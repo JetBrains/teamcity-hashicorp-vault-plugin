@@ -1,0 +1,18 @@
+apply plugin: 'java'
+apply plugin: 'com.github.rodm.teamcity-agent'
+
+dependencies {
+    compile project(':common')
+}
+
+teamcity {
+    version = teamcityVersion
+
+    agent {
+        descriptor {
+            pluginDeployment {
+                useSeparateClassloader = true
+            }
+        }
+    }
+}

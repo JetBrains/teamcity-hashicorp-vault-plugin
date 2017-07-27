@@ -1,0 +1,5 @@
+rootProject.name = 'teamcity-vault-plugin'
+
+include 'common'
+include 'agent'
+include 'server'

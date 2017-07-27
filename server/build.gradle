@@ -1,0 +1,50 @@
+apply plugin: 'java'
+apply plugin: 'java'
+
+apply plugin: 'com.github.rodm.teamcity-server'
+
+ext {
+    downloadsDir = project.findProperty('downloads.dir') ?: "$rootDir/downloads"
+    serversDir = project.findProperty('servers.dir') ?: "$rootDir/servers"
+}
+
+dependencies {
+    compile project(':common')
+
+    agent project(path: ':agent', configuration: 'plugin')
+}
+
+teamcity {
+    version = teamcityVersion
+
+    server {
+        descriptor {
+            name = 'teamcity-vault-support'
+            displayName = 'TeamCity Vault Support'
+            description = 'Provides support for Vault Secrets Manager'
+            version = project.version
+
+            vendorName = 'Vladislav Rassokhin'
+            email = 'Vladislav.Rassokhin@jetbrains.com'
+
+            useSeparateClassloader = true
+        }
+    }
+
+    environments {
+        downloadsDir = project.downloadsDir
+        baseHomeDir = project.serversDir
+        baseDataDir = 'data'
+
+        teamcity10_0 {
+            version = '10.0.5'
+        }
+
+        teamcity2017_1 {
+            version = '2017.1'
+        }
+    }
+}
+
+sourceCompatibility = "1.8"
+targetCompatibility = "1.8"
