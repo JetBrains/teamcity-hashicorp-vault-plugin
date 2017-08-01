@@ -72,7 +72,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             val headers = HttpHeaders()
             headers["X-Vault-Wrap-TTL"] = "10m"
             val uri = template.uriTemplateHandler.expand("/auth/{mount}/login", options.path)
-            val request = RequestEntity(login, headers, HttpMethod.POST, uri, VaultResponse::class.java)
+            val request = RequestEntity(login, headers, HttpMethod.POST, uri)
 
             val response = template.exchange(request, VaultResponse::class.java)
 

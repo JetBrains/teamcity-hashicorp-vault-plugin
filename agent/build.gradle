@@ -3,6 +3,7 @@ apply plugin: 'com.github.rodm.teamcity-agent'
 
 dependencies {
     compile project(':common')
+    compile 'org.springframework:spring-web:4.2.6.RELEASE'
 }
 
 teamcity {
