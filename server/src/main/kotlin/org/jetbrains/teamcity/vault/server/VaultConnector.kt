@@ -14,6 +14,7 @@ import org.jetbrains.teamcity.vault.createRestTemplate
 import org.jetbrains.teamcity.vault.support.VaultResponse
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
 import org.springframework.http.RequestEntity
 import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
@@ -89,7 +90,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
             return token
         } catch (e: HttpStatusCodeException) {
-            throw VaultException(String.format("Cannot login using AppRole: %s", getError(e.responseBodyAsString)))
+            throw VaultException(String.format("Cannot login using AppRole: %s", getError(e)))
         }
     }
 
@@ -103,23 +104,25 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
         return login
     }
 
-    private fun getError(json: String): String {
-        if (json.contains("\"errors\":")) {
+    private fun getError(e: HttpStatusCodeException): String {
+        val contentType: MediaType?
+        val body = e.responseBodyAsString
+        try {
+            contentType = e.responseHeaders?.contentType
+        } catch(_: Exception) {
+            return body
+        }
+        if (MediaType.APPLICATION_JSON.includes(contentType)) {
+            val json = body
             try {
                 val map = Gson().fromJson(json, JsonObject::class.java)
                 if (map.has("errors")) {
-
-                    val errors = map.getAsJsonArray("errors")
-                    if (errors.size() == 1) {
-                        return errors.iterator().next().toString()
-                    }
-                    return errors.toString()
+                    return map.getAsJsonArray("errors").joinToString { it.asString }
                 }
-            } catch (o_O: JsonParseException) {
-                return json
+            } catch (e: JsonParseException) {
             }
         }
-        return json
+        return body
     }
 }
 
