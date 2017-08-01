@@ -7,20 +7,20 @@ import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.StringUtil
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.createRestTemplate
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.RequestEntity
 import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
 import org.springframework.vault.authentication.SimpleSessionManager
-import org.springframework.vault.client.VaultClients
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.client.VaultResponses
 import org.springframework.vault.config.ClientHttpRequestFactoryFactory
 import org.springframework.vault.core.VaultTemplate
 import org.springframework.vault.support.ClientOptions
 import org.springframework.vault.support.SslConfiguration
-import org.springframework.vault.support.VaultResponse
+import org.jetbrains.teamcity.vault.support.VaultResponse
 import org.springframework.vault.support.VaultToken
 import org.springframework.web.client.HttpStatusCodeException
 import java.net.URI
@@ -63,15 +63,15 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 .secretId(settings.secretId)
                 .build()
         val endpoint = VaultEndpoint.from(URI.create(settings.url))
-        val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)
-        val template = VaultClients.createRestTemplate(endpoint, factory)
+        val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE) // HttpComponents.usingHttpComponents(options, sslConfiguration)
+        val template = createRestTemplate(endpoint, factory)
 
         val login = getAppRoleLogin(options.roleId, options.secretId.nullIfEmpty())
 
         try {
             val headers = HttpHeaders()
             headers["X-Vault-Wrap-TTL"] = "10m"
-            val uri = template.uriTemplateHandler.expand("/auth/{mount}/login", options.path)
+            val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
             val request = RequestEntity(login, headers, HttpMethod.POST, uri)
 
             val response = template.exchange(request, VaultResponse::class.java)
