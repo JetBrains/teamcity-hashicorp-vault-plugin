@@ -6,27 +6,31 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import java.util.*
 
 class VaultParametersProvider(private val connector: VaultConnector) : AbstractBuildParametersProvider() {
     companion object {
         val LOG = Logger.getInstance(VaultParametersProvider::class.java.name)!!
     }
+
     override fun getParameters(build: SBuild, emulationMode: Boolean): Map<String, String> {
         if (build.isFinished) return emptyMap()
         val feature = build.getBuildFeaturesOfType(VaultConstants.FEATURE_TYPE).firstOrNull() ?: return emptyMap()
         val wrapped: String
         val settings = VaultFeatureSettings(feature.parameters)
         if (emulationMode) {
-            wrapped = "EMULATED"
+            wrapped = VaultConstants.SPECIAL_EMULATTED
         } else {
             wrapped = try {
-                connector.requestWrappedToken(build, settings) ?: "Failed To Request"
+                connector.requestWrappedToken(build, settings)
             } catch(e: Throwable) {
-                LOG.error("Failed to resolve: ${e.message}")
-                "Failed to resolve: ${e.message}"
+                val message = "Failed to fetch Vault wrapped token: ${e.message}"
+                LOG.warnAndDebugDetails(message, e)
+                build.buildLog.error("Vault", message, Date(), "", "", emptyList())
+                VaultConstants.SPECIAL_FAILED_TO_FETCH
             }
         }
-        return mapOf(VaultConstants.WRAPPED_TOKEN_PROEPRTY to wrapped, "teamcity.vault.url" to settings.url)
+        return mapOf(VaultConstants.WRAPPED_TOKEN_PROPERTY to wrapped, VaultConstants.URL_PROPERTY to settings.url)
     }
 
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {

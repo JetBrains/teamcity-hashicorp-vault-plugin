@@ -4,7 +4,8 @@ object VaultConstants {
     val FEATURE_SUPPORTED_AGENT_PARAMETER = "teamcity.vault.supported"
     @JvmField val FEATURE_TYPE = "teamcity-vault"
 
-    val WRAPPED_TOKEN_PROEPRTY = "teamcity.vault.wrapped.token"
+    val URL_PROPERTY = "teamcity.vault.url"
+    val WRAPPED_TOKEN_PROPERTY = "teamcity.vault.wrapped.token"
 
     // Agent-side parameters:
     val AGENT_CONFIG_PROP = "teamcity.vault.token"
@@ -16,5 +17,10 @@ object VaultConstants {
 
     @JvmField val ROLE_ID = "role-id"
     @JvmField val SECRET_ID = "secure:secret-id"
+
+    // Special values
+    val SPECIAL_EMULATTED = "EMULATED"
+    val SPECIAL_FAILED_TO_FETCH = "FAILED_TO_FETCH"
+    val SPECIAL_VALUES = setOf<String>(SPECIAL_EMULATTED, SPECIAL_FAILED_TO_FETCH)
 }
 

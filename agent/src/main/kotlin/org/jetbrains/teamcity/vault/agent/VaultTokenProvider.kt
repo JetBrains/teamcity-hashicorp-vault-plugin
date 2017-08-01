@@ -14,7 +14,7 @@ import java.net.URI
 
 object VaultTokenProvider {
 
-    fun getToken(settings: VaultFeatureSettings, wrapped: String): String {
+    fun unwrap(settings: VaultFeatureSettings, wrapped: String): String {
         val options = CubbyholeAuthenticationOptions.builder()
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped))

@@ -8,6 +8,7 @@ import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.StringUtil
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.createRestTemplate
+import org.jetbrains.teamcity.vault.support.VaultResponse
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.RequestEntity
@@ -20,7 +21,6 @@ import org.springframework.vault.config.ClientHttpRequestFactoryFactory
 import org.springframework.vault.core.VaultTemplate
 import org.springframework.vault.support.ClientOptions
 import org.springframework.vault.support.SslConfiguration
-import org.jetbrains.teamcity.vault.support.VaultResponse
 import org.springframework.vault.support.VaultToken
 import org.springframework.web.client.HttpStatusCodeException
 import java.net.URI
@@ -53,7 +53,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     private val myBuildsTokens: MutableMap<Long, LeasedWrappedTokenInfo> = HashMap()
     private val myPendingRemoval: MutableSet<LeasedWrappedTokenInfo> = HashSet()
 
-    fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String? {
+    fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String {
         val info = myBuildsTokens[build.buildId]
         if (info != null) return info.wrapped
 
