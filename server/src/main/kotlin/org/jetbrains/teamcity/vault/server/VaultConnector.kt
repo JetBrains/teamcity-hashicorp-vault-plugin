@@ -1,5 +1,8 @@
 package org.jetbrains.teamcity.vault.server
 
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.JsonParseException
 import jetbrains.buildServer.serverSide.BuildServerAdapter
 import jetbrains.buildServer.serverSide.BuildServerListener
 import jetbrains.buildServer.serverSide.SBuild
@@ -16,7 +19,6 @@ import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
 import org.springframework.vault.authentication.SimpleSessionManager
 import org.springframework.vault.client.VaultEndpoint
-import org.springframework.vault.client.VaultResponses
 import org.springframework.vault.config.ClientHttpRequestFactoryFactory
 import org.springframework.vault.core.VaultTemplate
 import org.springframework.vault.support.ClientOptions
@@ -87,7 +89,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
             return token
         } catch (e: HttpStatusCodeException) {
-            throw VaultException(String.format("Cannot login using AppRole: %s", VaultResponses.getError(e.responseBodyAsString)))
+            throw VaultException(String.format("Cannot login using AppRole: %s", getError(e.responseBodyAsString)))
         }
     }
 
@@ -99,6 +101,25 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             login.put("secret_id", secretId)
         }
         return login
+    }
+
+    private fun getError(json: String): String {
+        if (json.contains("\"errors\":")) {
+            try {
+                val map = Gson().fromJson(json, JsonObject::class.java)
+                if (map.has("errors")) {
+
+                    val errors = map.getAsJsonArray("errors")
+                    if (errors.size() == 1) {
+                        return errors.iterator().next().toString()
+                    }
+                    return errors.toString()
+                }
+            } catch (o_O: JsonParseException) {
+                return json
+            }
+        }
+        return json
     }
 }
 
