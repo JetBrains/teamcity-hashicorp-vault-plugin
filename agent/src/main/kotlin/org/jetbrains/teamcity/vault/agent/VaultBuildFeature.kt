@@ -1,5 +1,6 @@
 package org.jetbrains.teamcity.vault.agent
 
+import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.agent.AgentLifeCycleAdapter
 import jetbrains.buildServer.agent.AgentLifeCycleListener
 import jetbrains.buildServer.agent.AgentRunningBuild
@@ -10,9 +11,15 @@ import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.isJava8OrNewer
 
 class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleListener>) : AgentLifeCycleAdapter() {
+    companion object {
+        val LOG = Logger.getInstance(VaultBuildFeature::class.java.name)!!
+    }
     init {
         if (isJava8OrNewer()) {
             dispatcher.addListener(this)
+            LOG.info("Vault intergration enabled")
+        } else {
+            LOG.warn("Vault integration disabled: agent should be running under Java 1.8 or newer")
         }
     }
 
@@ -44,6 +51,6 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
         }
         runningBuild.addSharedConfigParameter(VaultConstants.AGENT_CONFIG_PROP, token)
         runningBuild.addSharedEnvironmentVariable(VaultConstants.AGENT_ENV_PROP, token)
-        logger.message("Vault token successfully fetched");
+        logger.message("Vault token successfully fetched")
     }
 }
