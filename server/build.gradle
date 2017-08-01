@@ -41,7 +41,9 @@ teamcity {
         }
 
         teamcity2017_1 {
-            version = '2017.1'
+            version = '2017.1.3'
+            serverOptions = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5600"
+            agentOptions = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5601"
         }
     }
 }
