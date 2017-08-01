@@ -7,6 +7,7 @@ teamcity {
 dependencies {
     compile('org.springframework.vault:spring-vault-core:1.0.2.RELEASE') {
         exclude group: 'org.springframework'
+        exclude group: 'com.fasterxml.jackson.core'
     }
     provided 'org.springframework:spring-web:4.2.6.RELEASE'
 }
