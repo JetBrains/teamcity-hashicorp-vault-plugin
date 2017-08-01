@@ -12,19 +12,19 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
         if (build.isFinished) return emptyMap()
         val feature = build.getBuildFeaturesOfType(VaultConstants.FEATURE_TYPE).firstOrNull() ?: return emptyMap()
         val wrapped: String
+        val settings = VaultFeatureSettings(feature.parameters)
         if (emulationMode) {
             wrapped = "EMULATED"
         } else {
-            val settings = VaultFeatureSettings(feature.parameters)
             wrapped = connector.requestWrappedToken(build, settings) ?: "Failed To Request"
         }
-        return mapOf("teamcity.vault.wrapped.token" to wrapped)
+        return mapOf(VaultConstants.WRAPPED_TOKEN_PROEPRTY to wrapped, "teamcity.vault.url" to settings.url)
     }
 
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {
         if (build.isFinished) return emptyList()
         build.getBuildFeaturesOfType(VaultConstants.FEATURE_TYPE).firstOrNull() ?: return emptyList()
-        return listOf("teamcity.vault.token", Constants.ENV_PREFIX + "VAULT_TOKEN")
+        return listOf(VaultConstants.AGENT_CONFIG_PROP, Constants.ENV_PREFIX + VaultConstants.AGENT_ENV_PROP)
     }
 }
 

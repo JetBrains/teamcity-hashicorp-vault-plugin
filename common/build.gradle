@@ -5,5 +5,5 @@ teamcity {
 }
 
 dependencies {
-    compile('com.bettercloud:vault-java-driver:3.0.0')
+    compile('org.springframework.vault:spring-vault-core:1.0.2.RELEASE')
 }

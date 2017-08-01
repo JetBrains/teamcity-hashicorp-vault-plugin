@@ -18,6 +18,7 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
 
     override fun getDefaultParameters(): Map<String, String> {
         return mapOf(
+                "teamcity.vault.requirement" to "%teamcity.vault.supported%",
                 VaultConstants.URL to "http://localhost:8200",
                 VaultConstants.VERIFY_SSL to "true"
         )
