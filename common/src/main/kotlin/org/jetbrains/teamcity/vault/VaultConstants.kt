@@ -7,6 +7,8 @@ object VaultConstants {
     val URL_PROPERTY = "teamcity.vault.url"
     val WRAPPED_TOKEN_PROPERTY = "teamcity.vault.wrapped.token"
 
+    @JvmField val VAULT_PARAMETER_PREFIX = "vault:"
+
     // Agent-side parameters:
     val AGENT_CONFIG_PROP = "teamcity.vault.token"
     val AGENT_ENV_PROP = "VAULT_TOKEN"

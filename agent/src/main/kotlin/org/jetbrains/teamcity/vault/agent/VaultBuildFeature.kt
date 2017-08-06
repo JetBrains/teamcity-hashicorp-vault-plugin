@@ -10,7 +10,8 @@ import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.isJava8OrNewer
 
-class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleListener>) : AgentLifeCycleAdapter() {
+class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleListener>,
+                                    private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
     companion object {
         val LOG = Logger.getInstance(VaultBuildFeature::class.java.name)!!
     }
@@ -52,5 +53,7 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
         runningBuild.addSharedConfigParameter(VaultConstants.AGENT_CONFIG_PROP, token)
         runningBuild.addSharedEnvironmentVariable(VaultConstants.AGENT_ENV_PROP, token)
         logger.message("Vault token successfully fetched")
+
+        myVaultParametersResolver.resolve(runningBuild, settings, token)
     }
 }

@@ -2,5 +2,6 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans default-autowire="constructor">
+    <bean id="vaultParametersResolver" class="org.jetbrains.teamcity.vault.agent.VaultParametersResolver"/>
     <bean id="vaultBuildFeature" class="org.jetbrains.teamcity.vault.agent.VaultBuildFeature"/>
 </beans>

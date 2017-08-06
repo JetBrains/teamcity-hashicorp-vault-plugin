@@ -4,6 +4,9 @@ apply plugin: 'com.github.rodm.teamcity-agent'
 dependencies {
     compile project(':common')
     compile 'org.springframework:spring-web:4.2.6.RELEASE'
+    compile 'com.jayway.jsonpath:json-path:2.4.0'
+
+    testCompile project(path: ':common', configuration: 'testOutput')
 }
 
 teamcity {
