@@ -13,10 +13,8 @@ dependencies {
 
     agent project(path: ':agent', configuration: 'plugin')
 
-    testCompile 'org.testcontainers:testcontainers:1.4.2'
-    testCompile('org.springframework.vault:spring-vault-core:1.0.2.RELEASE') {
-        exclude group: 'org.springframework'
-    }}
+    testCompile project(path: ':common', configuration: 'testOutput')
+}
 
 teamcity {
     version = teamcityVersion
