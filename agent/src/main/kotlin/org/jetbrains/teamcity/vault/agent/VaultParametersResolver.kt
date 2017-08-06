@@ -114,7 +114,6 @@ class VaultParametersResolver {
 
 
     private fun replaceParametersValues(build: AgentRunningBuild, replacements: HashMap<String, String>) {
-        // TODO: Check wheter it works properly
         for ((k, v) in HashMap(build.sharedConfigParameters)) {
             if (!v.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX)) continue
             val replacement = replacements[v.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX)]
