@@ -94,7 +94,14 @@ class VaultParametersResolver {
             return value
         }
 
-        val pattern = JsonPath.compile(jsonPath.ensureHasPrefix("$."))
+        val pattern: JsonPath?
+        val updated = jsonPath.ensureHasPrefix("$.")
+        try {
+            pattern = JsonPath.compile(updated)
+        } catch(e: Throwable) {
+            LOG.warnAndDebugDetails("JsonPath compilation failed for '$updated'", e)
+            return null
+        }
         try {
             val value: Any? = pattern.read(Gson().toJson(response.data))
             if (value == null) {
