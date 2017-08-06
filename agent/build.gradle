@@ -5,6 +5,9 @@ dependencies {
     compile project(':common')
     compile 'org.springframework:spring-web:4.2.6.RELEASE'
     compile 'com.jayway.jsonpath:json-path:2.4.0'
+    compile('org.springframework.vault:spring-vault-core:1.0.2.RELEASE') {
+        exclude group: 'org.springframework'
+    }
 
     testCompile project(path: ':common', configuration: 'testOutput')
 }
