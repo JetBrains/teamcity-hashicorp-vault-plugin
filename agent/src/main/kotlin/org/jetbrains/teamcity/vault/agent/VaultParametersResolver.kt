@@ -36,8 +36,16 @@ class VaultParametersResolver {
         replaceParametersValues(build, replacements)
     }
 
-    public fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>): HashMap<String, String> {
-        val responses = fetch(settings, token, parameters.map { it.vaultPath })
+    fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>): HashMap<String, String> {
+        val endpoint = VaultEndpoint.from(URI.create(settings.url))
+        val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)
+        val client = VaultTemplate(endpoint, factory, SimpleSessionManager({ VaultToken.of(token) }))
+
+        return doFetchAndPrepareReplacements(client, parameters)
+    }
+
+    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: List<VaultParameter>): HashMap<String, String> {
+        val responses = fetch(client, parameters.map { it.vaultPath })
 
         val replacements = getReplacements(parameters, responses)
         return replacements
@@ -141,11 +149,7 @@ class VaultParametersResolver {
         }
     }
 
-    private fun fetch(settings: VaultFeatureSettings, token: String, paths: Collection<String>): Map<String, VaultResponse?> {
-        val endpoint = VaultEndpoint.from(URI.create(settings.url))
-        val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)
-        val client = VaultTemplate(endpoint, factory, SimpleSessionManager({ VaultToken.of(token) }))
-
+    private fun fetch(client: VaultTemplate, paths: Collection<String>): HashMap<String, VaultResponse?> {
         val responses = HashMap<String, VaultResponse?>(paths.size)
 
         for (path in paths) {

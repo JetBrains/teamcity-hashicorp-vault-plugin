@@ -7,6 +7,9 @@ import org.jetbrains.teamcity.vault.VaultFeatureSettings;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.client.AbstractClientHttpRequestFactoryWrapper;
+import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.vault.config.ClientHttpRequestFactoryFactory;
 import org.springframework.vault.core.VaultTemplate;
@@ -14,10 +17,9 @@ import org.springframework.vault.support.ClientOptions;
 import org.springframework.vault.support.SslConfiguration;
 import org.springframework.vault.support.VaultResponse;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.net.URI;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.BDDAssertions.then;
@@ -29,10 +31,17 @@ public class VaultParametersResolverTest {
     private VaultParametersResolver resolver;
     private VaultFeatureSettings feature;
     private VaultTemplate template;
+    private final List<String> myRequestedURIs = new ArrayList<String>();
 
     @Before
     public void setUp() throws Exception {
-        final ClientHttpRequestFactory factory = ClientHttpRequestFactoryFactory.create(new ClientOptions(), SslConfiguration.NONE);
+        ClientHttpRequestFactory factory = new AbstractClientHttpRequestFactoryWrapper(ClientHttpRequestFactoryFactory.create(new ClientOptions(), SslConfiguration.NONE)) {
+            @Override
+            protected ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod, ClientHttpRequestFactory requestFactory) throws IOException {
+                myRequestedURIs.add(uri.toString());
+                return requestFactory.createRequest(uri, httpMethod);
+            }
+        };
         template = new VaultTemplate(vault.getEndpoint(), factory, vault.getSimpleSessionManager());
         resolver = new VaultParametersResolver();
         feature = new VaultFeatureSettings(vault.getUrl(), false, "", "");
@@ -73,5 +82,22 @@ public class VaultParametersResolverTest {
 
         final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), parameters);
         then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
+    }
+
+    @Test
+    public void testComplexValueParameterCallVaultAPIOnlyOnce() throws Exception {
+        final String path = "secret/test-read-once";
+        template.write(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
+
+        final List<VaultParameter> parameters = Arrays.asList(
+                VaultParameter.extract("/" + path + "!/first"),
+                VaultParameter.extract("/" + path + "!/second")
+        );
+
+        myRequestedURIs.clear();
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(template, parameters);
+        then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
+
+        then(myRequestedURIs).containsOnlyOnce(path);
     }
 }
