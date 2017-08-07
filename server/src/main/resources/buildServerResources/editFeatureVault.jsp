@@ -39,3 +39,5 @@
         <span class="smallNote">When checked, Vault connection would verify SSL connection</span>
     </td>
 </tr>
+
+<%--TODO: Add "Test Connection" button which would fetch wrapped token and revoke it using accessor --%>
