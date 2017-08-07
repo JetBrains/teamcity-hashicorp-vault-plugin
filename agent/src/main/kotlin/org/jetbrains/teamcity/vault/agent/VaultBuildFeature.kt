@@ -6,9 +6,7 @@ import jetbrains.buildServer.agent.AgentLifeCycleListener
 import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.BuildAgent
 import jetbrains.buildServer.util.EventDispatcher
-import org.jetbrains.teamcity.vault.VaultConstants
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import org.jetbrains.teamcity.vault.isJava8OrNewer
+import org.jetbrains.teamcity.vault.*
 
 class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                                     private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
@@ -52,10 +50,10 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
         }
         logger.message("Vault token successfully fetched")
 
-        if (runningBuild.sharedConfigParameters[VaultConstants.BehaviourParameters.ExposeConfigParameters]?.toBoolean() ?: false) {
+        if (isShouldSetConfigParameters(runningBuild.sharedConfigParameters)) {
             runningBuild.addSharedConfigParameter(VaultConstants.AGENT_CONFIG_PROP, token)
         }
-        if (runningBuild.sharedConfigParameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() ?: false) {
+        if (isShouldSetEnvParameters(runningBuild.sharedConfigParameters)) {
             runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_TOKEN, token)
             runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_ADDR, settings.url)
         }

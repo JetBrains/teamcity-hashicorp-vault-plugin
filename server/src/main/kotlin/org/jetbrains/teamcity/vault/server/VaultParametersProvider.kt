@@ -7,6 +7,8 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.isShouldSetConfigParameters
+import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
 
 class VaultParametersProvider(private val connector: VaultConnector) : AbstractBuildParametersProvider() {
     companion object {
@@ -40,11 +42,11 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
         if (build.isFinished) return emptyList()
         build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull() ?: return emptyList()
         val exposed = ArrayList<String>(3)
-        if (build.buildOwnParameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() ?: false) {
+        if (isShouldSetEnvParameters(build.buildOwnParameters)) {
             exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_TOKEN
             exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_ADDR
         }
-        if (build.buildOwnParameters[VaultConstants.BehaviourParameters.ExposeConfigParameters]?.toBoolean() ?: false) {
+        if (isShouldSetConfigParameters(build.buildOwnParameters)) {
             exposed += VaultConstants.AGENT_CONFIG_PROP
         }
         return exposed
