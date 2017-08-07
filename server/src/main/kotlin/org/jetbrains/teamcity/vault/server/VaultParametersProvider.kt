@@ -13,6 +13,16 @@ import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
 class VaultParametersProvider(private val connector: VaultConnector) : AbstractBuildParametersProvider() {
     companion object {
         val LOG = Logger.getInstance(VaultParametersProvider::class.java.name)!!
+
+        internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {
+            val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
+            val parameters = build.buildOwnParameters
+            return buildFeature != null || isShouldSetConfigParameters(parameters) || isShouldSetEnvParameters(parameters) || hasVaultParameters(build)
+        }
+
+        private fun hasVaultParameters(build: SBuild): Boolean {
+            return build.parametersProvider.all.any { it.value.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX) }
+        }
     }
 
     override fun getParameters(build: SBuild, emulationMode: Boolean): Map<String, String> {
@@ -31,10 +41,7 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
             settings = VaultFeatureSettings(projectFeature.parameters)
         } else return emptyMap()
 
-        if (!isShouldSetConfigParameters(build.buildOwnParameters)
-                && !isShouldSetEnvParameters(build.buildOwnParameters)
-                && !hasVaultParameters(build)
-                && buildFeature == null) {
+        if (!isShouldEnableVaultIntegration(build)) {
             LOG.debug("There's no need to fetch vault parameter for build $build")
             return emptyMap()
         }
@@ -57,12 +64,6 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
             }
         }
         return mapOf(VaultConstants.WRAPPED_TOKEN_PROPERTY to wrapped, VaultConstants.URL_PROPERTY to settings.url)
-    }
-
-    private fun hasVaultParameters(build: SBuild): Boolean {
-        // TODO: investigate how it would workwhen invoked from ParametersProvider
-        // TODO: Check for SOE
-        return build.parametersProvider.all.any { it.value.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX) }
     }
 
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {
