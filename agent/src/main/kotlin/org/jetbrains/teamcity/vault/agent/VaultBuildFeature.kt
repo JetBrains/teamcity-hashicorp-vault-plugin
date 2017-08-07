@@ -29,17 +29,17 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
     }
 
     override fun buildStarted(runningBuild: AgentRunningBuild) {
-        val feature = runningBuild.getBuildFeaturesOfType(VaultConstants.FEATURE_TYPE).firstOrNull() ?: return
+        val feature = runningBuild.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull() ?: return
         val settings = VaultFeatureSettings(feature.parameters)
 
         val logger = runningBuild.buildLogger
         val wrapped = runningBuild.sharedConfigParameters[VaultConstants.WRAPPED_TOKEN_PROPERTY]
         if (wrapped == null || wrapped.isNullOrEmpty()) {
-            logger.internalError(VaultConstants.FEATURE_TYPE, "Wrapped Vault token not found", null)
+            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped Vault token not found", null)
             return
         }
         if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
-            logger.internalError(VaultConstants.FEATURE_TYPE, "Wrapped Vault token value is incorrect, seems there was error fetching token on TeamCity server side", null)
+            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped Vault token value is incorrect, seems there was error fetching token on TeamCity server side", null)
             return
         }
         val token: String
@@ -50,9 +50,15 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
             logger.exception(e)
             return
         }
-        runningBuild.addSharedConfigParameter(VaultConstants.AGENT_CONFIG_PROP, token)
-        runningBuild.addSharedEnvironmentVariable(VaultConstants.AGENT_ENV_PROP, token)
         logger.message("Vault token successfully fetched")
+
+        if (runningBuild.sharedConfigParameters[VaultConstants.BehaviourParameters.ExposeConfigParameters]?.toBoolean() ?: false) {
+            runningBuild.addSharedConfigParameter(VaultConstants.AGENT_CONFIG_PROP, token)
+        }
+        if (runningBuild.sharedConfigParameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() ?: false) {
+            runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_TOKEN, token)
+            runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_ADDR, settings.url)
+        }
 
         myVaultParametersResolver.resolve(runningBuild, settings, token)
     }

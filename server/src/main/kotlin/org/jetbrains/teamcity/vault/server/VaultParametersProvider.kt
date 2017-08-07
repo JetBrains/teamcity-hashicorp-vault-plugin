@@ -15,7 +15,7 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
 
     override fun getParameters(build: SBuild, emulationMode: Boolean): Map<String, String> {
         if (build.isFinished) return emptyMap()
-        val feature = build.getBuildFeaturesOfType(VaultConstants.FEATURE_TYPE).firstOrNull() ?: return emptyMap()
+        val feature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull() ?: return emptyMap()
         val wrapped: String
         val settings = VaultFeatureSettings(feature.parameters)
         if (emulationMode) {
@@ -38,8 +38,16 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
 
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {
         if (build.isFinished) return emptyList()
-        build.getBuildFeaturesOfType(VaultConstants.FEATURE_TYPE).firstOrNull() ?: return emptyList()
-        return listOf(VaultConstants.AGENT_CONFIG_PROP, Constants.ENV_PREFIX + VaultConstants.AGENT_ENV_PROP)
+        build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull() ?: return emptyList()
+        val exposed = ArrayList<String>(3)
+        if (build.buildOwnParameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() ?: false) {
+            exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_TOKEN
+            exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_ADDR
+        }
+        if (build.buildOwnParameters[VaultConstants.BehaviourParameters.ExposeConfigParameters]?.toBoolean() ?: false) {
+            exposed += VaultConstants.AGENT_CONFIG_PROP
+        }
+        return exposed
     }
 }
 
