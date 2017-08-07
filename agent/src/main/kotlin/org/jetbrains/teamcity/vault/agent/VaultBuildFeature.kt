@@ -27,11 +27,16 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
     }
 
     override fun buildStarted(runningBuild: AgentRunningBuild) {
-        val feature = runningBuild.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull() ?: return
-        val settings = VaultFeatureSettings(feature.parameters)
+        val parameters = runningBuild.sharedConfigParameters
+        val url = parameters[VaultConstants.URL_PROPERTY]
+        val wrapped = parameters[VaultConstants.WRAPPED_TOKEN_PROPERTY]
+
+        if (url == null || url.isNullOrBlank()) return
+
+        // TODO: Use better constructor / refactor VaultFeatureSettings
+        val settings = VaultFeatureSettings(url, true, "", "")
 
         val logger = runningBuild.buildLogger
-        val wrapped = runningBuild.sharedConfigParameters[VaultConstants.WRAPPED_TOKEN_PROPERTY]
         if (wrapped == null || wrapped.isNullOrEmpty()) {
             logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped Vault token not found", null)
             return
@@ -50,10 +55,10 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
         }
         logger.message("Vault token successfully fetched")
 
-        if (isShouldSetConfigParameters(runningBuild.sharedConfigParameters)) {
+        if (isShouldSetConfigParameters(parameters)) {
             runningBuild.addSharedConfigParameter(VaultConstants.AGENT_CONFIG_PROP, token)
         }
-        if (isShouldSetEnvParameters(runningBuild.sharedConfigParameters)) {
+        if (isShouldSetEnvParameters(parameters)) {
             runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_TOKEN, token)
             runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_ADDR, settings.url)
         }
