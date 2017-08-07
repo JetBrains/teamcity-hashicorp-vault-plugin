@@ -9,7 +9,7 @@ import org.jetbrains.teamcity.vault.VaultFeatureSettings
 
 class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature() {
     override fun getType(): String = VaultConstants.FEATURE_TYPE
-    override fun getDisplayName(): String = "TeamCity Vault Integration"
+    override fun getDisplayName(): String = "Vault Connection"
 
     override fun isMultipleFeaturesPerBuildTypeAllowed() = false
     override fun getPlaceToShow() = PlaceToShow.GENERAL
