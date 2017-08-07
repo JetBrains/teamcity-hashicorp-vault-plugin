@@ -9,6 +9,7 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.StringUtil
+import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.createRestTemplate
 import org.jetbrains.teamcity.vault.support.VaultResponse
@@ -33,6 +34,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
         dispatcher.addListener(object : BuildServerAdapter() {
             override fun buildFinished(build: SRunningBuild) {
                 val info = myBuildsTokens.remove(build.buildId) ?: return
+                if (info == LeasedWrappedTokenInfo.FAILED_TO_FETCH) return
                 myPendingRemoval.add(info)
                 revoke(info)
             }
@@ -90,9 +92,29 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
             return token
         } catch (e: HttpStatusCodeException) {
-            throw VaultException(String.format("Cannot login using AppRole: %s", getError(e)))
+            val err = getError(e)
+            var message: String? = null
+            if (err.startsWith("failed to validate SecretID: ")) {
+                val suberror = err.removePrefix("failed to validate SecretID: ")
+                if (suberror.contains("invalid secret_id")) {
+                    message = "Cannot login using AppRole, seems SecretID is incorrect or expired."
+                } else if (suberror.contains("failed to find secondary index for role_id")) {
+                    message = "Cannot login using AppRole, seems RoleID is incorrect or role was deleted."
+                }
+            }
+            if (message == null) {
+                message = "Cannot login using AppRole: $err"
+            }
+//            if (true) {
+//                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", message))
+//            } else {
+            myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo.FAILED_TO_FETCH;
+            throw ConnectionException(message)
+//            }
         }
     }
+
+    class ConnectionException(message: String) : Exception(message)
 
 
     private fun getAppRoleLogin(roleId: String, secretId: String?): Map<String, String> {
@@ -130,4 +152,8 @@ private fun String?.nullIfEmpty(): String? {
     return StringUtil.nullIfEmpty(this)
 }
 
-data class LeasedWrappedTokenInfo(val wrapped: String, val accessor: String, val connection: VaultFeatureSettings)
+data class LeasedWrappedTokenInfo(val wrapped: String, val accessor: String, val connection: VaultFeatureSettings) {
+    companion object {
+        val FAILED_TO_FETCH = LeasedWrappedTokenInfo(VaultConstants.SPECIAL_FAILED_TO_FETCH, "", VaultFeatureSettings(mapOf()))
+    }
+}

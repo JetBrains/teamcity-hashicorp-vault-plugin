@@ -1,12 +1,12 @@
 package org.jetbrains.teamcity.vault.server
 
 import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import java.util.*
 
 class VaultParametersProvider(private val connector: VaultConnector) : AbstractBuildParametersProvider() {
     companion object {
@@ -23,10 +23,13 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
         } else {
             wrapped = try {
                 connector.requestWrappedToken(build, settings)
+            } catch(e: VaultConnector.ConnectionException) {
+                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", e.message))
+                VaultConstants.SPECIAL_FAILED_TO_FETCH
             } catch(e: Throwable) {
                 val message = "Failed to fetch Vault wrapped token: ${e.message}"
                 LOG.warnAndDebugDetails(message, e)
-                build.buildLog.error("Vault", message, Date(), "", "", emptyList())
+                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", e.message))
                 VaultConstants.SPECIAL_FAILED_TO_FETCH
             }
         }
