@@ -17,6 +17,7 @@ import org.springframework.vault.support.VaultResponse
 import org.springframework.vault.support.VaultToken
 import java.net.URI
 import java.util.*
+import kotlin.collections.HashSet
 
 class VaultParametersResolver {
     companion object {
@@ -45,7 +46,7 @@ class VaultParametersResolver {
     }
 
     fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: List<VaultParameter>): HashMap<String, String> {
-        val responses = fetch(client, parameters.map { it.vaultPath })
+        val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath })
 
         val replacements = getReplacements(parameters, responses)
         return replacements
@@ -152,7 +153,7 @@ class VaultParametersResolver {
     private fun fetch(client: VaultTemplate, paths: Collection<String>): HashMap<String, VaultResponse?> {
         val responses = HashMap<String, VaultResponse?>(paths.size)
 
-        for (path in paths) {
+        for (path in paths.toSet()) {
             try {
                 val response = client.read(path.removePrefix("/"))
                 responses[path] = response

@@ -38,7 +38,7 @@ public class VaultParametersResolverTest {
         ClientHttpRequestFactory factory = new AbstractClientHttpRequestFactoryWrapper(ClientHttpRequestFactoryFactory.create(new ClientOptions(), SslConfiguration.NONE)) {
             @Override
             protected ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod, ClientHttpRequestFactory requestFactory) throws IOException {
-                myRequestedURIs.add(uri.toString());
+                myRequestedURIs.add(uri.getPath());
                 return requestFactory.createRequest(uri, httpMethod);
             }
         };
@@ -98,6 +98,6 @@ public class VaultParametersResolverTest {
         final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(template, parameters);
         then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
 
-        then(myRequestedURIs).containsOnlyOnce(path);
+        then(myRequestedURIs).hasSize(1).containsOnlyOnce("/v1/" + path);
     }
 }
