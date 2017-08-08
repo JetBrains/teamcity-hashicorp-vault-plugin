@@ -1,0 +1,5 @@
+<root>
+    <item name='org.springframework.vault.client.VaultErrorMessage'>
+        <annotation name='java.lang.Deprecated'/>
+    </item>
+</root>

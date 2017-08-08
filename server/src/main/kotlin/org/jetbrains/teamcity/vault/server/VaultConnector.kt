@@ -11,10 +11,10 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.EventDispatcher
 import org.jetbrains.teamcity.vault.*
-import org.jetbrains.teamcity.vault.support.VaultResponse
 import org.springframework.http.*
 import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
+import org.springframework.vault.support.VaultResponse
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
 import java.util.concurrent.ConcurrentHashMap
@@ -39,7 +39,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
         /**
          * @return true if operation succeed
          */
-        internal fun revoke(info: LeasedWrappedTokenInfo): Boolean {
+        @JvmStatic fun revoke(info: LeasedWrappedTokenInfo): Boolean {
             val settings = info.connection
             try {
                 val template = createRestTemplate(settings)
@@ -115,6 +115,55 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             }
             return body
         }
+
+        @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings): Pair<String, String> {
+            val options = AppRoleAuthenticationOptions.builder()
+                    .path("approle")
+                    .roleId(settings.roleId)
+                    .secretId(settings.secretId)
+                    .build()
+            val template = createRestTemplate(settings)
+
+            val login = getAppRoleLogin(options.roleId, options.secretId.nullIfEmpty())
+
+            try {
+                val headers = HttpHeaders()
+                headers["X-Vault-Wrap-TTL"] = "10m"
+                val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
+                val request = RequestEntity(login, headers, HttpMethod.POST, uri)
+
+                val response = template.exchange(request, VaultResponse::class.java)
+
+                val vaultResponse = response.body
+
+                val wrap = vaultResponse.wrapInfo
+
+                val token = wrap["token"] ?: throw VaultException("Vault hasn't returned wrapped token")
+                val accessor = wrap["wrapped_accessor"] ?: throw VaultException("Vault hasn't returned wrapped token accessor")
+
+                return token to accessor
+            } catch (e: HttpStatusCodeException) {
+                val err = getError(e)
+                var message: String? = null
+                if (err.startsWith("failed to validate SecretID: ")) {
+                    val suberror = err.removePrefix("failed to validate SecretID: ")
+                    if (suberror.contains("invalid secret_id")) {
+                        message = "Cannot login using AppRole, seems SecretID is incorrect or expired."
+                    } else if (suberror.contains("failed to find secondary index for role_id")) {
+                        message = "Cannot login using AppRole, seems RoleID is incorrect or role was deleted."
+                    }
+                }
+                if (message == null) {
+                    message = "Cannot login using AppRole: $err"
+                }
+                //            if (true) {
+                //                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", message))
+                //            } else {
+                throw ConnectionException(message)
+                //            }
+            }
+        }
+
     }
 
     // TODO: Support server restart
@@ -125,53 +174,13 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
         val info = myBuildsTokens[build.buildId]
         if (info != null) return info.wrapped
 
-        val options = AppRoleAuthenticationOptions.builder()
-                .path("approle")
-                .roleId(settings.roleId)
-                .secretId(settings.secretId)
-                .build()
-        val template = createRestTemplate(settings)
-
-        val login = getAppRoleLogin(options.roleId, options.secretId.nullIfEmpty())
-
         try {
-            val headers = HttpHeaders()
-            headers["X-Vault-Wrap-TTL"] = "10m"
-            val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
-            val request = RequestEntity(login, headers, HttpMethod.POST, uri)
-
-            val response = template.exchange(request, VaultResponse::class.java)
-
-            val vaultResponse = response.body
-
-            val wrap = vaultResponse.wrapInfo
-
-            val token = wrap["token"] ?: throw VaultException("Vault hasn't returned wrapped token")
-            val accessor = wrap["wrapped_accessor"] ?: throw VaultException("Vault hasn't returned wrapped token accessor")
-
+            val (token, accessor) = doRequestWrappedToken(settings)
             myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo(token, accessor, settings)
-
             return token
-        } catch (e: HttpStatusCodeException) {
-            val err = getError(e)
-            var message: String? = null
-            if (err.startsWith("failed to validate SecretID: ")) {
-                val suberror = err.removePrefix("failed to validate SecretID: ")
-                if (suberror.contains("invalid secret_id")) {
-                    message = "Cannot login using AppRole, seems SecretID is incorrect or expired."
-                } else if (suberror.contains("failed to find secondary index for role_id")) {
-                    message = "Cannot login using AppRole, seems RoleID is incorrect or role was deleted."
-                }
-            }
-            if (message == null) {
-                message = "Cannot login using AppRole: $err"
-            }
-//            if (true) {
-//                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", message))
-//            } else {
+        } catch(e: Exception) {
             myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo.FAILED_TO_FETCH;
-            throw ConnectionException(message)
-//            }
+            throw e
         }
     }
 

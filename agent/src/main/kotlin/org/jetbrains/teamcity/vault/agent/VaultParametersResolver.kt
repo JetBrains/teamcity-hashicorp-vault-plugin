@@ -7,10 +7,10 @@ import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.Constants
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.vault.authentication.SimpleSessionManager
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.config.ClientHttpRequestFactoryFactory
-import org.springframework.vault.core.VaultTemplate
 import org.springframework.vault.support.ClientOptions
 import org.springframework.vault.support.SslConfiguration
 import org.springframework.vault.support.VaultResponse

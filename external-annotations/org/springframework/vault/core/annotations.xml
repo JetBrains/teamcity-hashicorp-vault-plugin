@@ -1,0 +1,5 @@
+<root>
+    <item name='org.springframework.vault.core.VaultTemplate'>
+        <annotation name='java.lang.Deprecated'/>
+    </item>
+</root>

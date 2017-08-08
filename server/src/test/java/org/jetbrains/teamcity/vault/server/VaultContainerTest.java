@@ -1,11 +1,11 @@
 package org.jetbrains.teamcity.vault.server;
 
 import org.jetbrains.teamcity.vault.VaultDevContainer;
+import org.jetbrains.teamcity.vault.support.VaultTemplate;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.vault.config.ClientHttpRequestFactoryFactory;
-import org.springframework.vault.core.VaultTemplate;
 import org.springframework.vault.support.ClientOptions;
 import org.springframework.vault.support.SslConfiguration;
 import org.springframework.vault.support.VaultHealth;
