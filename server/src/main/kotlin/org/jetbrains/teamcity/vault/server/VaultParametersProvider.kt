@@ -63,7 +63,11 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
                 VaultConstants.SPECIAL_FAILED_TO_FETCH
             }
         }
-        return mapOf(VaultConstants.WRAPPED_TOKEN_PROPERTY to wrapped, VaultConstants.URL_PROPERTY to settings.url)
+        return mapOf(
+                VaultConstants.WRAPPED_TOKEN_PROPERTY to wrapped,
+                VaultConstants.URL_PROPERTY to settings.url,
+                VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE
+        )
     }
 
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {
