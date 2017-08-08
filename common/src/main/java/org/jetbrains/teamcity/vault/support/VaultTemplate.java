@@ -30,7 +30,6 @@ import org.springframework.vault.authentication.SessionManager;
 import org.springframework.vault.authentication.SimpleSessionManager;
 import org.springframework.vault.client.VaultEndpoint;
 import org.springframework.vault.client.VaultHttpHeaders;
-import org.springframework.vault.client.VaultResponses;
 import org.springframework.vault.core.*;
 import org.springframework.vault.support.VaultResponse;
 import org.springframework.vault.support.VaultResponseSupport;
