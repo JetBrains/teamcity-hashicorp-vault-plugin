@@ -1,15 +1,19 @@
 package org.jetbrains.teamcity.vault.agent
 
 import com.intellij.openapi.diagnostic.Logger
-import jetbrains.buildServer.agent.AgentLifeCycleAdapter
-import jetbrains.buildServer.agent.AgentLifeCycleListener
-import jetbrains.buildServer.agent.AgentRunningBuild
-import jetbrains.buildServer.agent.BuildAgent
+import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.util.EventDispatcher
 import org.jetbrains.teamcity.vault.*
+import org.springframework.scheduling.TaskScheduler
+import org.springframework.vault.authentication.CubbyholeAuthentication
+import org.springframework.vault.authentication.CubbyholeAuthenticationOptions
+import org.springframework.vault.authentication.LifecycleAwareSessionManager
+import org.springframework.vault.support.VaultToken
+import java.util.concurrent.ConcurrentHashMap
 
-class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleListener>,
-                                    private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
+class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
+                        private val scheduler: TaskScheduler,
+                        private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
     companion object {
         val LOG = Logger.getInstance(VaultBuildFeature::class.java.name)!!
     }
@@ -21,6 +25,8 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
             LOG.warn("Vault integration disabled: agent should be running under Java 1.8 or newer")
         }
     }
+
+    private val sessions = ConcurrentHashMap<Long, LifecycleAwareSessionManager>()
 
     override fun afterAgentConfigurationLoaded(agent: BuildAgent) {
         agent.configuration.addConfigurationParameter(VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER, "true")
@@ -47,7 +53,16 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
         }
         val token: String
         try {
-            token = VaultTokenProvider.unwrap(settings, wrapped)
+            val options = CubbyholeAuthenticationOptions.builder()
+                    .wrapped()
+                    .initialToken(VaultToken.of(wrapped))
+                    .build()
+            val template = createRestTemplate(settings)
+            val authentication = CubbyholeAuthentication(options, template)
+
+            val sessionManager = LifecycleAwareSessionManager(authentication, scheduler, template)
+            sessions[runningBuild.buildId] = sessionManager
+            token = sessionManager.sessionToken.token
         } catch(e: Exception) {
             logger.error("Failed to unwrap Vault token: " + e.message)
             logger.exception(e)
@@ -64,5 +79,11 @@ class VaultBuildFeature constructor(dispatcher: EventDispatcher<AgentLifeCycleLi
         }
 
         myVaultParametersResolver.resolve(runningBuild, settings, token)
+    }
+
+    override fun beforeBuildFinish(build: AgentRunningBuild, buildStatus: BuildFinishedStatus) {
+        // Stop renewing token, revoke token
+        val manager = sessions[build.buildId] ?: return
+        manager.destroy()
     }
 }
