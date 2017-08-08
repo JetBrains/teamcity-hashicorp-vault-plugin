@@ -5,6 +5,7 @@ import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.util.EventDispatcher
 import org.jetbrains.teamcity.vault.*
 import org.springframework.scheduling.TaskScheduler
+import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler
 import org.springframework.vault.authentication.CubbyholeAuthentication
 import org.springframework.vault.authentication.CubbyholeAuthenticationOptions
 import org.springframework.vault.authentication.LifecycleAwareSessionManager
@@ -12,7 +13,6 @@ import org.springframework.vault.support.VaultToken
 import java.util.concurrent.ConcurrentHashMap
 
 class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
-                        private val scheduler: TaskScheduler,
                         private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
     companion object {
         val LOG = Logger.getInstance(VaultBuildFeature::class.java.name)!!
@@ -27,6 +27,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
     }
 
     private val sessions = ConcurrentHashMap<Long, LifecycleAwareSessionManager>()
+    private val scheduler: TaskScheduler = ConcurrentTaskScheduler()
 
     override fun afterAgentConfigurationLoaded(agent: BuildAgent) {
         agent.configuration.addConfigurationParameter(VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER, "true")
