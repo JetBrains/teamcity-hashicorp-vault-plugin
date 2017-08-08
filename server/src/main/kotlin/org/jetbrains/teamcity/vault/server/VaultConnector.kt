@@ -3,31 +3,21 @@ package org.jetbrains.teamcity.vault.server
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.util.containers.ConcurrentHashSet
 import jetbrains.buildServer.serverSide.BuildServerAdapter
 import jetbrains.buildServer.serverSide.BuildServerListener
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.EventDispatcher
-import jetbrains.buildServer.util.StringUtil
-import org.jetbrains.teamcity.vault.VaultConstants
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import org.jetbrains.teamcity.vault.createRestTemplate
+import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultResponse
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
-import org.springframework.http.MediaType
-import org.springframework.http.RequestEntity
+import org.springframework.http.*
 import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
-import org.springframework.vault.authentication.SimpleSessionManager
-import org.springframework.vault.client.VaultEndpoint
-import org.springframework.vault.config.ClientHttpRequestFactoryFactory
-import org.springframework.vault.core.VaultTemplate
-import org.springframework.vault.support.ClientOptions
-import org.springframework.vault.support.SslConfiguration
-import org.springframework.vault.support.VaultToken
 import org.springframework.web.client.HttpStatusCodeException
-import java.net.URI
+import org.springframework.web.client.RestTemplate
+import java.util.concurrent.ConcurrentHashMap
 
 class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     init {
@@ -36,27 +26,100 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 val info = myBuildsTokens.remove(build.buildId) ?: return
                 if (info == LeasedWrappedTokenInfo.FAILED_TO_FETCH) return
                 myPendingRemoval.add(info)
-                revoke(info)
+                if (revoke(info)) {
+                    myPendingRemoval.remove(info)
+                }
             }
         })
     }
 
-    private fun revoke(info: LeasedWrappedTokenInfo) {
-        val settings = info.connection
+    companion object {
+        val LOG = Logger.getInstance(VaultConnector::class.java.name)!!
 
-        val endpoint = VaultEndpoint.from(URI.create(settings.url))
-        val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)
-        try {
-            // TODO: What token to use here?
-            VaultTemplate(endpoint, factory, SimpleSessionManager({ VaultToken.of("") })).write("/auth/token/revoke-accessor", mapOf("accessor" to info.accessor))
-            myPendingRemoval.remove(info)
-        } catch(e: Exception) {
+        /**
+         * @return true if operation succeed
+         */
+        internal fun revoke(info: LeasedWrappedTokenInfo): Boolean {
+            val settings = info.connection
+            try {
+                val template = createRestTemplate(settings)
+                // Login and retrieve server token
+                val (token, accessor) = getRealToken(template, settings)
+
+                template.withVaultToken(token)
+                // Revoke agent token
+                revokeAccessor(template, info.accessor)
+                // Revoke server token
+                revokeAccessor(template, accessor)
+                return true
+            } catch(e: Exception) {
+                LOG.warnAndDebugDetails("Failed to revoke token", e)
+            }
+            return false
+        }
+
+        private fun getRealToken(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
+            val options = AppRoleAuthenticationOptions.builder()
+                    .path("approle")
+                    .roleId(settings.roleId)
+                    .secretId(settings.secretId)
+                    .build()
+
+            val login = getAppRoleLogin(options.roleId, options.secretId.nullIfEmpty())
+            try {
+                val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
+                val response = template.postForObject(uri, login, VaultResponse::class.java)
+                val auth = response.auth
+                val token = auth["client_token"] as? String ?: throw VaultException("Vault hasn't returned token")
+                val accessor = auth["accessor"] as? String ?: throw VaultException("Vault hasn't returned token accessor")
+                return token to accessor
+            } catch (e: HttpStatusCodeException) {
+                throw ConnectionException("Cannot login using AppRole: ${getError(e)}")
+            }
+        }
+
+        /**
+         * @return true if operation succeed
+         */
+        private fun revokeAccessor(template: RestTemplate, accessor: String): Boolean {
+            val entity = template.postForEntity("/auth/token/revoke-accessor", mapOf("accessor" to accessor), VaultResponse::class.java)
+            return entity.statusCode == HttpStatus.NO_CONTENT
+        }
+
+        private fun getAppRoleLogin(roleId: String, secretId: String?): Map<String, String> {
+            val login = HashMap<String, String>()
+            login.put("role_id", roleId)
+            if (secretId != null) {
+                login.put("secret_id", secretId)
+            }
+            return login
+        }
+
+        private fun getError(e: HttpStatusCodeException): String {
+            val contentType: MediaType?
+            val body = e.responseBodyAsString
+            try {
+                contentType = e.responseHeaders?.contentType
+            } catch(_: Exception) {
+                return body
+            }
+            if (MediaType.APPLICATION_JSON.includes(contentType)) {
+                val json = body
+                try {
+                    val map = Gson().fromJson(json, JsonObject::class.java)
+                    if (map.has("errors")) {
+                        return map.getAsJsonArray("errors").joinToString { it.asString }
+                    }
+                } catch (e: JsonParseException) {
+                }
+            }
+            return body
         }
     }
 
     // TODO: Support server restart
-    private val myBuildsTokens: MutableMap<Long, LeasedWrappedTokenInfo> = HashMap()
-    private val myPendingRemoval: MutableSet<LeasedWrappedTokenInfo> = HashSet()
+    private val myBuildsTokens: MutableMap<Long, LeasedWrappedTokenInfo> = ConcurrentHashMap()
+    private val myPendingRemoval: MutableSet<LeasedWrappedTokenInfo> = ConcurrentHashSet()
 
     fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String {
         val info = myBuildsTokens[build.buildId]
@@ -67,9 +130,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 .roleId(settings.roleId)
                 .secretId(settings.secretId)
                 .build()
-        val endpoint = VaultEndpoint.from(URI.create(settings.url))
-        val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE) // HttpComponents.usingHttpComponents(options, sslConfiguration)
-        val template = createRestTemplate(endpoint, factory)
+        val template = createRestTemplate(settings)
 
         val login = getAppRoleLogin(options.roleId, options.secretId.nullIfEmpty())
 
@@ -117,39 +178,6 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     class ConnectionException(message: String) : Exception(message)
 
 
-    private fun getAppRoleLogin(roleId: String, secretId: String?): Map<String, String> {
-        val login = HashMap<String, String>()
-        login.put("role_id", roleId)
-        if (secretId != null) {
-            login.put("secret_id", secretId)
-        }
-        return login
-    }
-
-    private fun getError(e: HttpStatusCodeException): String {
-        val contentType: MediaType?
-        val body = e.responseBodyAsString
-        try {
-            contentType = e.responseHeaders?.contentType
-        } catch(_: Exception) {
-            return body
-        }
-        if (MediaType.APPLICATION_JSON.includes(contentType)) {
-            val json = body
-            try {
-                val map = Gson().fromJson(json, JsonObject::class.java)
-                if (map.has("errors")) {
-                    return map.getAsJsonArray("errors").joinToString { it.asString }
-                }
-            } catch (e: JsonParseException) {
-            }
-        }
-        return body
-    }
-}
-
-private fun String?.nullIfEmpty(): String? {
-    return StringUtil.nullIfEmpty(this)
 }
 
 data class LeasedWrappedTokenInfo(val wrapped: String, val accessor: String, val connection: VaultFeatureSettings) {
