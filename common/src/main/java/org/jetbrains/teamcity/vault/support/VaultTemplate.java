@@ -34,6 +34,7 @@ import org.springframework.vault.client.VaultResponses;
 import org.springframework.vault.core.*;
 import org.springframework.vault.support.VaultResponse;
 import org.springframework.vault.support.VaultResponseSupport;
+import org.springframework.vault.support.VaultToken;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
@@ -54,6 +55,8 @@ import java.util.Map;
  */
 public class VaultTemplate implements InitializingBean, VaultOperations, DisposableBean {
 
+    private VaultEndpoint endpoint;
+    private ClientHttpRequestFactory requestFactory;
     private SessionManager sessionManager;
 
     private RestTemplate sessionTemplate;
@@ -109,11 +112,27 @@ public class VaultTemplate implements InitializingBean, VaultOperations, Disposa
                 "ClientHttpRequestFactory must not be null");
         Assert.notNull(sessionManager, "SessionManager must not be null");
 
+        this.endpoint = vaultEndpoint;
+        this.requestFactory = clientHttpRequestFactory;
+
         this.sessionManager = sessionManager;
         this.dedicatedSessionManager = false;
 
         this.sessionTemplate = createSessionTemplate(vaultEndpoint, clientHttpRequestFactory);
         this.plainTemplate = UtilKt.createRestTemplate(vaultEndpoint, clientHttpRequestFactory);
+    }
+
+    private VaultTemplate(VaultTemplate origin, final String wrapTTL) {
+        this(origin.endpoint, origin.requestFactory, origin.sessionManager);
+        final ClientHttpRequestInterceptor interceptor = new ClientHttpRequestInterceptor() {
+            @Override
+            public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+                request.getHeaders().add("X-Vault-Wrap-TTL", wrapTTL);
+                return execution.execute(request, body);
+            }
+        };
+        plainTemplate.getInterceptors().add(interceptor);
+        sessionTemplate.getInterceptors().add(interceptor);
     }
 
     private RestTemplate createSessionTemplate(VaultEndpoint endpoint,
@@ -127,8 +146,13 @@ public class VaultTemplate implements InitializingBean, VaultOperations, Disposa
             public ClientHttpResponse intercept(HttpRequest request, byte[] body,
                                                 ClientHttpRequestExecution execution) throws IOException {
 
-                request.getHeaders().add(VaultHttpHeaders.VAULT_TOKEN,
-                        sessionManager.getSessionToken().getToken());
+                final VaultToken sessionToken = sessionManager.getSessionToken();
+                if (sessionToken != null) {
+                    final String token = sessionToken.getToken();
+                    if (token != null) {
+                        request.getHeaders().add(VaultHttpHeaders.VAULT_TOKEN, token);
+                    }
+                }
 
                 return execution.execute(request, body);
             }
@@ -161,6 +185,10 @@ public class VaultTemplate implements InitializingBean, VaultOperations, Disposa
         if (dedicatedSessionManager && sessionManager instanceof DisposableBean) {
             ((DisposableBean) sessionManager).destroy();
         }
+    }
+
+    public VaultTemplate withWrappedResponses(String wrapTTL) {
+        return new VaultTemplate(this, wrapTTL);
     }
 
     @Override

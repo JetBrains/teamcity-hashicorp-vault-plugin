@@ -11,12 +11,19 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.EventDispatcher
 import org.jetbrains.teamcity.vault.*
-import org.springframework.http.*
+import org.jetbrains.teamcity.vault.support.VaultTemplate
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
+import org.springframework.vault.client.VaultEndpoint
+import org.springframework.vault.config.ClientHttpRequestFactoryFactory
+import org.springframework.vault.support.ClientOptions
+import org.springframework.vault.support.SslConfiguration
 import org.springframework.vault.support.VaultResponse
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
+import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 
 class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
@@ -122,19 +129,15 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                     .roleId(settings.roleId)
                     .secretId(settings.secretId)
                     .build()
-            val template = createRestTemplate(settings)
+            val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
+            val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)!!
+
+            val template = VaultTemplate(endpoint, factory, DummySessionManager()).withWrappedResponses("10m")
 
             val login = getAppRoleLogin(options.roleId, options.secretId.nullIfEmpty())
 
             try {
-                val headers = HttpHeaders()
-                headers["X-Vault-Wrap-TTL"] = "10m"
-                val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
-                val request = RequestEntity(login, headers, HttpMethod.POST, uri)
-
-                val response = template.exchange(request, VaultResponse::class.java)
-
-                val vaultResponse = response.body
+                val vaultResponse = template.write("auth/${options.path}/login", login)
 
                 val wrap = vaultResponse.wrapInfo
 
