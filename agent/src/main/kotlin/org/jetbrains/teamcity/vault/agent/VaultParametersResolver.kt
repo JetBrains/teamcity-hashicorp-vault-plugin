@@ -35,6 +35,8 @@ class VaultParametersResolver {
         val replacements = doFetchAndPrepareReplacements(settings, token, parameters)
 
         replaceParametersValues(build, replacements)
+
+        replacements.values.forEach { build.passwordReplacer.addPassword(it) }
     }
 
     fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>): HashMap<String, String> {
