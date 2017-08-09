@@ -26,6 +26,10 @@ object VaultReferencesUtil {
         }
     }
 
+    @JvmStatic fun getVaultPath(ref: String): String {
+        return ref.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX).ensureHasPrefix("/")
+    }
+
     private fun getVaultReferences(value: String): Collection<String> {
         if (!value.contains(VaultConstants.VAULT_PARAMETER_PREFIX)) return emptyList()
 

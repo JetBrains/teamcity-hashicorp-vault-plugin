@@ -5,10 +5,10 @@ import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
 import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.Constants
-import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.VaultReferencesUtil
 import org.jetbrains.teamcity.vault.ensureHasPrefix
+import org.jetbrains.teamcity.vault.sizeAndPluralize
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.vault.authentication.SimpleSessionManager
 import org.springframework.vault.client.VaultEndpoint
@@ -27,18 +27,17 @@ class VaultParametersResolver {
     }
 
     fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {
-        val values = getReleatedParameterValues(build)
         val (referenceKeys, references) = getReleatedParameterReferences(build)
-        if (values.isEmpty() && references.isEmpty()) return
+        if (references.isEmpty()) {
+            LOG.info("There's nothing to resolve")
+            return
+        }
+        LOG.info("${"reference".sizeAndPluralize(references)} to resolve: $references")
 
-        LOG.info("${values.size} Values to resolve: $values")
-        LOG.info("${references.size} References to resolve: $references")
-
-        val parameters = (values + references).map { VaultParameter.extract(it.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX).ensureHasPrefix("/")) }
+        val parameters = references.map { VaultParameter.extract(VaultReferencesUtil.getVaultPath(it)) }
 
         val replacements = doFetchAndPrepareReplacements(settings, token, parameters)
 
-        replaceParametersValues(build, replacements)
         replaceParametersReferences(build, referenceKeys, replacements)
 
         replacements.values.forEach { build.passwordReplacer.addPassword(it) }
@@ -76,14 +75,6 @@ class VaultParametersResolver {
             replacements[parameter.full] = value
         }
         return replacements
-    }
-
-    private fun getReleatedParameterValues(build: AgentRunningBuild): Collection<String> {
-        val predicate: (String) -> Boolean = { it.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX) }
-        val values = HashSet<String>()
-        build.sharedConfigParameters.values.filterTo(values, predicate)
-        build.sharedBuildParameters.allParameters.values.filterTo(values, predicate)
-        return values.sorted()
     }
 
     private fun getReleatedParameterReferences(build: AgentRunningBuild): Pair<Collection<String>, Collection<String>> {
@@ -139,28 +130,6 @@ class VaultParametersResolver {
         } catch(e: Exception) {
             LOG.warnAndDebugDetails("Cannot extract '$jsonPath' data from response", e)
             return null
-        }
-    }
-
-
-    private fun replaceParametersValues(build: AgentRunningBuild, replacements: HashMap<String, String>) {
-        for ((k, v) in HashMap(build.sharedConfigParameters)) {
-            if (!v.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX)) continue
-            val replacement = replacements[v.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX)]
-            if (replacement != null) {
-                build.addSharedConfigParameter(k, replacement)
-            }
-        }
-        for ((k, v) in HashMap(build.sharedBuildParameters.allParameters)) {
-            if (!v.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX)) continue
-            val replacement = replacements[v.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX)]
-            if (replacement != null) {
-                when {
-                    k.startsWith(Constants.ENV_PREFIX) -> build.addSharedEnvironmentVariable(k.removePrefix(Constants.ENV_PREFIX), replacement)
-                    k.startsWith(Constants.SYSTEM_PREFIX) -> build.addSharedSystemProperty(k.removePrefix(Constants.SYSTEM_PREFIX), replacement)
-                    else -> build.addSharedConfigParameter(k, replacement)
-                }
-            }
         }
     }
 

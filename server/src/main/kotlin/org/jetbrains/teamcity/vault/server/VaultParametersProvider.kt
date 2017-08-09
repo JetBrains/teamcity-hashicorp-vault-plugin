@@ -14,13 +14,9 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
         internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {
             val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
             val parameters = build.buildOwnParameters
-            return buildFeature != null || isShouldSetConfigParameters(parameters) || isShouldSetEnvParameters(parameters) || hasVaultParameters(build)
+            return buildFeature != null || isShouldSetConfigParameters(parameters) || isShouldSetEnvParameters(parameters) || VaultReferencesUtil.hasReferences(build.parametersProvider.all)
         }
 
-        private fun hasVaultParameters(build: SBuild): Boolean {
-            val parameters = build.parametersProvider.all
-            return VaultReferencesUtil.hasReferences(parameters) || parameters.any { it.value.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX) }
-        }
     }
 
     override fun getParameters(build: SBuild, emulationMode: Boolean): Map<String, String> {

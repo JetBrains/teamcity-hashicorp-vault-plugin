@@ -109,3 +109,7 @@ fun String?.nullIfEmpty(): String? {
 fun String.ensureHasPrefix(prefix: String): String {
     return if (!this.startsWith(prefix)) "$prefix$this" else this
 }
+
+fun String.pluralize(size: Int) = StringUtil.pluralize(this, size)
+fun String.pluralize(collection: Collection<Any>) = this.pluralize(collection.size)
+fun String.sizeAndPluralize(collection: Collection<Any>) = "${collection.size} " + this.pluralize(collection)
