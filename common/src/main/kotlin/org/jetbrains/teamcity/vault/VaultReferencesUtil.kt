@@ -26,7 +26,7 @@ object VaultReferencesUtil {
         }
     }
 
-    @JvmStatic fun getVaultReferences(value: String): Collection<String> {
+    private fun getVaultReferences(value: String): Collection<String> {
         if (!value.contains(VaultConstants.VAULT_PARAMETER_PREFIX)) return emptyList()
 
         val references = ArrayList<String>(1)
@@ -52,7 +52,8 @@ object VaultReferencesUtil {
         ReferencesResolverUtil.resolve(value, object : ReferencesResolverUtil.ReferencesResolverListener {
             override fun appendReference(referenceKey: String): Boolean {
                 if (!referenceKey.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX)) return false
-                val replacement = replacements[referenceKey.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX)] ?: return false
+                val unprefixed = referenceKey.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX).ensureHasPrefix("/")
+                val replacement = replacements[unprefixed] ?: return false
                 result.append(replacement)
                 return true
             }
