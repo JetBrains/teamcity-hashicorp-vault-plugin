@@ -71,6 +71,8 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
         }
         logger.message("Vault token successfully fetched")
 
+        runningBuild.passwordReplacer.addPassword(token)
+
         if (isShouldSetConfigParameters(parameters)) {
             runningBuild.addSharedConfigParameter(VaultConstants.AGENT_CONFIG_PROP, token)
         }
