@@ -7,8 +7,8 @@ import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.Constants
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import org.jetbrains.teamcity.vault.resolveVaultReferences
-import org.jetbrains.teamcity.vault.collectRerefences
+import org.jetbrains.teamcity.vault.VaultReferencesUtil
+import org.jetbrains.teamcity.vault.ensureHasPrefix
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.vault.authentication.SimpleSessionManager
 import org.springframework.vault.client.VaultEndpoint
@@ -89,8 +89,8 @@ class VaultParametersResolver {
     private fun getReleatedParameterReferences(build: AgentRunningBuild): Pair<Collection<String>, Collection<String>> {
         val references = HashSet<String>()
         val keys = HashSet<String>()
-        collectRerefences(build.sharedConfigParameters, references, keys)
-        collectRerefences(build.sharedBuildParameters.allParameters, references, keys)
+        VaultReferencesUtil.collect(build.sharedConfigParameters, references, keys)
+        VaultReferencesUtil.collect(build.sharedBuildParameters.allParameters, references, keys)
         return keys to references.sorted()
     }
 
@@ -168,7 +168,7 @@ class VaultParametersResolver {
         val sharedConfigParameters = build.sharedConfigParameters
         for (k in keys) {
             val value = sharedConfigParameters[k] ?: continue
-            val resolved = resolveVaultReferences(value, replacements)
+            val resolved = VaultReferencesUtil.resolve(value, replacements)
             if (resolved != null) {
                 build.addSharedConfigParameter(k, resolved)
             }
@@ -176,7 +176,7 @@ class VaultParametersResolver {
         val allParameters = build.sharedBuildParameters.allParameters
         for (k in keys) {
             val value = allParameters[k] ?: continue
-            val resolved = resolveVaultReferences(value, replacements)
+            val resolved = VaultReferencesUtil.resolve(value, replacements)
             if (resolved != null) {
                 when {
                     k.startsWith(Constants.ENV_PREFIX) -> build.addSharedEnvironmentVariable(k.removePrefix(Constants.ENV_PREFIX), resolved)

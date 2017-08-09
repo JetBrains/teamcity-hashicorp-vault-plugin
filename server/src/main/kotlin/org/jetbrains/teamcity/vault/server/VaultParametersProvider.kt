@@ -18,9 +18,8 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
         }
 
         private fun hasVaultParameters(build: SBuild): Boolean {
-            val references = HashSet<String>()
-            collectRerefences(build.parametersProvider.all, references)
-            return references.isNotEmpty() || build.parametersProvider.all.any { it.value.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX) }
+            val parameters = build.parametersProvider.all
+            return VaultReferencesUtil.hasReferences(parameters) || parameters.any { it.value.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX) }
         }
     }
 
@@ -81,7 +80,7 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
         if (isShouldSetConfigParameters(parameters)) {
             exposed += VaultConstants.AGENT_CONFIG_PROP
         }
-        collectRerefences(parameters, exposed)
+        VaultReferencesUtil.collect(parameters, exposed)
         return exposed
     }
 }

@@ -1,6 +1,5 @@
 package org.jetbrains.teamcity.vault
 
-import jetbrains.buildServer.parameters.ReferencesResolverUtil
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.VersionComparatorUtil
 import org.jetbrains.teamcity.vault.support.MappingJackson2HttpMessageConverter
@@ -107,56 +106,6 @@ fun String?.nullIfEmpty(): String? {
     return StringUtil.nullIfEmpty(this)
 }
 
-
-fun collectRerefences(parameters: Map<String, String>, references: MutableCollection<String>, keys: MutableCollection<String>? = null) {
-    for ((key, value) in parameters) {
-        if (!ReferencesResolverUtil.mayContainReference(value)) continue
-        val refs = getVaultReferences(value)
-        if (refs.isNotEmpty()) {
-            keys?.add(key)
-            references.addAll(refs)
-        }
-    }
-}
-
-fun getVaultReferences(value: String): Collection<String> {
-    if (!ReferencesResolverUtil.mayContainReference(value)) return emptyList()
-    if (!value.contains(VaultConstants.VAULT_PARAMETER_PREFIX)) return emptyList()
-
-    val references = ArrayList<String>(1)
-    ReferencesResolverUtil.resolve(value, object : ReferencesResolverUtil.ReferencesResolverListener {
-        override fun appendText(text: String) {}
-
-        override fun appendReference(referenceKey: String): Boolean {
-            if (referenceKey.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX)) {
-                references.add(referenceKey)
-            }
-            return true
-        }
-
-    })
-    return references
-}
-
-
-/**
- * @return value with resolved references or null if string is not modified
- */
-fun resolveVaultReferences(value: String, replacements: Map<String, String>): String? {
-    val result = StringBuilder(value.length)
-    ReferencesResolverUtil.resolve(value, object : ReferencesResolverUtil.ReferencesResolverListener {
-        override fun appendReference(referenceKey: String): Boolean {
-            if (!referenceKey.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX)) return false
-            val replacement = replacements[referenceKey.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX)] ?: return false
-            result.append(replacement)
-            return true
-        }
-
-        override fun appendText(text: String) {
-            result.append(text)
-        }
-    })
-    val resolved = result.toString()
-    if (resolved == value) return null
-    return resolved
+fun String.ensureHasPrefix(prefix: String): String {
+    return if (!this.startsWith(prefix)) "$prefix$this" else this
 }
