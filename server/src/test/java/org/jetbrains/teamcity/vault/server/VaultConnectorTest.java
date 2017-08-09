@@ -11,7 +11,6 @@ import org.junit.Test;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.vault.authentication.CubbyholeAuthentication;
 import org.springframework.vault.authentication.CubbyholeAuthenticationOptions;
 import org.springframework.vault.authentication.LifecycleAwareSessionManager;
@@ -46,7 +45,7 @@ public class VaultConnectorTest {
         Pair<String, String> credentials = getAppRoleCredentials(template, "auth/approle/role/testrole");
 
 
-        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(vault.getUrl(), true, credentials.getFirst(), credentials.getSecond()));
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(vault.getUrl(), true, credentials.getFirst(), credentials.getSecond(), true));
 
         then(wrapped.getFirst()).isNotNull();
         then(wrapped.getSecond()).isNotNull();
@@ -56,7 +55,7 @@ public class VaultConnectorTest {
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped.getFirst()))
                 .build();
-        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(vault.getUrl(), true, "", ""));
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(vault.getUrl(), true, "", "", true));
         final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
         final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 

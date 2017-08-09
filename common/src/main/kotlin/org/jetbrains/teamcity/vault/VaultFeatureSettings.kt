@@ -1,6 +1,6 @@
 package org.jetbrains.teamcity.vault
 
-data class VaultFeatureSettings(val url: String, val verifySsl: Boolean, val roleId: String, val secretId: String, val enabled: Boolean = false) {
+data class VaultFeatureSettings(val url: String, val verifySsl: Boolean, val roleId: String, val secretId: String, val enabled: Boolean = true) {
     constructor(map: Map<String, String>) : this(
             map[VaultConstants.FeatureSettings.URL] ?: "",
             map[VaultConstants.FeatureSettings.VERIFY_SSL]?.toBoolean() ?: false,
