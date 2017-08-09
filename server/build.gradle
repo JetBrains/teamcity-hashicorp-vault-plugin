@@ -38,10 +38,6 @@ teamcity {
         baseHomeDir = project.serversDir
         baseDataDir = 'data'
 
-        teamcity10_0 {
-            version = '10.0.5'
-        }
-
         teamcity2017_1 {
             version = '2017.1.3'
             serverOptions = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5600"
