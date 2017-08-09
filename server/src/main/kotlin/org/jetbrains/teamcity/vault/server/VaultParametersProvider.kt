@@ -5,10 +5,7 @@ import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
-import org.jetbrains.teamcity.vault.VaultConstants
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import org.jetbrains.teamcity.vault.isShouldSetConfigParameters
-import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
+import org.jetbrains.teamcity.vault.*
 
 class VaultParametersProvider(private val connector: VaultConnector) : AbstractBuildParametersProvider() {
     companion object {
@@ -73,14 +70,16 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {
         if (build.isFinished) return emptyList()
         build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull() ?: return emptyList()
-        val exposed = ArrayList<String>(3)
-        if (isShouldSetEnvParameters(build.buildOwnParameters)) {
+        val exposed = HashSet<String>()
+        val parameters = build.buildOwnParameters
+        if (isShouldSetEnvParameters(parameters)) {
             exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_TOKEN
             exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_ADDR
         }
-        if (isShouldSetConfigParameters(build.buildOwnParameters)) {
+        if (isShouldSetConfigParameters(parameters)) {
             exposed += VaultConstants.AGENT_CONFIG_PROP
         }
+        collectRerefences(parameters, exposed)
         return exposed
     }
 }
