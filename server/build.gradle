@@ -11,6 +11,8 @@ ext {
 dependencies {
     compile project(':common')
 
+    provided "org.jetbrains.teamcity.internal:web:${teamcityVersion}"
+
     agent project(path: ':agent', configuration: 'plugin')
 
     testCompile project(path: ':common', configuration: 'testOutput')
