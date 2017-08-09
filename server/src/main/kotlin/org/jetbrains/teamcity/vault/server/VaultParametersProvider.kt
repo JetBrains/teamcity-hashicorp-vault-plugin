@@ -17,23 +17,25 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
             return buildFeature != null || isShouldSetConfigParameters(parameters) || isShouldSetEnvParameters(parameters) || VaultReferencesUtil.hasReferences(build.parametersProvider.all)
         }
 
+        private fun getFeature(build: SBuild): VaultFeatureSettings? {
+            val project = build.buildType?.project
+            val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
+            val projectFeature = project?.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE)?.firstOrNull()
+            if (buildFeature != null) {
+                // For compatibility
+                return VaultFeatureSettings(buildFeature.parameters)
+            } else if (projectFeature != null) {
+                return VaultFeatureSettings(projectFeature.parameters)
+            } else return null
+        }
+
     }
 
     override fun getParameters(build: SBuild, emulationMode: Boolean): Map<String, String> {
         if (build.isFinished) return emptyMap()
-        val buildType = build.buildType ?: return emptyMap()
-        val project = buildType.project
 
-        val settings: VaultFeatureSettings
-
-        val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
-        val projectFeature = project.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
-        if (buildFeature != null) {
-            // For compatibility
-            settings = VaultFeatureSettings(buildFeature.parameters)
-        } else if (projectFeature != null) {
-            settings = VaultFeatureSettings(projectFeature.parameters)
-        } else return emptyMap()
+        val settings = getFeature(build) ?: return emptyMap()
+        if (!settings.enabled) return emptyMap()
 
         if (!isShouldEnableVaultIntegration(build)) {
             LOG.debug("There's no need to fetch vault parameter for build $build")
@@ -66,7 +68,10 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
 
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {
         if (build.isFinished) return emptyList()
-        build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull() ?: return emptyList()
+
+        val settings = getFeature(build) ?: return emptyList()
+        if (!settings.enabled) return emptyList()
+
         val exposed = HashSet<String>()
         val parameters = build.buildOwnParameters
         if (isShouldSetEnvParameters(parameters)) {

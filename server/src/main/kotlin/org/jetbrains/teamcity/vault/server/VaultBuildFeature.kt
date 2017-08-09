@@ -17,11 +17,7 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
     override fun getEditParametersUrl(): String = descriptor.getPluginResourcesPath("editFeatureVault.jsp")
 
     override fun getDefaultParameters(): Map<String, String> {
-        return mapOf(
-                FeatureSettings.AGENT_SUPPORT_REQUIREMENT to FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE,
-                FeatureSettings.URL to "http://localhost:8200",
-                FeatureSettings.VERIFY_SSL to "true"
-        )
+        return VaultFeatureSettings.getDefaultParameters()
     }
 
     override fun describeParameters(params: MutableMap<String, String>): String {
@@ -59,5 +55,24 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
         val result = HashMap(parameters)
         result.remove(FeatureSettings.SECRET_ID)
         return result
+    }
+
+    companion object {
+        fun getParametersProcessor(): PropertiesProcessor {
+            return PropertiesProcessor {
+                val errors = ArrayList<InvalidProperty>()
+                VaultFeatureSettings(it)
+                if (it[FeatureSettings.URL].isNullOrBlank()) {
+                    errors.add(InvalidProperty(FeatureSettings.URL, "Should not be empty"))
+                }
+                if (it[FeatureSettings.ROLE_ID].isNullOrBlank()) {
+                    errors.add(InvalidProperty(FeatureSettings.ROLE_ID, "Should not be empty"))
+                }
+                if (it[FeatureSettings.SECRET_ID].isNullOrBlank()) {
+                    errors.add(InvalidProperty(FeatureSettings.SECRET_ID, "Should not be empty"))
+                }
+                return@PropertiesProcessor errors
+            }
+        }
     }
 }
