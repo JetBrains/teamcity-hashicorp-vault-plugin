@@ -2,6 +2,7 @@
 <%@ include file="/include-internal.jsp" %>
 <jsp:useBean id="keys" class="org.jetbrains.teamcity.vault.server.VaultJspKeys"/>
 <props:hiddenProperty name="teamcity.vault.requirement"/>
+<props:hiddenProperty name="enabled" value="true"/>
 <tr class="noBorder">
     <th><label for="${keys.URL}">Vault URL:</label></th>
     <td>
