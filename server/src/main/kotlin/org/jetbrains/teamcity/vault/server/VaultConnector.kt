@@ -81,7 +81,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 val accessor = auth["accessor"] as? String ?: throw VaultException("Vault hasn't returned token accessor")
                 return token to accessor
             } catch (e: HttpStatusCodeException) {
-                throw ConnectionException("Cannot login using AppRole: ${getError(e)}")
+                throw ConnectionException("Cannot login using AppRole: ${getError(e)}", e)
             }
         }
 
@@ -145,25 +145,25 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 val accessor = wrap["wrapped_accessor"] ?: throw VaultException("Vault hasn't returned wrapped token accessor")
 
                 return token to accessor
-            } catch (e: HttpStatusCodeException) {
-                val err = getError(e)
-                var message: String? = null
-                if (err.startsWith("failed to validate SecretID: ")) {
-                    val suberror = err.removePrefix("failed to validate SecretID: ")
-                    if (suberror.contains("invalid secret_id")) {
-                        message = "Cannot login using AppRole, seems SecretID is incorrect or expired."
-                    } else if (suberror.contains("failed to find secondary index for role_id")) {
-                        message = "Cannot login using AppRole, seems RoleID is incorrect or role was deleted."
+            } catch (e: VaultException) {
+                val cause = e.cause
+                if (cause is HttpStatusCodeException) {
+                    val err = getError(cause)
+                    var message: String? = null
+                    if (err.startsWith("failed to validate SecretID: ")) {
+                        val suberror = err.removePrefix("failed to validate SecretID: ")
+                        if (suberror.contains("invalid secret_id")) {
+                            message = "Cannot login using AppRole, seems SecretID is incorrect or expired."
+                        } else if (suberror.contains("failed to find secondary index for role_id")) {
+                            message = "Cannot login using AppRole, seems RoleID is incorrect or role was deleted."
+                        }
                     }
+                    if (message == null) {
+                        message = "Cannot login using AppRole: $err"
+                    }
+                    throw ConnectionException(message, cause)
                 }
-                if (message == null) {
-                    message = "Cannot login using AppRole: $err"
-                }
-                //            if (true) {
-                //                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", message))
-                //            } else {
-                throw ConnectionException(message)
-                //            }
+                throw e
             }
         }
 
@@ -182,14 +182,12 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo(token, accessor, settings)
             return token
         } catch(e: Exception) {
-            myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo.FAILED_TO_FETCH;
+            myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
             throw e
         }
     }
 
-    class ConnectionException(message: String) : Exception(message)
-
-
+    class ConnectionException(message: String, cause: Throwable) : Exception(message, cause)
 }
 
 data class LeasedWrappedTokenInfo(val wrapped: String, val accessor: String, val connection: VaultFeatureSettings) {
