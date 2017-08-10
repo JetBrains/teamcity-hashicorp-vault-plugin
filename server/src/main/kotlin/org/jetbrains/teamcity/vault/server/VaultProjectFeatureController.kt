@@ -44,22 +44,23 @@ class VaultProjectFeatureController(server: SBuildServer, wcm: WebControllerMana
         }
 
         val feature = project.getOwnFeaturesOfType(FeatureSettings.FEATURE_TYPE).firstOrNull()
-        val enabled = VaultFeatureSettings(properties).enabled
-        var persist = false;
+        val settings = VaultFeatureSettings(properties)
+        val enabled = !settings.roleId.isNullOrBlank() && !settings.secretId.isNullOrBlank() && !settings.url.isNullOrBlank()
+        var persist = false
 
         if (feature == null) {
             if (enabled) {
                 project.addFeature(FeatureSettings.FEATURE_TYPE, properties)
-                persist = true;
+                persist = true
             }
         } else {
             if (enabled) {
                 project.updateFeature(feature.id, feature.type, properties)
-                persist = true;
+                persist = true
             } else {
                 //TODO: Descide wheter delete or diable feature
                 project.removeFeature(feature.id)
-                persist = true;
+                persist = true
             }
         }
         if (persist) {

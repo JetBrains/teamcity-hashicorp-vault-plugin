@@ -3,8 +3,6 @@ package org.jetbrains.teamcity.vault.server
 import org.jetbrains.teamcity.vault.VaultConstants
 
 class VaultJspKeys {
-    val ENABLED = VaultConstants.FeatureSettings.ENABLED
-
     val URL = VaultConstants.FeatureSettings.URL
     val VERIFY_SSL = VaultConstants.FeatureSettings.VERIFY_SSL
 

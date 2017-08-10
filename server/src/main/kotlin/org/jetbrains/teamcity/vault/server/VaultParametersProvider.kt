@@ -23,7 +23,7 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
             val projectFeature = project?.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE)?.firstOrNull()
             if (buildFeature != null) {
                 // For compatibility
-                return VaultFeatureSettings(buildFeature.parameters).ensureEnabled()
+                return VaultFeatureSettings(buildFeature.parameters)
             } else if (projectFeature != null) {
                 return VaultFeatureSettings(projectFeature.parameters)
             } else return null
@@ -35,7 +35,6 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
         if (build.isFinished) return emptyMap()
 
         val settings = getFeature(build) ?: return emptyMap()
-        if (!settings.enabled) return emptyMap()
 
         if (!isShouldEnableVaultIntegration(build)) {
             LOG.debug("There's no need to fetch vault parameter for build $build")
@@ -49,9 +48,6 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
         } else {
             wrapped = try {
                 connector.requestWrappedToken(build, settings)
-            } catch(e: VaultConnector.ConnectionException) {
-                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", e.message))
-                VaultConstants.SPECIAL_FAILED_TO_FETCH
             } catch(e: Throwable) {
                 val message = "Failed to fetch Vault wrapped token: ${e.message}"
                 LOG.warnAndDebugDetails(message, e)
@@ -69,8 +65,7 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {
         if (build.isFinished) return emptyList()
 
-        val settings = getFeature(build) ?: return emptyList()
-        if (!settings.enabled) return emptyList()
+        getFeature(build) ?: return emptyList()
 
         val exposed = HashSet<String>()
         val parameters = build.buildOwnParameters

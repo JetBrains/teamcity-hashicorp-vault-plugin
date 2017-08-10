@@ -22,7 +22,7 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
     }
 
     override fun describeParameters(params: MutableMap<String, String>): String {
-        val settings = VaultFeatureSettings(params).ensureEnabled()
+        val settings = VaultFeatureSettings(params)
         return buildString {
             append("Vault URL: ${settings.url}")
             if (!settings.verifySsl) {
@@ -33,7 +33,6 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
 
     override fun getParametersProcessor(): PropertiesProcessor? {
         return PropertiesProcessor {
-            it[VaultConstants.FeatureSettings.ENABLED] = true.toString()
             return@PropertiesProcessor Companion.getParametersProcessor().process(it)
         }
     }

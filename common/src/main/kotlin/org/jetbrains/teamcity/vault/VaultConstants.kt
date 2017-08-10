@@ -20,9 +20,6 @@ object VaultConstants {
     object FeatureSettings {
         @JvmField val FEATURE_TYPE = "teamcity-vault"
 
-        // Project feature
-        @JvmField val ENABLED = "enabled"
-
         // Feature settings
         @JvmField val URL = "url"
         @JvmField val VERIFY_SSL = "verify-ssl"

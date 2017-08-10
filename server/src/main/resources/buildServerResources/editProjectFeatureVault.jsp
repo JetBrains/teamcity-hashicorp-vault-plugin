@@ -34,15 +34,6 @@
     <input type="hidden" id="projectId" name="projectId" value="${currentProject.externalId}">
     <table class="runnerFormTable" style="width: 99%">
         <tr class="noBorder">
-            <th><label for="${keys.ENABLED}">Enabled</label></th>
-            <td>
-                <props:checkboxProperty name="${keys.ENABLED}"/>
-                <span class="error" id="error_${keys.URL}"/>
-                <%--<span class="smallNote"></span>--%>
-            </td>
-        </tr>
-
-        <tr class="noBorder">
             <th><label for="${keys.URL}">Vault URL:</label></th>
             <td>
                 <props:textProperty name="${keys.URL}"
