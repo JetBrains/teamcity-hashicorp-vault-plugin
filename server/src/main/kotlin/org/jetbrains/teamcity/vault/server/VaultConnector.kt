@@ -149,17 +149,18 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
                     val err = getError(cause)
+                    val prefix = "Cannot log in to HashiCorp Vault using AppRole credentials"
                     var message: String? = null
                     if (err.startsWith("failed to validate SecretID: ")) {
                         val suberror = err.removePrefix("failed to validate SecretID: ")
                         if (suberror.contains("invalid secret_id")) {
-                            message = "Cannot login using AppRole, seems SecretID is incorrect or expired."
+                            message = "$prefix, SecretID is incorrect or expired"
                         } else if (suberror.contains("failed to find secondary index for role_id")) {
-                            message = "Cannot login using AppRole, seems RoleID is incorrect or role was deleted."
+                            message = "$prefix, RoleID is incorrect or there's no such role"
                         }
                     }
                     if (message == null) {
-                        message = "Cannot login using AppRole: $err"
+                        message = "$prefix: $err"
                     }
                     throw ConnectionException(message, cause)
                 }
