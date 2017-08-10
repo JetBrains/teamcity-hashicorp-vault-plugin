@@ -23,7 +23,7 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
             val projectFeature = project?.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE)?.firstOrNull()
             if (buildFeature != null) {
                 // For compatibility
-                return VaultFeatureSettings(buildFeature.parameters)
+                return VaultFeatureSettings(buildFeature.parameters).ensureEnabled()
             } else if (projectFeature != null) {
                 return VaultFeatureSettings(projectFeature.parameters)
             } else return null

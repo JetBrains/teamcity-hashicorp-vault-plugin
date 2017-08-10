@@ -4,6 +4,7 @@ import jetbrains.buildServer.serverSide.BuildFeature
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.PropertiesProcessor
 import jetbrains.buildServer.web.openapi.PluginDescriptor
+import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultConstants.FeatureSettings
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 
@@ -21,7 +22,7 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
     }
 
     override fun describeParameters(params: MutableMap<String, String>): String {
-        val settings = VaultFeatureSettings(params)
+        val settings = VaultFeatureSettings(params).ensureEnabled()
         return buildString {
             append("Vault URL: ${settings.url}")
             if (!settings.verifySsl) {
@@ -32,18 +33,8 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
 
     override fun getParametersProcessor(): PropertiesProcessor? {
         return PropertiesProcessor {
-            val errors = ArrayList<InvalidProperty>()
-            VaultFeatureSettings(it)
-            if (it[FeatureSettings.URL].isNullOrBlank()) {
-                errors.add(InvalidProperty(FeatureSettings.URL, "Should not be empty"))
-            }
-            if (it[FeatureSettings.ROLE_ID].isNullOrBlank()) {
-                errors.add(InvalidProperty(FeatureSettings.ROLE_ID, "Should not be empty"))
-            }
-            if (it[FeatureSettings.SECRET_ID].isNullOrBlank()) {
-                errors.add(InvalidProperty(FeatureSettings.SECRET_ID, "Should not be empty"))
-            }
-            return@PropertiesProcessor errors
+            it[VaultConstants.FeatureSettings.ENABLED] = true.toString()
+            return@PropertiesProcessor Companion.getParametersProcessor().process(it)
         }
     }
 

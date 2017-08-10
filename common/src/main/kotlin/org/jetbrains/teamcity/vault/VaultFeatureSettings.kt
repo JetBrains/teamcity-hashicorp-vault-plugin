@@ -28,4 +28,12 @@ data class VaultFeatureSettings(val url: String, val verifySsl: Boolean, val rol
             )
         }
     }
+
+    fun ensureEnabled(): VaultFeatureSettings {
+        if (enabled) return this
+        val map = HashMap<String, String>()
+        this.toMap(map)
+        map[VaultConstants.FeatureSettings.ENABLED] = true.toString()
+        return VaultFeatureSettings(map)
+    }
 }
