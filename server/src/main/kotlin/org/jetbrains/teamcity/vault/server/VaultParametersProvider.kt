@@ -49,7 +49,7 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
             wrapped = try {
                 connector.requestWrappedToken(build, settings)
             } catch(e: Throwable) {
-                val message = "Failed to fetch Vault wrapped token: ${e.message}"
+                val message = "Failed to fetch HashiCorp Vault wrapped token: ${e.message}"
                 LOG.warnAndDebugDetails(message, e)
                 build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", e.message))
                 VaultConstants.SPECIAL_FAILED_TO_FETCH

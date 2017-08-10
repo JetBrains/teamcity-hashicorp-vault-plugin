@@ -77,8 +77,8 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
                 val response = template.postForObject(uri, login, VaultResponse::class.java)
                 val auth = response.auth
-                val token = auth["client_token"] as? String ?: throw VaultException("Vault hasn't returned token")
-                val accessor = auth["accessor"] as? String ?: throw VaultException("Vault hasn't returned token accessor")
+                val token = auth["client_token"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token")
+                val accessor = auth["accessor"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
                 return token to accessor
             } catch (e: HttpStatusCodeException) {
                 throw ConnectionException("Cannot login using AppRole: ${getError(e)}", e)
@@ -141,8 +141,8 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
                 val wrap = vaultResponse.wrapInfo
 
-                val token = wrap["token"] ?: throw VaultException("Vault hasn't returned wrapped token")
-                val accessor = wrap["wrapped_accessor"] ?: throw VaultException("Vault hasn't returned wrapped token accessor")
+                val token = wrap["token"] ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token")
+                val accessor = wrap["wrapped_accessor"] ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token accessor")
 
                 return token to accessor
             } catch (e: VaultException) {

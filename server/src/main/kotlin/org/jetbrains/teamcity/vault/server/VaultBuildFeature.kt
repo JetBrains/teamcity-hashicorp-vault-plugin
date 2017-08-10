@@ -10,7 +10,7 @@ import org.jetbrains.teamcity.vault.VaultFeatureSettings
 
 class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature() {
     override fun getType(): String = FeatureSettings.FEATURE_TYPE
-    override fun getDisplayName(): String = "Vault Connection"
+    override fun getDisplayName(): String = "HashiCorp Vault Connection"
 
     override fun isMultipleFeaturesPerBuildTypeAllowed() = false
     override fun getPlaceToShow() = PlaceToShow.GENERAL

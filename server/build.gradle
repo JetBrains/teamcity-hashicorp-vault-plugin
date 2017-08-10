@@ -24,8 +24,8 @@ teamcity {
     server {
         descriptor {
             name = 'teamcity-vault-support'
-            displayName = 'TeamCity Vault Support'
-            description = 'Provides support for Vault Secrets Manager'
+            displayName = 'TeamCity HashiCorp Vault Support'
+            description = 'Provides support for HashiCorp Vault Secrets Manager'
             version = project.version
 
             vendorName = 'Vladislav Rassokhin'
