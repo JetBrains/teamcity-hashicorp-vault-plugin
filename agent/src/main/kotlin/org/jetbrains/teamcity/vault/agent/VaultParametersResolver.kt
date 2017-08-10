@@ -64,12 +64,12 @@ class VaultParametersResolver {
         for (parameter in parameters) {
             val response = responses[parameter.vaultPath]
             if (response == null) {
-                LOG.warn("Cannot resolve '${parameter.full}': data wasn't received from Vault")
+                LOG.warn("Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault")
                 continue
             }
             val value = extract(response, parameter.jsonPath)
             if (value == null) {
-                LOG.warn("Cannot extract '${parameter.full}' from Vault result")
+                LOG.warn("Cannot extract '${parameter.full}' from HashiCorp Vault result")
                 continue
             }
             replacements[parameter.full] = value
@@ -89,7 +89,7 @@ class VaultParametersResolver {
         if (jsonPath == null) {
             val data = response.data
             if (data.isEmpty()) {
-                LOG.warn("There's no data in Vault response")
+                LOG.warn("There's no data in HashiCorp Vault response")
                 return null
             }
             var key: String = "value"
@@ -98,7 +98,7 @@ class VaultParametersResolver {
             }
             val value = data[key]
             if (value == null) {
-                LOG.warn("'$key' is missing in Vault response")
+                LOG.warn("'$key' is missing in HashiCorp Vault response")
                 return null
             }
             if (value !is String) {

@@ -20,9 +20,9 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
     init {
         if (isJava8OrNewer()) {
             dispatcher.addListener(this)
-            LOG.info("Vault intergration enabled")
+            LOG.info("HashiCorp Vault intergration enabled")
         } else {
-            LOG.warn("Vault integration disabled: agent should be running under Java 1.8 or newer")
+            LOG.warn("HashiCorp Vault integration disabled: agent should be running under Java 1.8 or newer")
         }
     }
 
@@ -45,11 +45,11 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
         val logger = runningBuild.buildLogger
         if (wrapped == null || wrapped.isNullOrEmpty()) {
-            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped Vault token not found", null)
+            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token not found", null)
             return
         }
         if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
-            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped Vault token value is incorrect, seems there was error fetching token on TeamCity server side", null)
+            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token value is incorrect, seems there was error fetching token on TeamCity server side", null)
             return
         }
         val token: String
@@ -65,11 +65,11 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
             sessions[runningBuild.buildId] = sessionManager
             token = sessionManager.sessionToken.token
         } catch(e: Exception) {
-            logger.error("Failed to unwrap Vault token: " + e.message)
+            logger.error("Failed to unwrap HashiCorp Vault token: " + e.message)
             logger.exception(e)
             return
         }
-        logger.message("Vault token successfully fetched")
+        logger.message("HashiCorp Vault token successfully fetched")
 
         runningBuild.passwordReplacer.addPassword(token)
 
