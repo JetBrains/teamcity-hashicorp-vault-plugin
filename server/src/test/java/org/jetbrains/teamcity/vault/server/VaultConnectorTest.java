@@ -45,7 +45,7 @@ public class VaultConnectorTest {
         Pair<String, String> credentials = getAppRoleCredentials(template, "auth/approle/role/testrole");
 
 
-        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(vault.getUrl(), true, credentials.getFirst(), credentials.getSecond(), true));
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(vault.getUrl(), true, credentials.getFirst(), credentials.getSecond()));
 
         then(wrapped.getFirst()).isNotNull();
         then(wrapped.getSecond()).isNotNull();
@@ -55,7 +55,7 @@ public class VaultConnectorTest {
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped.getFirst()))
                 .build();
-        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(vault.getUrl(), true, "", "", true));
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(vault.getUrl(), true, "", ""));
         final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
         final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 
