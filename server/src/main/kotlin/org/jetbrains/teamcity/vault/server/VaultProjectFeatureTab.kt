@@ -24,8 +24,8 @@ class VaultProjectFeatureTab(pagePlaces: PagePlaces, descriptor: PluginDescripto
         val parameters = (feature?.parameters ?: default)
 
         val propertiesBean = BasePropertiesBean(parameters, default)
-        propertiesBean.setProperty("enabled", (feature != null).toString())
 
+        model.put("defined", (feature != null).toString())
         model.put("propertiesBean", propertiesBean)
         model.put(PublicKeyUtil.PUBLIC_KEY_PARAM, RSACipher.getHexEncodedPublicKey())
     }

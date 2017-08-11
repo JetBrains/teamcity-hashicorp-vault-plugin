@@ -9,7 +9,6 @@ import jetbrains.buildServer.web.openapi.WebControllerManager
 import jetbrains.buildServer.web.util.SessionUser
 import org.jdom.Element
 import org.jetbrains.teamcity.vault.VaultConstants.FeatureSettings
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
@@ -35,36 +34,34 @@ class VaultProjectFeatureController(server: SBuildServer, wcm: WebControllerMana
         PluginPropertiesUtil.bindPropertiesFromRequest(request, propertiesBean)
         val properties = propertiesBean.properties.toMutableMap()
 
-        val processor = VaultBuildFeature.getParametersProcessor()
-        val errors = ActionErrors()
-        processor.process(properties).forEach { errors.addError(it) }
-        if (errors.hasErrors()) {
-            errors.serialize(xmlResponse)
-            return
-        }
-
         val feature = project.getOwnFeaturesOfType(FeatureSettings.FEATURE_TYPE).firstOrNull()
-        val settings = VaultFeatureSettings(properties)
-        val enabled = !settings.roleId.isNullOrBlank() && !settings.secretId.isNullOrBlank() && !settings.url.isNullOrBlank()
-        var persist = false
+        val action = request.getParameter("do-action")
+        var persist: String? = null
 
-        if (feature == null) {
-            if (enabled) {
-                project.addFeature(FeatureSettings.FEATURE_TYPE, properties)
-                persist = true
+        if (action == "delete") {
+            if (feature != null) {
+                project.removeFeature(feature.id)
+                persist = "Remove HashiCorp Vault feature"
             }
         } else {
-            if (enabled) {
-                project.updateFeature(feature.id, feature.type, properties)
-                persist = true
+            val processor = VaultBuildFeature.getParametersProcessor()
+            val errors = ActionErrors()
+            processor.process(properties).forEach { errors.addError(it) }
+            if (errors.hasErrors()) {
+                errors.serialize(xmlResponse)
+                return
+            }
+
+            if (feature == null) {
+                project.addFeature(FeatureSettings.FEATURE_TYPE, properties)
+                persist = "Add HashiCorp Vault feature"
             } else {
-                //TODO: Descide wheter delete or diable feature
-                project.removeFeature(feature.id)
-                persist = true
+                project.updateFeature(feature.id, feature.type, properties)
+                persist = "Update HashiCorp Vault feature"
             }
         }
-        if (persist) {
-            persister.persist(project, configActionFactory.createAction(SessionUser.getUser(request), project, "Update HashiCorp Vault feature"))
+        if (persist != null) {
+            persister.persist(project, configActionFactory.createAction(SessionUser.getUser(request), project, persist))
         }
     }
 
