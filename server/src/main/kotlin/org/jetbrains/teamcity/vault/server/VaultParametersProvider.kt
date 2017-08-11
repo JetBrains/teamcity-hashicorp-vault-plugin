@@ -4,6 +4,8 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.serverSide.SBuild
+import jetbrains.buildServer.serverSide.SRunningBuild
+import jetbrains.buildServer.serverSide.impl.RunningBuildState
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
 import org.jetbrains.teamcity.vault.*
 
@@ -52,11 +54,17 @@ class VaultParametersProvider(private val connector: VaultConnector) : AbstractB
                 LOG.warn(e.message)
                 LOG.debug(e)
                 build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", e.message))
+                if (build is SRunningBuild) {
+                    build.setInterrupted(RunningBuildState.INTERRUPTED_BY_SYSTEM, null, e.message)
+                }
                 VaultConstants.SPECIAL_FAILED_TO_FETCH
             } catch(e: Throwable) {
                 val message = "Failed to fetch HashiCorp Vault wrapped token: ${e.message}"
                 LOG.warnAndDebugDetails(message, e)
                 build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", e.message))
+                if (build is SRunningBuild) {
+                    build.setInterrupted(RunningBuildState.INTERRUPTED_BY_SYSTEM, null, message)
+                }
                 VaultConstants.SPECIAL_FAILED_TO_FETCH
             }
         }
