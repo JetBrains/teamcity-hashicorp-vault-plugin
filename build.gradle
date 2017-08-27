@@ -39,6 +39,12 @@ subprojects {
     }
 }
 
+allprojects {
+    if (System.getenv('TEAMCITY_VERSION') != null) {
+        test.ignoreFailures = true
+    }
+}
+
 task wrapper(type: Wrapper) {
     gradleVersion = '4.0.1'
 }
