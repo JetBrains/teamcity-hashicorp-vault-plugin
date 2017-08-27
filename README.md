@@ -1,2 +1,2 @@
-# teamcity-vault-plugin
-TeamCity plugin to support Vault
+# teamcity-hashicorp-vault-plugin
+TeamCity plugin to support HashiCorp Vault

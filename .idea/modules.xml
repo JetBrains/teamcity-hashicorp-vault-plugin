@@ -11,7 +11,7 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/server/server.iml" filepath="$PROJECT_DIR$/.idea/modules/server/server.iml" group="server" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/server/server_main.iml" filepath="$PROJECT_DIR$/.idea/modules/server/server_main.iml" group="server" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/server/server_test.iml" filepath="$PROJECT_DIR$/.idea/modules/server/server_test.iml" group="server" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/teamcity-vault-plugin.iml" filepath="$PROJECT_DIR$/.idea/modules/teamcity-vault-plugin.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/teamcity-hashicorp-vault-plugin.iml" filepath="$PROJECT_DIR$/.idea/modules/teamcity-hashicorp-vault-plugin.iml" />
     </modules>
   </component>
 </project>

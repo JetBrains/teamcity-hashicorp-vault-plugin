@@ -1,4 +1,4 @@
-rootProject.name = 'teamcity-vault-plugin'
+rootProject.name = 'teamcity-hashicorp-vault-plugin'
 
 include 'common'
 include 'agent'
