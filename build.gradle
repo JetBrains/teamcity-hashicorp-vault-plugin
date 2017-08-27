@@ -17,10 +17,10 @@ ext {
 }
 
 group = 'org.jetbrains.teamcity.vault'
-version = "${System.env.BUILD_NUMBER}"
+version = "SNAPSHOT"
 
-if (version.length() == 0) {
-    version = "SNAPSHOT"
+if (System.getenv('BUILD_NUMBER') != null) {
+    version = "${System.env.BUILD_NUMBER}"
 }
 
 
