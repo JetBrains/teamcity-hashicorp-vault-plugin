@@ -37,9 +37,6 @@ subprojects {
     dependencies {
         compile("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
     }
-}
-
-allprojects {
     if (System.getenv('TEAMCITY_VERSION') != null) {
         test.ignoreFailures = true
     }
