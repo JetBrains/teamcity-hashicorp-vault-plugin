@@ -43,6 +43,21 @@ class VaultProjectFeatureController(server: SBuildServer, wcm: WebControllerMana
                 project.removeFeature(feature.id)
                 persist = "Remove HashiCorp Vault feature"
             }
+        } else if (action == "test-connection") {
+            val processor = VaultBuildFeature.getParametersProcessor()
+            val errors = ActionErrors()
+            processor.process(properties).forEach { errors.addError(it) }
+            if (errors.hasErrors()) {
+                errors.serialize(xmlResponse)
+                return
+            }
+            val result = doTestConnection(properties, errors)
+            if (errors.hasErrors()) {
+                errors.serialize(xmlResponse)
+            }
+            val el = Element("test_connection")
+            el.setAttribute("result", result.toString())
+            xmlResponse.addContent(el)
         } else {
             val processor = VaultBuildFeature.getParametersProcessor()
             val errors = ActionErrors()
@@ -70,5 +85,10 @@ class VaultProjectFeatureController(server: SBuildServer, wcm: WebControllerMana
         val errors = ActionErrors()
         errors.addError("general", message)
         errors.serialize(xmlResponse)
+    }
+
+    private fun doTestConnection(properties:Map<String,String>, errors: ActionErrors) : Boolean {
+        // TODO: Implement
+        return true;
     }
 }

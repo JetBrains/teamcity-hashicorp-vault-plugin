@@ -27,6 +27,23 @@
         }
       }));
       return false;
+    },
+    test_connection: function () {
+      $j('input[name="do-action"]')[0].value = 'test-connection';
+      BS.FormSaver.save(this, this.formElement().action, OO.extend(BS.ErrorsAwareListener, {
+        onCompleteSave: function (form, responseXML, err) {
+          var wereErrors = BS.XMLResponse.processErrors(responseXML, BS.ErrorsAwareListener, form.propertiesErrorsHandler);
+          BS.ErrorsAwareListener.onCompleteSave(form, responseXML, wereErrors);
+          BS.Util.reenableForm(form.formElement());
+          var connectionNodes = responseXML.documentElement.getElementsByTagName("test_connection");
+          if (!connectionNodes || connectionNodes.length === 0) return null;
+          var connection = connectionNodes.item(0);
+          var result = connection.getAttribute("result");
+          alert("TestConnection result: " + result);
+          // TODO: Show dialog
+        }
+      }));
+      return false;
     }
   })
 </script>
@@ -64,7 +81,6 @@
                 <%--<span class="smallNote"></span>--%>
             </td>
         </tr>
-        <%--TODO: Add "Test Connection" button which would fetch wrapped token and revoke it using accessor --%>
     </table>
     <div class="saveButtonsBlock">
         <input type="hidden" name="do-action" value="save">
@@ -72,6 +88,8 @@
         <c:if test="${defined}">
             <forms:button id="submit-delete" onclick="return BS.EditVaultFeatureForm.submit('delete');" title="Delete">Delete</forms:button>
         </c:if>
+        <forms:button id="test-connection" onclick="return BS.EditVaultFeatureForm.test_connection();"
+                      title="Test Connection">Test Connection</forms:button>
         <forms:saving/>
         <forms:modified/>
     </div>
