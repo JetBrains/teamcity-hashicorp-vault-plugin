@@ -1,6 +1,7 @@
 package org.jetbrains.teamcity.vault.server
 
 import jetbrains.buildServer.controllers.*
+import jetbrains.buildServer.controllers.admin.projects.EditVcsRootsController
 import jetbrains.buildServer.controllers.admin.projects.PluginPropertiesUtil
 import jetbrains.buildServer.serverSide.ConfigActionFactory
 import jetbrains.buildServer.serverSide.ProjectManager
@@ -9,12 +10,14 @@ import jetbrains.buildServer.web.openapi.WebControllerManager
 import jetbrains.buildServer.web.util.SessionUser
 import org.jdom.Element
 import org.jetbrains.teamcity.vault.VaultConstants.FeatureSettings
+import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 class VaultProjectFeatureController(server: SBuildServer, wcm: WebControllerManager,
                                     val configActionFactory: ConfigActionFactory,
                                     val persister: UIConfigsPersister,
+                                    private val connector: VaultConnector,
                                     val projectManager: ProjectManager) : BaseFormXmlController(server) {
     init {
         wcm.registerController("/admin/project/hashicorp-vault/edit.html", this)
@@ -44,20 +47,7 @@ class VaultProjectFeatureController(server: SBuildServer, wcm: WebControllerMana
                 persist = "Remove HashiCorp Vault feature"
             }
         } else if (action == "test-connection") {
-            val processor = VaultBuildFeature.getParametersProcessor()
-            val errors = ActionErrors()
-            processor.process(properties).forEach { errors.addError(it) }
-            if (errors.hasErrors()) {
-                errors.serialize(xmlResponse)
-                return
-            }
-            val result = doTestConnection(properties, errors)
-            if (errors.hasErrors()) {
-                errors.serialize(xmlResponse)
-            }
-            val el = Element("test_connection")
-            el.setAttribute("result", result.toString())
-            xmlResponse.addContent(el)
+            doTestConnection(properties, xmlResponse)
         } else {
             val processor = VaultBuildFeature.getParametersProcessor()
             val errors = ActionErrors()
@@ -87,8 +77,26 @@ class VaultProjectFeatureController(server: SBuildServer, wcm: WebControllerMana
         errors.serialize(xmlResponse)
     }
 
-    private fun doTestConnection(properties:Map<String,String>, errors: ActionErrors) : Boolean {
-        // TODO: Implement
-        return true;
+    private fun doTestConnection(properties: Map<String, String>, xmlResponse: Element) {
+        val processor = VaultBuildFeature.getParametersProcessor()
+        val errors = ActionErrors()
+        processor.process(properties).forEach { errors.addError(it) }
+        if (errors.hasErrors()) {
+            errors.serialize(xmlResponse)
+            return
+        }
+
+        try {
+            val settings = VaultFeatureSettings(properties)
+            val token = connector.tryRequestToken(settings)
+            VaultConnector.revoke(token)
+            XmlResponseUtil.writeTestResult(xmlResponse, "")
+            return
+        } catch (e: Exception) {
+            errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, e.message)
+        }
+        if (errors.hasErrors()) {
+            errors.serialize(xmlResponse)
+        }
     }
 }

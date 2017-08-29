@@ -4,43 +4,64 @@
 <jsp:useBean id="currentProject" type="jetbrains.buildServer.serverSide.SProject" scope="request"/>
 <jsp:useBean id="keys" class="org.jetbrains.teamcity.vault.server.VaultJspKeys"/>
 <props:hiddenProperty name="teamcity.vault.requirement"/>
+<bs:linkScript>
+    /js/bs/testConnection.js
+</bs:linkScript>
 <script>
   BS.EditVaultFeatureForm = OO.extend(BS.PluginPropertiesForm, {
     formElement: function () {
       return $('vaultProjectFeatureForm')
     },
     submit: function (action) {
-      $j('input[name="do-action"]')[0].value = action;
-      BS.FormSaver.save(this, this.formElement().action, OO.extend(BS.ErrorsAwareListener, {
-        onCompleteSave: function (form, responseXML, err) {
-          var wereErrors = BS.XMLResponse.processErrors(responseXML, BS.ErrorsAwareListener, form.propertiesErrorsHandler);
-          BS.ErrorsAwareListener.onCompleteSave(form, responseXML, wereErrors);
-          if (wereErrors) {
-            BS.Util.reenableForm(form.formElement())
-          } else {
-            this.onSuccessfulSave(responseXML)
+      $("submitVaultConnection").value = action;
+
+      BS.PasswordFormSaver.save(this, this.formElement().action, OO.extend(BS.ErrorsAwareListener, {
+        onCompleteSave: function (form, responseXML) {
+          var err = BS.XMLResponse.processErrors(responseXML, this, form.propertiesErrorsHandler);
+          BS.ErrorsAwareListener.onCompleteSave(form, responseXML, err);
+          if (!err) {
+            this.onSuccessfulSave(responseXML);
           }
         },
-
         onSuccessfulSave: function (responseXML) {
           BS.reload(true)
         }
       }));
       return false;
     },
-    test_connection: function () {
-      $j('input[name="do-action"]')[0].value = 'test-connection';
-      BS.FormSaver.save(this, this.formElement().action, OO.extend(BS.ErrorsAwareListener, {
-        onCompleteSave: function (form, responseXML, err) {
-          var wereErrors = BS.XMLResponse.processErrors(responseXML, BS.ErrorsAwareListener, form.propertiesErrorsHandler);
-          BS.ErrorsAwareListener.onCompleteSave(form, responseXML, wereErrors);
-          BS.Util.reenableForm(form.formElement());
-          var connectionNodes = responseXML.documentElement.getElementsByTagName("test_connection");
-          if (!connectionNodes || connectionNodes.length === 0) return null;
-          var connection = connectionNodes.item(0);
-          var result = connection.getAttribute("result");
-          alert("TestConnection result: " + result);
-          // TODO: Show dialog
+    submitTestConnection: function () {
+      $("submitVaultConnection").value = 'test-connection';
+      var that = this;
+      BS.PasswordFormSaver.save(this, this.formElement().action, OO.extend(BS.ErrorsAwareListener, {
+        onFailedTestConnectionError: function (elem) {
+          var text = "";
+          if (elem.firstChild) {
+            text = elem.firstChild.nodeValue;
+          }
+          BS.TestConnectionDialog.show(false, text, $('testConnectionButton'));
+        },
+
+        onCompleteSave: function (form, responseXML) {
+          var err = BS.XMLResponse.processErrors(responseXML, this, form.propertiesErrorsHandler);
+          BS.ErrorsAwareListener.onCompleteSave(form, responseXML, err);
+          if (!err) {
+            this.onSuccessfulSave(responseXML);
+          }
+        },
+
+        onSuccessfulSave: function (responseXML) {
+          that.enable();
+
+          var additionalInfo = "";
+          var testConnectionResultNodes = responseXML.documentElement.getElementsByTagName("testConnectionResult");
+          if (testConnectionResultNodes && testConnectionResultNodes.length > 0) {
+            var testConnectionResult = testConnectionResultNodes.item(0);
+            if (testConnectionResult.firstChild) {
+              additionalInfo = testConnectionResult.firstChild.nodeValue;
+            }
+          }
+
+          BS.TestConnectionDialog.show(true, additionalInfo, $('testConnectionButton'));
         }
       }));
       return false;
@@ -83,15 +104,20 @@
         </tr>
     </table>
     <div class="saveButtonsBlock">
-        <input type="hidden" name="do-action" value="save">
+        <input type="hidden" id="submitVaultConnection" name="do-action" value="save">
         <forms:submit name="submit-save" onclick="return BS.EditVaultFeatureForm.submit('save');" label="Save"/>
         <c:if test="${defined}">
             <forms:button id="submit-delete" onclick="return BS.EditVaultFeatureForm.submit('delete');" title="Delete">Delete</forms:button>
         </c:if>
-        <forms:button id="test-connection" onclick="return BS.EditVaultFeatureForm.test_connection();"
-                      title="Test Connection">Test Connection</forms:button>
+        <forms:submit id="testConnectionButton" type="button" label="Test Connection"
+                      onclick="return BS.EditVaultFeatureForm.submitTestConnection();"/>
         <forms:saving/>
-        <forms:modified/>
     </div>
 </form>
 
+<bs:dialog dialogId="testConnectionDialog" title="Test Connection" closeCommand="BS.TestConnectionDialog.close();"
+           closeAttrs="showdiscardchangesmessage='false'">
+    <div id="testConnectionStatus"></div>
+    <div id="testConnectionDetails" class="mono"></div>
+</bs:dialog>
+<forms:modified/>

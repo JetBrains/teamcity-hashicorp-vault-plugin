@@ -65,6 +65,25 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             return false
         }
 
+        /**
+         * @return true if operation succeed
+         */
+        @JvmStatic
+        fun revoke(info: LeasedTokenInfo): Boolean {
+            val settings = info.connection
+            try {
+                val template = createRestTemplate(settings)
+                // Login and retrieve server token
+                template.withVaultToken(info.token)
+                // Revoke token by accessor
+                revokeAccessor(template, info.accessor)
+                return true
+            } catch (e: Exception) {
+                LOG.warnAndDebugDetails("Failed to revoke token", e)
+            }
+            return false
+        }
+
         private fun getRealToken(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
                     .path("approle")
@@ -72,7 +91,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                     .secretId(settings.secretId)
                     .build()
 
-            val login = getAppRoleLogin(options.roleId, options.secretId.nullIfEmpty())
+            val login = getAppRoleLogin(options)
             try {
                 val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
                 val response = template.postForObject(uri, login, VaultResponse::class.java)
@@ -93,11 +112,11 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             return entity.statusCode == HttpStatus.NO_CONTENT
         }
 
-        private fun getAppRoleLogin(roleId: String, secretId: String?): Map<String, String> {
-            val login = HashMap<String, String>()
-            login.put("role_id", roleId)
-            if (secretId != null) {
-                login.put("secret_id", secretId)
+        private fun getAppRoleLogin(options: AppRoleAuthenticationOptions): Map<String, String> {
+            val login = HashMap<String, String>(2)
+            login.put("role_id", options.roleId)
+            options.secretId.nullIfEmpty()?.let {
+                login.put("secret_id", it)
             }
             return login
         }
@@ -134,7 +153,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
             val template = VaultTemplate(endpoint, factory, DummySessionManager()).withWrappedResponses("10m")
 
-            val login = getAppRoleLogin(options.roleId, options.secretId.nullIfEmpty())
+            val login = getAppRoleLogin(options)
 
             try {
                 val vaultResponse = template.write("auth/${options.path}/login", login)
@@ -144,6 +163,50 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 val token = wrap["token"] ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token")
                 val accessor = wrap["wrapped_accessor"] ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token accessor")
 
+                return token to accessor
+            } catch (e: VaultException) {
+                val cause = e.cause
+                if (cause is HttpStatusCodeException) {
+                    val err = getError(cause)
+                    val prefix = "Cannot log in to HashiCorp Vault using AppRole credentials"
+                    var message: String? = null
+                    if (err.startsWith("failed to validate SecretID: ")) {
+                        val suberror = err.removePrefix("failed to validate SecretID: ")
+                        if (suberror.contains("invalid secret_id")) {
+                            message = "$prefix, SecretID is incorrect or expired"
+                        } else if (suberror.contains("failed to find secondary index for role_id")) {
+                            message = "$prefix, RoleID is incorrect or there's no such role"
+                        }
+                    }
+                    if (message == null) {
+                        message = "$prefix: $err"
+                    }
+                    throw ConnectionException(message, cause)
+                }
+                throw e
+            }
+        }
+
+        @JvmStatic
+        fun doRequestToken(settings: VaultFeatureSettings): Pair<String, String> {
+            val options = AppRoleAuthenticationOptions.builder()
+                    .path("approle")
+                    .roleId(settings.roleId)
+                    .secretId(settings.secretId)
+                    .build()
+            val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
+            val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)!!
+
+            val template = VaultTemplate(endpoint, factory, DummySessionManager())
+
+            val login = getAppRoleLogin(options)
+
+            try {
+                val vaultResponse = template.write("auth/${options.path}/login", login)
+                val auth = vaultResponse.auth
+
+                val token = auth["client_token"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token")
+                val accessor = auth["accessor"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
                 return token to accessor
             } catch (e: VaultException) {
                 val cause = e.cause
@@ -188,6 +251,11 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
         }
     }
 
+    fun tryRequestToken(settings: VaultFeatureSettings): LeasedTokenInfo {
+        val (token, accessor) = doRequestToken(settings)
+        return LeasedTokenInfo(token, accessor, settings)
+    }
+
     class ConnectionException(message: String, cause: Throwable) : Exception(message, cause)
 }
 
@@ -196,3 +264,5 @@ data class LeasedWrappedTokenInfo(val wrapped: String, val accessor: String, val
         val FAILED_TO_FETCH = LeasedWrappedTokenInfo(VaultConstants.SPECIAL_FAILED_TO_FETCH, "", VaultFeatureSettings(mapOf()))
     }
 }
+
+data class LeasedTokenInfo(val token: String, val accessor: String, val connection: VaultFeatureSettings)
