@@ -38,8 +38,7 @@ object VaultConstants {
 
 
     // Special values
-    val SPECIAL_EMULATTED = "EMULATED"
     val SPECIAL_FAILED_TO_FETCH = "FAILED_TO_FETCH"
-    val SPECIAL_VALUES = setOf<String>(SPECIAL_EMULATTED, SPECIAL_FAILED_TO_FETCH)
+    val SPECIAL_VALUES = setOf<String>(SPECIAL_FAILED_TO_FETCH)
 }
 
