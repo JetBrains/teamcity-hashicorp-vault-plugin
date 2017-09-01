@@ -25,7 +25,7 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
     }
 
     override fun getEditParametersUrl(): String? {
-        return descriptor.getPluginResourcesPath("editProjectConnectionVault.jsp");
+        return descriptor.getPluginResourcesPath("editProjectConnectionVault.jsp")
     }
 
     override fun getPropertiesProcessor(): PropertiesProcessor? {
