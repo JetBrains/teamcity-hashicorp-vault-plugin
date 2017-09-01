@@ -7,9 +7,6 @@
     <bean id="vaultParametersProvider" class="org.jetbrains.teamcity.vault.server.VaultParametersProvider"/>
     <bean id="vaultBuildStartContextProcessor" class="org.jetbrains.teamcity.vault.server.VaultBuildStartContextProcessor"/>
 
-    <bean id="vaultProjectFeatureTab" class="org.jetbrains.teamcity.vault.server.VaultProjectFeatureTab"/>
-    <bean id="vaultProjectFeatureController" class="org.jetbrains.teamcity.vault.server.VaultProjectFeatureController"/>
-
     <bean id="vaultProjectConnection" class="org.jetbrains.teamcity.vault.server.VaultProjectConnectionProvider"/>
     <bean id="vaultOAuthTestConnectionController" class="org.jetbrains.teamcity.vault.server.VaultOAuthTestConnectionController"/>
 </beans>

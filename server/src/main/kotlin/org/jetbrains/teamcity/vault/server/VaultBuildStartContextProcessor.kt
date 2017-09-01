@@ -18,18 +18,13 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
         private fun getFeature(build: SBuild): VaultFeatureSettings? {
             val buildType = build.buildType ?: return null
-            val project = buildType.project
 
             val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
             if (buildFeature != null) {
                 // For compatibility
                 return VaultFeatureSettings(buildFeature.parameters)
             }
-            val projectFeature = project.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
-            if (projectFeature != null) {
-                return VaultFeatureSettings(projectFeature.parameters)
-            }
-            val connectionFeature = project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).firstOrNull {
+            val connectionFeature = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).firstOrNull {
                 VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
             }
             if (connectionFeature != null) {

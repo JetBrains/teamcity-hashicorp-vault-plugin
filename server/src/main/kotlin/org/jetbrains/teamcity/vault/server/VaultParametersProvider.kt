@@ -14,9 +14,6 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
             val buildType = build.buildType ?: return false
             val project = buildType.project
 
-            val projectFeature = project.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
-            if (projectFeature != null) return true
-
             // It's faster than asking OAuthConectionsManager
             if (project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).any {
                 VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
