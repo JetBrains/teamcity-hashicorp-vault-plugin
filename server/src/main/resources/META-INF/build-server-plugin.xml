@@ -11,4 +11,5 @@
     <bean id="vaultProjectFeatureController" class="org.jetbrains.teamcity.vault.server.VaultProjectFeatureController"/>
 
     <bean id="vaultProjectConnection" class="org.jetbrains.teamcity.vault.server.VaultProjectConnectionProvider"/>
+    <bean id="vaultOAuthTestConnectionController" class="org.jetbrains.teamcity.vault.server.VaultOAuthTestConnectionController"/>
 </beans>

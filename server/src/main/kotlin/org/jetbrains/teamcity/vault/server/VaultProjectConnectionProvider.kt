@@ -14,7 +14,7 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
 
     override fun describeConnection(connection: OAuthConnectionDescriptor): String {
         val settings = VaultFeatureSettings(connection.parameters)
-        return "Connection to HashiCorp Vault secrets server at ${settings.url}"
+        return "Connection to HashiCorp Vault server at ${settings.url}"
     }
 
     override fun getDefaultProperties(): Map<String, String> {

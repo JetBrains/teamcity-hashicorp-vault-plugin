@@ -6,7 +6,47 @@
 <jsp:useBean id="oauthConnectionBean" type="jetbrains.buildServer.serverSide.oauth.OAuthConnectionBean"
              scope="request"/>
 <jsp:useBean id="propertiesBean" type="jetbrains.buildServer.serverSide.oauth.OAuthConnectionBean" scope="request"/>
+<bs:linkScript>
+    /js/bs/testConnection.js
+</bs:linkScript>
+<script>
+  BS.OAuthConnectionDialog.submitTestConnection = function () {
+    var that = this;
+    BS.PasswordFormSaver.save(this, '<c:url value="/admin/hashicorp-vault-test-connection.html"/>', OO.extend(BS.ErrorsAwareListener, {
+      onFailedTestConnectionError: function (elem) {
+        var text = "";
+        if (elem.firstChild) {
+          text = elem.firstChild.nodeValue;
+        }
+        BS.TestConnectionDialog.show(false, text, $('testConnectionButton'));
+      },
 
+      onCompleteSave: function (form, responseXML) {
+        var err = BS.XMLResponse.processErrors(responseXML, this, form.propertiesErrorsHandler);
+        BS.ErrorsAwareListener.onCompleteSave(form, responseXML, err);
+        if (!err) {
+          this.onSuccessfulSave(responseXML);
+        }
+      },
+
+      onSuccessfulSave: function (responseXML) {
+        that.enable();
+
+        var additionalInfo = "";
+        var testConnectionResultNodes = responseXML.documentElement.getElementsByTagName("testConnectionResult");
+        if (testConnectionResultNodes && testConnectionResultNodes.length > 0) {
+          var testConnectionResult = testConnectionResultNodes.item(0);
+          if (testConnectionResult.firstChild) {
+            additionalInfo = testConnectionResult.firstChild.nodeValue;
+          }
+        }
+
+        BS.TestConnectionDialog.show(true, additionalInfo, $('testConnectionButton'));
+      }
+    }));
+    return false;
+  };
+</script>
 <tr>
     <td><label for="displayName">Display name:</label><l:star/></td>
     <td>
@@ -44,4 +84,14 @@
         <%--<span class="smallNote"></span>--%>
     </td>
 </tr>
-<%--TODO: Add 'Test Connection' button--%>
+
+<forms:submit id="testConnectionButton" type="button" label="Test Connection"
+              onclick="return BS.OAuthConnectionDialog.submitTestConnection();"/>
+<bs:dialog dialogId="testConnectionDialog" title="Test Connection" closeCommand="BS.TestConnectionDialog.close();"
+           closeAttrs="showdiscardchangesmessage='false'">
+    <div id="testConnectionStatus"></div>
+    <div id="testConnectionDetails" class="mono"></div>
+</bs:dialog>
+<script>
+  $j("#testConnectionButton").appendTo($j('#OAuthConnectionDialog .popupSaveButtonsBlock')[0])
+</script>
