@@ -15,10 +15,7 @@ import org.springframework.vault.authentication.CubbyholeAuthentication;
 import org.springframework.vault.authentication.CubbyholeAuthenticationOptions;
 import org.springframework.vault.authentication.LifecycleAwareSessionManager;
 import org.springframework.vault.config.ClientHttpRequestFactoryFactory;
-import org.springframework.vault.support.ClientOptions;
-import org.springframework.vault.support.SslConfiguration;
-import org.springframework.vault.support.VaultMount;
-import org.springframework.vault.support.VaultToken;
+import org.springframework.vault.support.*;
 import org.springframework.web.client.RestTemplate;
 
 import static org.assertj.core.api.BDDAssertions.then;
@@ -26,6 +23,19 @@ import static org.assertj.core.api.BDDAssertions.then;
 public class VaultConnectorTest {
     @ClassRule
     public static final VaultDevContainer vault = new VaultDevContainer();
+
+    @Test
+    public void testVaultIsUpAndRunning() throws Exception {
+        final ClientHttpRequestFactory factory = ClientHttpRequestFactoryFactory.create(new ClientOptions(), SslConfiguration.NONE);
+
+        final VaultTemplate template = new VaultTemplate(vault.getEndpoint(), factory, () -> VaultToken.of(vault.getToken()));
+
+        final VaultHealth health = template.opsForSys().health();
+        then(health.isInitialized()).isTrue();
+        then(health.isSealed()).isFalse();
+        then(health.isStandby()).isFalse();
+        then(health.getVersion()).isEqualTo("0.7.3");
+    }
 
     @Test
     public void testWrappedTokenCreated() throws Exception {
@@ -45,7 +55,7 @@ public class VaultConnectorTest {
         Pair<String, String> credentials = getAppRoleCredentials(template, "auth/approle/role/testrole");
 
 
-        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(vault.getUrl(), true, credentials.getFirst(), credentials.getSecond()));
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(vault.getUrl(), credentials.getFirst(), credentials.getSecond()));
 
         then(wrapped.getFirst()).isNotNull();
         then(wrapped.getSecond()).isNotNull();
@@ -55,7 +65,7 @@ public class VaultConnectorTest {
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped.getFirst()))
                 .build();
-        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(vault.getUrl(), true, "", ""));
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(vault.getUrl(), "", ""));
         final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
         final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 
@@ -75,7 +85,7 @@ public class VaultConnectorTest {
     }
 
     private static class MyLifecycleAwareSessionManager extends LifecycleAwareSessionManager {
-        public MyLifecycleAwareSessionManager(CubbyholeAuthentication authentication, RestTemplate simpleTemplate, TaskScheduler scheduler) {
+        private MyLifecycleAwareSessionManager(CubbyholeAuthentication authentication, RestTemplate simpleTemplate, TaskScheduler scheduler) {
             super(authentication, scheduler, simpleTemplate);
         }
 
