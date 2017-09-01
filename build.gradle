@@ -21,7 +21,7 @@ group = 'org.jetbrains.teamcity.vault'
 version = "${version_prefix}-SNAPSHOT"
 
 if (System.getenv('BUILD_NUMBER') != null) {
-    version = "${version_prefix}.${System.env.BUILD_NUMBER}"
+    version = "${System.env.BUILD_NUMBER}"
 }
 
 
