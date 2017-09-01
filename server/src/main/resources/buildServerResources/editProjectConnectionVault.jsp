@@ -46,6 +46,12 @@
     }));
     return false;
   };
+
+  var afterClose = BS.OAuthConnectionDialog.afterClose;
+  BS.OAuthConnectionDialog.afterClose = function () {
+    $j('#OAuthConnectionDialog .testConnectionButton').remove();
+    afterClose()
+  }
 </script>
 <tr>
     <td><label for="displayName">Display name:</label><l:star/></td>
@@ -85,7 +91,7 @@
     </td>
 </tr>
 
-<forms:submit id="testConnectionButton" type="button" label="Test Connection"
+<forms:submit id="testConnectionButton" type="button" label="Test Connection" className="testConnectionButton"
               onclick="return BS.OAuthConnectionDialog.submitTestConnection();"/>
 <bs:dialog dialogId="testConnectionDialog" title="Test Connection" closeCommand="BS.TestConnectionDialog.close();"
            closeAttrs="showdiscardchangesmessage='false'">
