@@ -1,5 +1,6 @@
 package org.jetbrains.teamcity.vault
 
+import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.VersionComparatorUtil
 import org.jetbrains.teamcity.vault.support.MappingJackson2HttpMessageConverter
@@ -111,3 +112,12 @@ fun String.ensureHasPrefix(prefix: String): String {
 fun String.pluralize(size: Int) = StringUtil.pluralize(this, size)
 fun String.pluralize(collection: Collection<Any>) = this.pluralize(collection.size)
 fun String.sizeAndPluralize(collection: Collection<Any>) = "${collection.size} " + this.pluralize(collection)
+
+fun <T> BuildProgressLogger.activity(activityName: String, activityType: String, body: () -> T): T {
+    this.activityStarted(activityName, activityType)
+    try {
+        return body()
+    } finally {
+        this.activityFinished(activityName, activityType)
+    }
+}

@@ -12,6 +12,7 @@ dependencies {
     }
 
     testCompile project(path: ':common', configuration: 'testOutput')
+    testCompile "org.jetbrains.teamcity:tests-support:${teamcityVersion}"
 }
 
 teamcity {

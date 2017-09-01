@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
 import jetbrains.buildServer.agent.AgentRunningBuild
+import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.log.Loggers
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultTemplate
@@ -29,49 +30,118 @@ class VaultParametersResolver {
             LOG.info("There's nothing to resolve")
             return
         }
-        LOG.info("${"reference".sizeAndPluralize(references)} to resolve: $references")
+        val logger = build.buildLogger
+        logger.message("${references.size} Vault ${"reference".pluralize(references)} to resolve: $references")
 
         val parameters = references.map { VaultParameter.extract(VaultReferencesUtil.getVaultPath(it)) }
 
-        val replacements = doFetchAndPrepareReplacements(settings, token, parameters)
+        val replacements = doFetchAndPrepareReplacements(settings, token, parameters, logger)
 
-        replaceParametersReferences(build, replacements)
+        replaceParametersReferences(build, replacements, references)
 
         replacements.values.forEach { build.passwordReplacer.addPassword(it) }
     }
 
-    fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>): HashMap<String, String> {
+    fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>, logger: BuildProgressLogger): HashMap<String, String> {
         val endpoint = VaultEndpoint.from(URI.create(settings.url))
         val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)
         val client = VaultTemplate(endpoint, factory, SimpleSessionManager({ VaultToken.of(token) }))
 
-        return doFetchAndPrepareReplacements(client, parameters)
+        return doFetchAndPrepareReplacements(client, parameters, logger)
     }
 
-    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: List<VaultParameter>): HashMap<String, String> {
-        val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath })
-
-        return getReplacements(parameters, responses)
+    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: List<VaultParameter>, logger: BuildProgressLogger): HashMap<String, String> {
+        return VaultParametersFetcher(client, logger).doFetchAndPrepareReplacements(parameters)
     }
 
-    private fun getReplacements(parameters: List<VaultParameter>, responses: Map<String, VaultResponse?>): HashMap<String, String> {
-        val replacements = HashMap<String, String>()
+    class VaultParametersFetcher(private val client: VaultTemplate,
+                                 private val logger: BuildProgressLogger) {
+        fun doFetchAndPrepareReplacements(parameters: List<VaultParameter>): HashMap<String, String> {
+            val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath })
 
-        for (parameter in parameters) {
-            val response = responses[parameter.vaultPath]
-            if (response == null) {
-                LOG.warn("Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault")
-                continue
-            }
-            val value = extract(response, parameter.jsonPath)
-            if (value == null) {
-                LOG.warn("Cannot extract '${parameter.full}' from HashiCorp Vault result")
-                continue
-            }
-            replacements[parameter.full] = value
+            return getReplacements(parameters, responses)
         }
-        return replacements
+
+        private fun fetch(client: VaultTemplate, paths: Collection<String>): HashMap<String, VaultResponse?> {
+            val responses = HashMap<String, VaultResponse?>(paths.size)
+
+            for (path in paths.toSet()) {
+                try {
+                    val response = client.read(path.removePrefix("/"))
+                    responses[path] = response
+                } catch (e: Exception) {
+                    logger.warning("Failed to fetch data for path '$path'")
+                    responses[path] = null
+                }
+            }
+            return responses
+        }
+
+        private fun getReplacements(parameters: List<VaultParameter>, responses: Map<String, VaultResponse?>): HashMap<String, String> {
+            val replacements = HashMap<String, String>()
+
+            for (parameter in parameters) {
+                val response = responses[parameter.vaultPath]
+                if (response == null) {
+                    logger.warning("Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault")
+                    continue
+                }
+                val value = extract(response, parameter) ?: continue
+                replacements[parameter.full] = value
+            }
+            return replacements
+        }
+
+        private fun extract(response: VaultResponse, parameter: VaultParameter): String? {
+            val jsonPath = parameter.jsonPath
+            if (jsonPath == null) {
+                val data = response.data
+                if (data.isEmpty()) {
+                    logger.warning("There's no data in HashiCorp Vault response for '${parameter.vaultPath}'")
+                    return null
+                }
+                var key = "value"
+                if (data.size == 1) {
+                    key = data.keys.first()
+                }
+                val value = data[key]
+                if (value == null) {
+                    logger.warning("'$key' is missing in HashiCorp Vault response for '${parameter.vaultPath}'")
+                    return null
+                }
+                if (value !is String) {
+                    logger.warning("From '${parameter.vaultPath}' cannot extract data from non-string '$key'. Actual type is ${value.javaClass.simpleName}")
+                    return null
+                }
+                return value
+            }
+
+            val pattern: JsonPath?
+            val updated = jsonPath.ensureHasPrefix("$.")
+            try {
+                pattern = JsonPath.compile(updated)
+            } catch (e: Throwable) {
+                logger.warning("JsonPath compilation failed for '$updated'")
+                return null
+            }
+            try {
+                val value: Any? = pattern.read(Gson().toJson(response.data))
+                if (value == null) {
+                    logger.warning("'$jsonPath' is missing result structure for '${parameter.vaultPath}'")
+                    return null
+                }
+                if (value !is String) {
+                    logger.warning("From '${parameter.vaultPath}' cannot extract data from non-string '$jsonPath'. Actual type is ${value.javaClass.simpleName}")
+                    return null
+                }
+                return value
+            } catch (e: Exception) {
+                logger.warning("Cannot extract '$jsonPath' data from '${parameter.vaultPath}', full reference: ${parameter.full}")
+                return null
+            }
+        }
     }
+
 
     private fun getReleatedParameterReferences(build: AgentRunningBuild): Collection<String> {
         val references = HashSet<String>()
@@ -80,75 +150,14 @@ class VaultParametersResolver {
         return references.sorted()
     }
 
-    private fun extract(response: VaultResponse, jsonPath: String?): String? {
-        if (jsonPath == null) {
-            val data = response.data
-            if (data.isEmpty()) {
-                LOG.warn("There's no data in HashiCorp Vault response")
-                return null
-            }
-            var key = "value"
-            if (data.size == 1) {
-                key = data.keys.first()
-            }
-            val value = data[key]
-            if (value == null) {
-                LOG.warn("'$key' is missing in HashiCorp Vault response")
-                return null
-            }
-            if (value !is String) {
-                LOG.warn("Cannot extract data from non-string '$key'. Actual type is ${value.javaClass.simpleName}")
-                return null
-            }
-            return value
-        }
-
-        val pattern: JsonPath?
-        val updated = jsonPath.ensureHasPrefix("$.")
-        try {
-            pattern = JsonPath.compile(updated)
-        } catch(e: Throwable) {
-            LOG.warnAndDebugDetails("JsonPath compilation failed for '$updated'", e)
-            return null
-        }
-        try {
-            val value: Any? = pattern.read(Gson().toJson(response.data))
-            if (value == null) {
-                LOG.warn("'$jsonPath' is missing")
-                return null
-            }
-            if (value !is String) {
-                LOG.warn("Cannot extract data from non-string '$jsonPath'. Actual type is ${value.javaClass.simpleName}")
-                return null
-            }
-            return value
-        } catch(e: Exception) {
-            LOG.warnAndDebugDetails("Cannot extract '$jsonPath' data from response", e)
-            return null
-        }
-    }
-
-    private fun replaceParametersReferences(build: AgentRunningBuild, replacements: HashMap<String, String>) {
-        for ((key, value) in replacements) {
-            val name = key.ensureHasPrefix("/").ensureHasPrefix(VaultConstants.VAULT_PARAMETER_PREFIX)
-            build.addSharedConfigParameter(name, value)
-        }
-    }
-
-
-    private fun fetch(client: VaultTemplate, paths: Collection<String>): HashMap<String, VaultResponse?> {
-        val responses = HashMap<String, VaultResponse?>(paths.size)
-
-        for (path in paths.toSet()) {
-            try {
-                val response = client.read(path.removePrefix("/"))
-                responses[path] = response
-            } catch(e: Exception) {
-                LOG.warn("Failed to fetch data for path '$path'")
-                responses[path] = null
+    private fun replaceParametersReferences(build: AgentRunningBuild, replacements: HashMap<String, String>, usages: Collection<String>) {
+        // usage may not have leading slash
+        for (usage in usages) {
+            val replacement = replacements[usage.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX).ensureHasPrefix("/")]
+            if (replacement != null) {
+                build.addSharedConfigParameter(usage, replacement)
             }
         }
-        return responses
     }
 
 }

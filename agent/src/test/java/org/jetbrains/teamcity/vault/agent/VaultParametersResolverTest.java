@@ -1,6 +1,7 @@
 package org.jetbrains.teamcity.vault.agent;
 
 
+import jetbrains.buildServer.agent.NullBuildProgressLogger;
 import jetbrains.buildServer.util.CollectionsUtil;
 import org.jetbrains.teamcity.vault.VaultDevContainer;
 import org.jetbrains.teamcity.vault.VaultFeatureSettings;
@@ -57,7 +58,7 @@ public class VaultParametersResolverTest {
             then(response.getData()).contains(entry("value", "TestValue"));
         }
 
-        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)));
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger());
         then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
     }
 
@@ -66,7 +67,7 @@ public class VaultParametersResolverTest {
         final String path = "secret/test";
         template.write(path, Collections.singletonMap("data", "TestValue"));
 
-        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)));
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger());
         then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
     }
 
@@ -80,7 +81,7 @@ public class VaultParametersResolverTest {
                 new VaultParameter("/" + path, "second")
         );
 
-        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), parameters);
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), parameters, new NullBuildProgressLogger());
         then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
     }
 
@@ -95,7 +96,7 @@ public class VaultParametersResolverTest {
         );
 
         myRequestedURIs.clear();
-        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(template, parameters);
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(template, parameters, new NullBuildProgressLogger());
         then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
 
         then(myRequestedURIs).hasSize(1).containsOnlyOnce("/v1/" + path);
