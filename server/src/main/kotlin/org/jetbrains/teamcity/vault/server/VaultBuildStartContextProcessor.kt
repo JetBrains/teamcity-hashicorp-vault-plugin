@@ -2,14 +2,18 @@ package org.jetbrains.teamcity.vault.server
 
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.BuildProblemData
+import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.BuildStartContext
 import jetbrains.buildServer.serverSide.BuildStartContextProcessor
 import jetbrains.buildServer.serverSide.SBuild
-import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.VaultConstants
+import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.VaultReferencesUtil
+import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
 
 class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor {
     companion object {
-        val LOG = Logger.getInstance(VaultBuildStartContextProcessor::class.java.name)!!
+        val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)!!
 
         private fun getFeature(build: SBuild): VaultFeatureSettings? {
             val project = build.buildType?.project

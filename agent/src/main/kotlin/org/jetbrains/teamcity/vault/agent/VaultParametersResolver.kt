@@ -5,6 +5,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
 import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.Constants
+import jetbrains.buildServer.log.Loggers
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.VaultReferencesUtil
 import org.jetbrains.teamcity.vault.ensureHasPrefix
@@ -23,7 +24,7 @@ import kotlin.collections.HashSet
 
 class VaultParametersResolver {
     companion object {
-        val LOG = Logger.getInstance(VaultParametersResolver::class.java.name)!!
+        val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultParametersResolver::class.java.name)!!
     }
 
     fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {

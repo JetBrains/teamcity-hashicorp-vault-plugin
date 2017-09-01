@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.containers.ConcurrentHashSet
+import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.BuildServerAdapter
 import jetbrains.buildServer.serverSide.BuildServerListener
 import jetbrains.buildServer.serverSide.SBuild
@@ -41,7 +42,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     }
 
     companion object {
-        val LOG = Logger.getInstance(VaultConnector::class.java.name)!!
+        val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultConnector::class.java.name)!!
 
         /**
          * @return true if operation succeed

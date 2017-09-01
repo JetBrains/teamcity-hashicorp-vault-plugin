@@ -2,6 +2,7 @@ package org.jetbrains.teamcity.vault.agent
 
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.agent.*
+import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.EventDispatcher
 import org.jetbrains.teamcity.vault.*
 import org.springframework.scheduling.TaskScheduler
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                         private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
     companion object {
-        val LOG = Logger.getInstance(VaultBuildFeature::class.java.name)!!
+        val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultBuildFeature::class.java.name)!!
     }
     init {
         if (isJava8OrNewer()) {
