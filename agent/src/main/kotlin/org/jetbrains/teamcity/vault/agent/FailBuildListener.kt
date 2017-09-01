@@ -11,6 +11,6 @@ class FailBuildListener : AgentLifeCycleAdapter() {
 
         if (url == null || url.isNullOrBlank()) return
 
-        runningBuild.stopBuild("HashiCorp Vault is not supported on this agent. Please add agent requirement for '${VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT}' parameter or run agent using Java 1.8");
+        runningBuild.stopBuild("HashiCorp Vault is not supported on this agent. Please add agent requirement for '${VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER}' parameter or run agent using Java 1.8")
     }
 }
