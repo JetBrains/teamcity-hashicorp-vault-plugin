@@ -16,7 +16,7 @@
     </td>
 </tr>
 <tr>
-    <th><label for="${keys.URL}">Vault URL:</label></th>
+    <td><label for="${keys.URL}">Vault URL:</label></td>
     <td>
         <props:textProperty name="${keys.URL}"
                             className="longField textProperty_max-width js_max-width"/>
@@ -26,7 +26,7 @@
 </tr>
 
 <tr>
-    <th><label for="${keys.ROLE_ID}">AppRole Role ID:</label></th>
+    <td><label for="${keys.ROLE_ID}">AppRole Role ID:</label></td>
     <td>
         <props:textProperty name="${keys.ROLE_ID}"
                             className="longField textProperty_max-width js_max-width"/>
@@ -36,7 +36,7 @@
 </tr>
 
 <tr class="noBorder">
-    <th><label for="${keys.SECRET_ID}">AppRole Secret ID:</label></th>
+    <td><label for="${keys.SECRET_ID}">AppRole Secret ID:</label></td>
     <td>
         <props:passwordProperty name="${keys.SECRET_ID}"
                                 className="longField textProperty_max-width js_max-width"/>
