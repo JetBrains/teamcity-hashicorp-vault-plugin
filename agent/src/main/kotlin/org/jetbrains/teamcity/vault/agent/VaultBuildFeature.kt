@@ -74,9 +74,6 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
         runningBuild.passwordReplacer.addPassword(token)
 
-        if (isShouldSetConfigParameters(parameters)) {
-            runningBuild.addSharedConfigParameter(VaultConstants.AGENT_CONFIG_PROP, token)
-        }
         if (isShouldSetEnvParameters(parameters)) {
             runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_TOKEN, token)
             runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_ADDR, settings.url)

@@ -5,7 +5,6 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultReferencesUtil
-import org.jetbrains.teamcity.vault.isShouldSetConfigParameters
 import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
 
 class VaultParametersProvider : AbstractBuildParametersProvider() {
@@ -33,9 +32,6 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
         if (isShouldSetEnvParameters(parameters)) {
             exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_TOKEN
             exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_ADDR
-        }
-        if (isShouldSetConfigParameters(parameters)) {
-            exposed += VaultConstants.AGENT_CONFIG_PROP
         }
         VaultReferencesUtil.collect(parameters, exposed)
         return exposed

@@ -27,7 +27,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
             if (buildFeature != null) return true
             val parameters = build.buildOwnParameters
-            return isShouldSetConfigParameters(parameters) || isShouldSetEnvParameters(parameters)
+            return isShouldSetEnvParameters(parameters)
                     // Slowest part:
                     || VaultReferencesUtil.hasReferences(build.parametersProvider.all)
         }
