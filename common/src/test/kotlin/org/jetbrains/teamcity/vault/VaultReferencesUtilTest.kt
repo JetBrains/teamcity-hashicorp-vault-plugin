@@ -25,13 +25,4 @@ class VaultReferencesUtilTest {
         then(keys).containsOnly(map.keys.first())
         then(refs).containsOnly("vault:/testA", "vault:/test B")
     }
-
-    @Test
-    fun testResolving() {
-        then(VaultReferencesUtil.resolve("%vault:/test%", mapOf())).isNull()
-        then(VaultReferencesUtil.resolve("%vault:/test%", mapOf("/test" to "val"))).isEqualTo("val")
-        then(VaultReferencesUtil.resolve("%vault:/A% %vault:/ B%", mapOf("/A" to "AAA", "/ B" to "BBB"))).isEqualTo("AAA BBB")
-
-        then(VaultReferencesUtil.resolve("%vault:test% %vault:/test%", mapOf("/test" to "val"))).isEqualTo("val val")
-    }
 }

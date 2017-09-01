@@ -47,28 +47,4 @@ object VaultReferencesUtil {
         })
         return references
     }
-
-    /**
-     * @return value with resolved references or null if string is not modified
-     */
-    @JvmStatic fun resolve(value: String, replacements: Map<String, String>): String? {
-        val result = StringBuilder(value.length)
-        ReferencesResolverUtil.resolve(value, object : ReferencesResolverUtil.ReferencesResolverListener {
-            override fun appendReference(referenceKey: String): Boolean {
-                if (!referenceKey.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX)) return false
-                val unprefixed = referenceKey.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX).ensureHasPrefix("/")
-                val replacement = replacements[unprefixed] ?: return false
-                result.append(replacement)
-                return true
-            }
-
-            override fun appendText(text: String) {
-                result.append(text)
-            }
-        })
-        val resolved = result.toString()
-        if (resolved == value) return null
-        return resolved
-    }
-
 }

@@ -4,12 +4,8 @@ import com.google.gson.Gson
 import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
 import jetbrains.buildServer.agent.AgentRunningBuild
-import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.log.Loggers
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import org.jetbrains.teamcity.vault.VaultReferencesUtil
-import org.jetbrains.teamcity.vault.ensureHasPrefix
-import org.jetbrains.teamcity.vault.sizeAndPluralize
+import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.vault.authentication.SimpleSessionManager
 import org.springframework.vault.client.VaultEndpoint
@@ -28,7 +24,7 @@ class VaultParametersResolver {
     }
 
     fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {
-        val (referenceKeys, references) = getReleatedParameterReferences(build)
+        val references = getReleatedParameterReferences(build)
         if (references.isEmpty()) {
             LOG.info("There's nothing to resolve")
             return
@@ -39,7 +35,7 @@ class VaultParametersResolver {
 
         val replacements = doFetchAndPrepareReplacements(settings, token, parameters)
 
-        replaceParametersReferences(build, referenceKeys, replacements)
+        replaceParametersReferences(build, replacements)
 
         replacements.values.forEach { build.passwordReplacer.addPassword(it) }
     }
@@ -78,12 +74,11 @@ class VaultParametersResolver {
         return replacements
     }
 
-    private fun getReleatedParameterReferences(build: AgentRunningBuild): Pair<Collection<String>, Collection<String>> {
+    private fun getReleatedParameterReferences(build: AgentRunningBuild): Collection<String> {
         val references = HashSet<String>()
-        val keys = HashSet<String>()
-        VaultReferencesUtil.collect(build.sharedConfigParameters, references, keys)
-        VaultReferencesUtil.collect(build.sharedBuildParameters.allParameters, references, keys)
-        return keys to references.sorted()
+        VaultReferencesUtil.collect(build.sharedConfigParameters, references)
+        VaultReferencesUtil.collect(build.sharedBuildParameters.allParameters, references)
+        return references.sorted()
     }
 
     private fun extract(response: VaultResponse, jsonPath: String?): String? {
@@ -134,26 +129,10 @@ class VaultParametersResolver {
         }
     }
 
-    private fun replaceParametersReferences(build: AgentRunningBuild, keys: Collection<String>, replacements: HashMap<String, String>) {
-        val sharedConfigParameters = build.sharedConfigParameters
-        for (k in keys) {
-            val value = sharedConfigParameters[k] ?: continue
-            val resolved = VaultReferencesUtil.resolve(value, replacements)
-            if (resolved != null) {
-                build.addSharedConfigParameter(k, resolved)
-            }
-        }
-        val allParameters = build.sharedBuildParameters.allParameters
-        for (k in keys) {
-            val value = allParameters[k] ?: continue
-            val resolved = VaultReferencesUtil.resolve(value, replacements)
-            if (resolved != null) {
-                when {
-                    k.startsWith(Constants.ENV_PREFIX) -> build.addSharedEnvironmentVariable(k.removePrefix(Constants.ENV_PREFIX), resolved)
-                    k.startsWith(Constants.SYSTEM_PREFIX) -> build.addSharedSystemProperty(k.removePrefix(Constants.SYSTEM_PREFIX), resolved)
-                    else -> build.addSharedConfigParameter(k, resolved)
-                }
-            }
+    private fun replaceParametersReferences(build: AgentRunningBuild, replacements: HashMap<String, String>) {
+        for ((key, value) in replacements) {
+            val name = key.ensureHasPrefix("/").ensureHasPrefix(VaultConstants.VAULT_PARAMETER_PREFIX)
+            build.addSharedConfigParameter(name, value)
         }
     }
 
