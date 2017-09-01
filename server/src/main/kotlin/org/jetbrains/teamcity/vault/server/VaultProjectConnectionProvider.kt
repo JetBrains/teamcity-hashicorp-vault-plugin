@@ -5,6 +5,7 @@ import jetbrains.buildServer.serverSide.oauth.OAuthConnectionDescriptor
 import jetbrains.buildServer.serverSide.oauth.OAuthProvider
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import org.jetbrains.teamcity.vault.VaultConstants
+import org.jetbrains.teamcity.vault.VaultFeatureSettings
 
 class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) : OAuthProvider() {
     override fun getType(): String = VaultConstants.FeatureSettings.FEATURE_TYPE
@@ -12,7 +13,8 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
     override fun getDisplayName(): String = "HashiCorp Vault"
 
     override fun describeConnection(connection: OAuthConnectionDescriptor): String {
-        return "Connection to HashiCorp Vault secrets server"
+        val settings = VaultFeatureSettings(connection.parameters)
+        return "Connection to HashiCorp Vault secrets server at ${settings.url}"
     }
 
     override fun getDefaultProperties(): Map<String, String> {
