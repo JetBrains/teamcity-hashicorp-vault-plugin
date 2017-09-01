@@ -14,10 +14,10 @@ buildscript {
 
 ext {
     teamcityVersion = '2017.1'
+    version_prefix = '0.1'
 }
 
 group = 'org.jetbrains.teamcity.vault'
-version_prefix = '0.1'
 version = "${version_prefix}-SNAPSHOT"
 
 if (System.getenv('BUILD_NUMBER') != null) {
