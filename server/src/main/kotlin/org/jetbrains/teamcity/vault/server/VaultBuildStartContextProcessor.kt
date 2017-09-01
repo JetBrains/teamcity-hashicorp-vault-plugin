@@ -5,12 +5,12 @@ import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.serverSide.BuildStartContext
 import jetbrains.buildServer.serverSide.BuildStartContextProcessor
 import jetbrains.buildServer.serverSide.SBuild
-import org.jetbrains.teamcity.vault.VaultConstants
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.*
 
 class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor {
     companion object {
         val LOG = Logger.getInstance(VaultBuildStartContextProcessor::class.java.name)!!
+
         private fun getFeature(build: SBuild): VaultFeatureSettings? {
             val project = build.buildType?.project
             val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
@@ -23,6 +23,14 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             } else return null
         }
 
+        internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {
+            val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
+            if (buildFeature != null) return true
+            val parameters = build.buildOwnParameters
+            return isShouldSetConfigParameters(parameters) || isShouldSetEnvParameters(parameters)
+                    // Slowest part:
+                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all)
+        }
 
     }
 
@@ -31,7 +39,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
         val settings = getFeature(build) ?: return
 
-        if (!VaultParametersProvider.isShouldEnableVaultIntegration(build)) {
+        if (!isShouldEnableVaultIntegration(build)) {
             LOG.debug("There's no need to fetch vault parameter for build $build")
             return
         }

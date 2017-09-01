@@ -1,24 +1,15 @@
 package org.jetbrains.teamcity.vault.server
 
-import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
-import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.VaultConstants
+import org.jetbrains.teamcity.vault.VaultReferencesUtil
+import org.jetbrains.teamcity.vault.isShouldSetConfigParameters
+import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
 
 class VaultParametersProvider : AbstractBuildParametersProvider() {
     companion object {
-        val LOG = Logger.getInstance(VaultParametersProvider::class.java.name)!!
-
-        internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {
-            val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
-            if (buildFeature != null) return true
-            val parameters = build.buildOwnParameters
-            return isShouldSetConfigParameters(parameters) || isShouldSetEnvParameters(parameters)
-                    // Slowest part:
-                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all)
-        }
-
         internal fun isFeatureEnabled(build: SBuild): Boolean {
             val buildType = build.buildType ?: return false
             val project = buildType.project
@@ -30,21 +21,6 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
             return buildFeature != null && buildType.isEnabled(buildFeature.id)
         }
 
-    }
-
-    override fun getParameters(build: SBuild, emulationMode: Boolean): Map<String, String> {
-        if (build.isFinished) return emptyMap()
-        if (!isFeatureEnabled(build)) return emptyMap()
-
-        // TODO: check could be slow since it checks all parameter values for '%vault:'
-        if (!isShouldEnableVaultIntegration(build)) {
-            LOG.debug("There's no need to fetch vault parameter for build $build")
-            return emptyMap()
-        }
-
-        return mapOf(
-                VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE
-        )
     }
 
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {

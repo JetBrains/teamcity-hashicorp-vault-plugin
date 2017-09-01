@@ -22,6 +22,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
             dispatcher.addListener(this)
             LOG.info("HashiCorp Vault intergration enabled")
         } else {
+            dispatcher.addListener(FailBuildListener())
             LOG.warn("HashiCorp Vault integration disabled: agent should be running under Java 1.8 or newer")
         }
     }

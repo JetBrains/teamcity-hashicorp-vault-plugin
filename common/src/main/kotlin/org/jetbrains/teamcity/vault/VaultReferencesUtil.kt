@@ -5,7 +5,7 @@ import jetbrains.buildServer.parameters.ReferencesResolverUtil
 object VaultReferencesUtil {
 
     @JvmStatic fun hasReferences(parameters: Map<String, String>): Boolean {
-        for ((key, value) in parameters) {
+        for ((_, value) in parameters) {
             if (!ReferencesResolverUtil.mayContainReference(value)) continue
             val refs = getVaultReferences(value)
             if (refs.isNotEmpty()) {
