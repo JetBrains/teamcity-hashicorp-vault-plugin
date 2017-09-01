@@ -3,6 +3,7 @@ package org.jetbrains.teamcity.vault.server
 import jetbrains.buildServer.controllers.BasePropertiesBean
 import jetbrains.buildServer.controllers.PublicKeyUtil
 import jetbrains.buildServer.controllers.admin.projects.EditProjectTab
+import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.serverSide.auth.Permission
 import jetbrains.buildServer.serverSide.crypt.RSACipher
 import jetbrains.buildServer.web.openapi.PagePlaces
@@ -34,5 +35,9 @@ class VaultProjectFeatureTab(pagePlaces: PagePlaces, descriptor: PluginDescripto
         val project = getProject(request)
         val user = SessionUser.getUser(request)
         return project != null && user != null && user.isPermissionGrantedForProject(project.projectId, Permission.EDIT_PROJECT)
+                && isFeatureSupportedInProject(project)
     }
+
+    private fun isFeatureSupportedInProject(project: SProject) =
+            project.getParameterValue(VaultConstants.PROJECT_FEATURE_TAB_SUPPORTED_PARAMETER)?.toBoolean() ?: false
 }
