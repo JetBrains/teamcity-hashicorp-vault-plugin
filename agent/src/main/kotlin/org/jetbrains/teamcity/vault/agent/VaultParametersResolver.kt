@@ -51,8 +51,7 @@ class VaultParametersResolver {
     fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: List<VaultParameter>): HashMap<String, String> {
         val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath })
 
-        val replacements = getReplacements(parameters, responses)
-        return replacements
+        return getReplacements(parameters, responses)
     }
 
     private fun getReplacements(parameters: List<VaultParameter>, responses: Map<String, VaultResponse?>): HashMap<String, String> {
@@ -88,7 +87,7 @@ class VaultParametersResolver {
                 LOG.warn("There's no data in HashiCorp Vault response")
                 return null
             }
-            var key: String = "value"
+            var key = "value"
             if (data.size == 1) {
                 key = data.keys.first()
             }

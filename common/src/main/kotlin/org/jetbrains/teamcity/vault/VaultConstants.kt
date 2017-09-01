@@ -30,7 +30,6 @@ object VaultConstants {
 
     object BehaviourParameters {
         val ExposeEnvParameters = "teamcity.vault.set.env"
-        val ExposeConfigParameters = "teamcity.vault.set.parameter"
     }
 
 
