@@ -1,5 +1,6 @@
 package org.jetbrains.teamcity.vault.server
 
+import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.PropertiesProcessor
 import jetbrains.buildServer.serverSide.oauth.OAuthConnectionDescriptor
 import jetbrains.buildServer.serverSide.oauth.OAuthProvider
@@ -28,6 +29,25 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
     }
 
     override fun getPropertiesProcessor(): PropertiesProcessor? {
-        return VaultBuildFeature.getParametersProcessor()
+        return getParametersProcessor()
+    }
+
+    companion object {
+        fun getParametersProcessor(): PropertiesProcessor {
+            return PropertiesProcessor {
+                val errors = ArrayList<InvalidProperty>()
+                VaultFeatureSettings(it)
+                if (it[VaultConstants.FeatureSettings.URL].isNullOrBlank()) {
+                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
+                }
+                if (it[VaultConstants.FeatureSettings.ROLE_ID].isNullOrBlank()) {
+                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.ROLE_ID, "Should not be empty"))
+                }
+                if (it[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
+                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
+                }
+                return@PropertiesProcessor errors
+            }
+        }
     }
 }

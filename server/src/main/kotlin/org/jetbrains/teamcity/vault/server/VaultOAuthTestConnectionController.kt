@@ -31,7 +31,7 @@ class VaultOAuthTestConnectionController(server: SBuildServer, wcm: WebControlle
     }
 
     private fun doTestConnection(properties: Map<String, String>, xmlResponse: Element) {
-        val processor = VaultBuildFeature.getParametersProcessor()
+        val processor = VaultProjectConnectionProvider.getParametersProcessor()
         val errors = ActionErrors()
         processor.process(properties).forEach { errors.addError(it) }
         if (errors.hasErrors()) {

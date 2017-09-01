@@ -19,8 +19,7 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
                 VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
             }) return true
 
-            val buildFeature = buildType.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
-            return buildFeature != null && buildType.isEnabled(buildFeature.id)
+            return false
         }
 
     }
