@@ -3,7 +3,6 @@
        xmlns="http://www.springframework.org/schema/beans"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd"
        default-autowire="constructor">
-    <bean id="vaultBuildFeature" class="org.jetbrains.teamcity.vault.server.VaultBuildFeature"/>
     <bean id="vaultConnector" class="org.jetbrains.teamcity.vault.server.VaultConnector"/>
     <bean id="vaultParametersProvider" class="org.jetbrains.teamcity.vault.server.VaultParametersProvider"/>
     <bean id="vaultBuildStartContextProcessor" class="org.jetbrains.teamcity.vault.server.VaultBuildStartContextProcessor"/>
