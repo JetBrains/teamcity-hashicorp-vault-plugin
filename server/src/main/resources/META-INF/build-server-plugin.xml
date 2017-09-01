@@ -9,4 +9,6 @@
 
     <bean id="vaultProjectFeatureTab" class="org.jetbrains.teamcity.vault.server.VaultProjectFeatureTab"/>
     <bean id="vaultProjectFeatureController" class="org.jetbrains.teamcity.vault.server.VaultProjectFeatureController"/>
+
+    <bean id="vaultProjectConnection" class="org.jetbrains.teamcity.vault.server.VaultProjectConnectionProvider"/>
 </beans>

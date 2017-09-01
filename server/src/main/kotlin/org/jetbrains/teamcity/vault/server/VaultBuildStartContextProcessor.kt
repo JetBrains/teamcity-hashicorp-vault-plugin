@@ -6,6 +6,7 @@ import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.BuildStartContext
 import jetbrains.buildServer.serverSide.BuildStartContextProcessor
 import jetbrains.buildServer.serverSide.SBuild
+import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.VaultReferencesUtil
@@ -16,15 +17,25 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)!!
 
         private fun getFeature(build: SBuild): VaultFeatureSettings? {
-            val project = build.buildType?.project
+            val buildType = build.buildType ?: return null
+            val project = buildType.project
+
             val buildFeature = build.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
-            val projectFeature = project?.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE)?.firstOrNull()
             if (buildFeature != null) {
                 // For compatibility
                 return VaultFeatureSettings(buildFeature.parameters)
-            } else if (projectFeature != null) {
+            }
+            val projectFeature = project.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
+            if (projectFeature != null) {
                 return VaultFeatureSettings(projectFeature.parameters)
-            } else return null
+            }
+            val connectionFeature = project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).firstOrNull {
+                VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
+            }
+            if (connectionFeature != null) {
+                return VaultFeatureSettings(connectionFeature.parameters)
+            }
+            return null
         }
 
         internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {

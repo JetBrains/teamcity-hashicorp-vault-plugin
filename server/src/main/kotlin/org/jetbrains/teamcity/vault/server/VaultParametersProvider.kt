@@ -2,6 +2,7 @@ package org.jetbrains.teamcity.vault.server
 
 import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.serverSide.SBuild
+import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultReferencesUtil
@@ -15,6 +16,11 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
 
             val projectFeature = project.getAvailableFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
             if (projectFeature != null) return true
+
+            // It's faster than asking OAuthConectionsManager
+            if (project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).any {
+                VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
+            }) return true
 
             val buildFeature = buildType.getBuildFeaturesOfType(VaultConstants.FeatureSettings.FEATURE_TYPE).firstOrNull()
             return buildFeature != null && buildType.isEnabled(buildFeature.id)
