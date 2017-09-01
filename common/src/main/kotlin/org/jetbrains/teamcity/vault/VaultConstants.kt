@@ -2,7 +2,6 @@ package org.jetbrains.teamcity.vault
 
 object VaultConstants {
     val FEATURE_SUPPORTED_AGENT_PARAMETER = "teamcity.vault.supported"
-    val PROJECT_FEATURE_TAB_SUPPORTED_PARAMETER = "teamcity.vault.supported.in.project"
 
     val URL_PROPERTY = "teamcity.vault.url"
     val WRAPPED_TOKEN_PROPERTY = "teamcity.vault.wrapped.token"
