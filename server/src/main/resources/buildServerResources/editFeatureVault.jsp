@@ -32,11 +32,3 @@
         <%--<span class="smallNote"></span>--%>
     </td>
 </tr>
-
-<tr class="noborder">
-    <th><label for="${keys.VERIFY_SSL}">Verify SSL connection:</label></th>
-    <td>
-        <props:checkboxProperty name="${keys.VERIFY_SSL}"/>
-        <span class="smallNote">When checked, Vault connection would verify SSL connection</span>
-    </td>
-</tr>

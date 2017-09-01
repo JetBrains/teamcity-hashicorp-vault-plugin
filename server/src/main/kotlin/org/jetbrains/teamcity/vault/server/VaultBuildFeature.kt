@@ -4,7 +4,6 @@ import jetbrains.buildServer.serverSide.BuildFeature
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.PropertiesProcessor
 import jetbrains.buildServer.web.openapi.PluginDescriptor
-import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultConstants.FeatureSettings
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 
@@ -25,9 +24,6 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
         val settings = VaultFeatureSettings(params)
         return buildString {
             append("Vault URL: ${settings.url}")
-            if (!settings.verifySsl) {
-                append("<br>!!! SSL verification disabled. Do not use in prodfuction")
-            }
         }
     }
 
@@ -39,12 +35,6 @@ class VaultBuildFeature(private val descriptor: PluginDescriptor) : BuildFeature
 
     override fun toString(): String {
         return "VaultBuildFeature(${descriptor.pluginName})"
-    }
-
-    fun getParametersForAgent(parameters: Map<String, String>): Map<String, String> {
-        val result = HashMap(parameters)
-        result.remove(FeatureSettings.SECRET_ID)
-        return result
     }
 
     companion object {

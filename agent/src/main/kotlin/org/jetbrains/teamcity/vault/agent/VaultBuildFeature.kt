@@ -43,7 +43,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
         if (url == null || url.isNullOrBlank()) return
 
         // TODO: Use better constructor / refactor VaultFeatureSettings
-        val settings = VaultFeatureSettings(url, true, "", "")
+        val settings = VaultFeatureSettings(url, "", "")
 
         val logger = runningBuild.buildLogger
         if (wrapped == null || wrapped.isNullOrEmpty()) {

@@ -11,7 +11,6 @@ object VaultConstants {
     object AgentEnvironment {
         val VAULT_TOKEN = "VAULT_TOKEN"
         val VAULT_ADDR = "VAULT_ADDR"
-        val VAULT_SKIP_VERIFY = "VAULT_SKIP_VERIFY"
     }
 
     object FeatureSettings {
@@ -19,7 +18,6 @@ object VaultConstants {
 
         // Feature settings
         @JvmField val URL = "url"
-        @JvmField val VERIFY_SSL = "verify-ssl"
 
         @JvmField val ROLE_ID = "role-id"
         @JvmField val SECRET_ID = "secure:secret-id"
