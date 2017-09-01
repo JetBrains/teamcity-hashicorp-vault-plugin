@@ -1,8 +1,7 @@
 <%@ taglib prefix="props" uri="http://www.springframework.org/tags/form" %>
 <%@ include file="/include-internal.jsp" %>
 <jsp:useBean id="keys" class="org.jetbrains.teamcity.vault.server.VaultJspKeys"/>
-<props:hiddenProperty name="teamcity.vault.requirement"/>
-<props:hiddenProperty name="enabled" value="true"/>
+<props:hiddenProperty name="${keys.AGENT_REQUIREMENT}"/>
 <tr class="noBorder">
     <th><label for="${keys.URL}">Vault URL:</label></th>
     <td>

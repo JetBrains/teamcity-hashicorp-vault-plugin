@@ -7,4 +7,6 @@ class VaultJspKeys {
 
     val ROLE_ID = VaultConstants.FeatureSettings.ROLE_ID
     val SECRET_ID = VaultConstants.FeatureSettings.SECRET_ID
+
+    val AGENT_REQUIREMENT = VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT
 }
