@@ -64,8 +64,6 @@ fun createRestTemplate(): RestTemplate {
 
 fun isShouldSetEnvParameters(parameters: MutableMap<String, String>) = parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() ?: false
 
-fun isShouldSetConfigParameters(parameters: MutableMap<String, String>) = parameters[VaultConstants.BehaviourParameters.ExposeConfigParameters]?.toBoolean() ?: false
-
 private fun createUriTemplateHandler(endpoint: VaultEndpoint): DefaultUriTemplateHandler {
     val baseUrl = String.format("%s://%s:%s/%s/", endpoint.scheme, endpoint.host, endpoint.port, "v1")
     val handler = object : VaultClients.PrefixAwareUriTemplateHandler() {
