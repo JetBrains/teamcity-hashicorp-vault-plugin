@@ -26,3 +26,6 @@ teamcity {
         }
     }
 }
+
+// Do not include version into plugin archive name
+project.tasks.getByName('agentPlugin').version = ''
