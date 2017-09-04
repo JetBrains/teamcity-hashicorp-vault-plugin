@@ -50,3 +50,7 @@ teamcity {
 
 sourceCompatibility = "1.8"
 targetCompatibility = "1.8"
+
+// Do not include version into plugin archive name
+project.tasks.getByName('serverPlugin').version = ''
+
