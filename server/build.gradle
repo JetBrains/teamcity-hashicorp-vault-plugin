@@ -28,8 +28,8 @@ teamcity {
             description = 'Provides support for HashiCorp Vault Secrets Manager'
             version = project.version
 
-            vendorName = 'Vladislav Rassokhin'
-            email = 'Vladislav.Rassokhin@jetbrains.com'
+            vendorName = 'JetBrains, s.r.o.'
+            vendorUrl = 'http://www.jetbrains.com'
 
             useSeparateClassloader = true
         }
