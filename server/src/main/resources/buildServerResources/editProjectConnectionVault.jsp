@@ -99,5 +99,6 @@
     <div id="testConnectionDetails" class="mono"></div>
 </bs:dialog>
 <script>
+  $j('#OAuthConnectionDialog .popupSaveButtonsBlock .testConnectionButton').remove();
   $j("#testConnectionButton").appendTo($j('#OAuthConnectionDialog .popupSaveButtonsBlock')[0])
 </script>
