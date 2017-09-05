@@ -29,7 +29,7 @@ teamcity {
             version = project.version
 
             vendorName = 'JetBrains, s.r.o.'
-            vendorUrl = 'http://www.jetbrains.com'
+            vendorUrl = 'https://www.jetbrains.com'
 
             useSeparateClassloader = true
         }
