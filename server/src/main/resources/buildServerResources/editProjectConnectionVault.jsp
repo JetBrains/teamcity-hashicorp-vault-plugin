@@ -67,7 +67,7 @@
         <props:textProperty name="${keys.URL}"
                             className="longField textProperty_max-width js_max-width"/>
         <span class="error" id="error_${keys.URL}"/>
-        <span class="smallNote">Specify Vault URL, like 'https://vault.service:8200/'</span>
+        <span class="smallNote">Format: https://<vaultserver>:<port></span>
     </td>
 </tr>
 
