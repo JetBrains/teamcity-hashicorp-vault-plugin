@@ -1,5 +1,6 @@
 # TeamCity Plugin for HashiCorp Vault
 
+[![official JetBrains project](http://jb.gg/badges/official.svg)](https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub) 
 [![](https://teamcity.jetbrains.com/app/rest/builds/buildType:TeamCityPluginsByJetBrains_TeamCityHashiCorpVaultPlugin_Build/statusIcon.svg)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=TeamCityPluginsByJetBrains_TeamCityHashiCorpVaultPlugin_Build)
 
 The plugin allows connecting TeamCity to Vault, requesting new credentials when a build starts, passing them to the build script, and revoking them immediately when the build finishes.
