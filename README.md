@@ -4,6 +4,6 @@
 
 The plugin allows connecting TeamCity to Vault, requesting new credentials when a build starts, passing them to the build script, and revoking them immediately when the build finishes.
 
-See [blog post](https://blog.jetbrains.com/teamcity/09/vault/) for details.
+See [blog post](https://blog.jetbrains.com/teamcity/2017/09/vault/) for details.
 
 Download binaries in [Plugin repository](https://plugins.jetbrains.com/plugin/10011-hashicorp-vault-support).
