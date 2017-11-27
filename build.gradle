@@ -29,6 +29,7 @@ buildscript {
 
 ext {
     teamcityVersion = '2017.1'
+    springVersion = '4.2.6.RELEASE'
     version_prefix = '0.1'
 }
 
