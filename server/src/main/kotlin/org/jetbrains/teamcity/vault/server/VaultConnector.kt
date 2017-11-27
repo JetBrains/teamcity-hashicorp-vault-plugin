@@ -172,9 +172,11 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             val login = getAppRoleLogin(options)
 
             try {
-                val vaultResponse = template.write("auth/${options.path}/login", login)
+                val path = "auth/${options.path}/login"
+                val vaultResponse = template.write(path, login)
+                        ?: throw VaultException("HashiCorp Vault hasn't returned anything from POST to '$path'")
 
-                val wrap = vaultResponse.wrapInfo
+                val wrap = vaultResponse.wrapInfo ?: throw VaultException("HashiCorp Vault hasn't returned 'wrap_info' for POST to '$path'")
 
                 val token = wrap["token"] ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token")
                 val accessor = wrap["wrapped_accessor"] ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token accessor")

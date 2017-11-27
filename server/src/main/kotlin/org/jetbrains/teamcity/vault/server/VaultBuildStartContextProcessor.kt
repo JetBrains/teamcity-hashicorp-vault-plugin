@@ -66,8 +66,10 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             connector.requestWrappedToken(build, settings)
         } catch (e: Throwable) {
             val message = "Failed to fetch HashiCorp Vault wrapped token: ${e.message}"
-            LOG.warnAndDebugDetails(message, e)
-            build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection", message))
+            LOG.warn(message, e)
+            build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection",
+                    message + ": " + e.toString() + ", see teamcity-server.log for details"
+            ))
             return
         }
 
