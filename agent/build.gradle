@@ -20,7 +20,7 @@ dependencies {
     compile(project(':common')) {
         exclude group: 'org.apache.httpcomponents'
     }
-    compile 'org.springframework:spring-web:4.2.6.RELEASE'
+    compile "org.springframework:spring-web:${springVersion}"
     compile('com.jayway.jsonpath:json-path:2.4.0') {
         exclude group: 'org.slf4j'
     }
