@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault.server
 
+import com.google.common.util.concurrent.Striped
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
@@ -41,6 +42,7 @@ import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.withLock
 
 class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     init {
@@ -254,18 +256,25 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     // TODO: Support server restart
     private val myBuildsTokens: MutableMap<Long, LeasedWrappedTokenInfo> = ConcurrentHashMap()
     private val myPendingRemoval: MutableSet<LeasedWrappedTokenInfo> = ConcurrentHashSet()
+    private val myLocks = Striped.lazyWeakLock(64)
 
     fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String {
         val info = myBuildsTokens[build.buildId]
         if (info != null) return info.wrapped
 
-        try {
-            val (token, accessor) = doRequestWrappedToken(settings)
-            myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo(token, accessor, settings)
-            return token
-        } catch(e: Exception) {
-            myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
-            throw e
+        myLocks.get(build.buildId).withLock {
+            @Suppress("NAME_SHADOWING")
+            val info = myBuildsTokens[build.buildId]
+            if (info != null) return info.wrapped
+
+            try {
+                val (token, accessor) = doRequestWrappedToken(settings)
+                myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo(token, accessor, settings)
+                return token
+            } catch (e: Exception) {
+                myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
+                throw e
+            }
         }
     }
 
