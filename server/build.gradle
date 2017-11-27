@@ -24,7 +24,9 @@ ext {
 }
 
 dependencies {
-    compile project(':common')
+    compile(project(':common')) {
+        exclude group: 'org.apache.httpcomponents'
+    }
 
     provided "org.jetbrains.teamcity.internal:web:${teamcityVersion}"
 

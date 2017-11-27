@@ -28,9 +28,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.client.AbstractClientHttpRequestFactoryWrapper;
 import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.vault.config.ClientHttpRequestFactoryFactory;
-import org.springframework.vault.support.ClientOptions;
-import org.springframework.vault.support.SslConfiguration;
 import org.springframework.vault.support.VaultResponse;
 
 import java.io.IOException;
@@ -39,6 +36,7 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.BDDAssertions.then;
+import static org.jetbrains.teamcity.vault.UtilKt.createClientHttpRequestFactory;
 
 public class VaultParametersResolverTest {
     @ClassRule
@@ -51,7 +49,7 @@ public class VaultParametersResolverTest {
 
     @Before
     public void setUp() throws Exception {
-        ClientHttpRequestFactory factory = new AbstractClientHttpRequestFactoryWrapper(ClientHttpRequestFactoryFactory.create(new ClientOptions(), SslConfiguration.NONE)) {
+        ClientHttpRequestFactory factory = new AbstractClientHttpRequestFactoryWrapper(createClientHttpRequestFactory()) {
             @Override
             protected ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod, ClientHttpRequestFactory requestFactory) throws IOException {
                 myRequestedURIs.add(uri.getPath());

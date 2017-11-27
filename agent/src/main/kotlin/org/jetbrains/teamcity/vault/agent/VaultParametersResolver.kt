@@ -25,9 +25,6 @@ import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.vault.authentication.SimpleSessionManager
 import org.springframework.vault.client.VaultEndpoint
-import org.springframework.vault.config.ClientHttpRequestFactoryFactory
-import org.springframework.vault.support.ClientOptions
-import org.springframework.vault.support.SslConfiguration
 import org.springframework.vault.support.VaultResponse
 import org.springframework.vault.support.VaultToken
 import java.net.URI
@@ -59,7 +56,7 @@ class VaultParametersResolver {
 
     fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>, logger: BuildProgressLogger): HashMap<String, String> {
         val endpoint = VaultEndpoint.from(URI.create(settings.url))
-        val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)
+        val factory = createClientHttpRequestFactory()
         val client = VaultTemplate(endpoint, factory, SimpleSessionManager({ VaultToken.of(token) }))
 
         return doFetchAndPrepareReplacements(client, parameters, logger)

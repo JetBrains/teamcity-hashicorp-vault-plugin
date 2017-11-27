@@ -24,6 +24,7 @@ dependencies {
         exclude group: 'org.springframework'
     }
     provided 'org.springframework:spring-web:4.2.6.RELEASE'
+    provided 'org.apache.httpcomponents:httpclient:4.3.6'
 
     testCompile 'org.testcontainers:testcontainers:1.4.2'
     testCompile 'org.assertj:assertj-core:1.7.1'

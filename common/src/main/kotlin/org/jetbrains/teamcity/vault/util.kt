@@ -18,6 +18,7 @@ package org.jetbrains.teamcity.vault
 import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.VersionComparatorUtil
+import org.jetbrains.teamcity.vault.support.ClientHttpRequestFactoryFactory
 import org.jetbrains.teamcity.vault.support.MappingJackson2HttpMessageConverter
 import org.springframework.http.client.ClientHttpRequestFactory
 import org.springframework.http.client.ClientHttpRequestInterceptor
@@ -27,7 +28,6 @@ import org.springframework.http.converter.StringHttpMessageConverter
 import org.springframework.vault.client.VaultClients
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.client.VaultHttpHeaders
-import org.springframework.vault.config.ClientHttpRequestFactoryFactory
 import org.springframework.vault.support.ClientOptions
 import org.springframework.vault.support.SslConfiguration
 import org.springframework.web.client.RestTemplate
@@ -39,9 +39,13 @@ fun isJava8OrNewer(): Boolean {
     return VersionComparatorUtil.compare(System.getProperty("java.specification.version"), "1.8") >= 0
 }
 
+fun createClientHttpRequestFactory(): ClientHttpRequestFactory {
+    return ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)
+}
+
 fun createRestTemplate(settings: VaultFeatureSettings): RestTemplate {
     val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
-    val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)!!
+    val factory = createClientHttpRequestFactory()
     // HttpComponents.usingHttpComponents(options, sslConfiguration)
 
     return createRestTemplate(endpoint, factory)
@@ -65,7 +69,7 @@ fun RestTemplate.withVaultToken(token: String): RestTemplate {
 }
 
 
-fun createRestTemplate(): RestTemplate {
+private fun createRestTemplate(): RestTemplate {
     // Like in org.springframework.vault.client.VaultClients.createRestTemplate()
     // However custom Jackson2 converter is used
     val converters = listOf<HttpMessageConverter<*>>(
@@ -73,9 +77,7 @@ fun createRestTemplate(): RestTemplate {
             StringHttpMessageConverter(),
             MappingJackson2HttpMessageConverter()
     )
-    val template = RestTemplate(converters)
-    template.interceptors.add(ClientHttpRequestInterceptor { request, body, execution -> execution.execute(request, body) })
-    return template
+    return RestTemplate(converters)
 }
 
 fun isShouldSetEnvParameters(parameters: MutableMap<String, String>) = parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() ?: false

@@ -17,7 +17,9 @@ apply plugin: 'java'
 apply plugin: 'com.github.rodm.teamcity-agent'
 
 dependencies {
-    compile project(':common')
+    compile(project(':common')) {
+        exclude group: 'org.apache.httpcomponents'
+    }
     compile 'org.springframework:spring-web:4.2.6.RELEASE'
     compile('com.jayway.jsonpath:json-path:2.4.0') {
         exclude group: 'org.slf4j'

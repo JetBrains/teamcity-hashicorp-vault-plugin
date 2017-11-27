@@ -29,11 +29,13 @@ import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
 import org.springframework.vault.authentication.CubbyholeAuthentication;
 import org.springframework.vault.authentication.CubbyholeAuthenticationOptions;
 import org.springframework.vault.authentication.LifecycleAwareSessionManager;
-import org.springframework.vault.config.ClientHttpRequestFactoryFactory;
-import org.springframework.vault.support.*;
+import org.springframework.vault.support.VaultHealth;
+import org.springframework.vault.support.VaultMount;
+import org.springframework.vault.support.VaultToken;
 import org.springframework.web.client.RestTemplate;
 
 import static org.assertj.core.api.BDDAssertions.then;
+import static org.jetbrains.teamcity.vault.UtilKt.createClientHttpRequestFactory;
 
 public class VaultConnectorTest {
     @ClassRule
@@ -41,7 +43,7 @@ public class VaultConnectorTest {
 
     @Test
     public void testVaultIsUpAndRunning() throws Exception {
-        final ClientHttpRequestFactory factory = ClientHttpRequestFactoryFactory.create(new ClientOptions(), SslConfiguration.NONE);
+        final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
 
         final VaultTemplate template = new VaultTemplate(vault.getEndpoint(), factory, () -> VaultToken.of(vault.getToken()));
 
@@ -54,7 +56,7 @@ public class VaultConnectorTest {
 
     @Test
     public void testWrappedTokenCreated() throws Exception {
-        final ClientHttpRequestFactory factory = ClientHttpRequestFactoryFactory.create(new ClientOptions(), SslConfiguration.NONE);
+        final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
         final VaultTemplate template = new VaultTemplate(vault.getEndpoint(), factory, () -> VaultToken.of(vault.getToken()));
 
         // Ensure approle auth enabled

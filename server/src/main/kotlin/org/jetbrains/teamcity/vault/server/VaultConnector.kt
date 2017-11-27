@@ -34,9 +34,6 @@ import org.springframework.http.MediaType
 import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
 import org.springframework.vault.client.VaultEndpoint
-import org.springframework.vault.config.ClientHttpRequestFactoryFactory
-import org.springframework.vault.support.ClientOptions
-import org.springframework.vault.support.SslConfiguration
 import org.springframework.vault.support.VaultResponse
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
@@ -113,6 +110,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             try {
                 val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
                 val response = template.postForObject(uri, login, VaultResponse::class.java)
+                        ?: throw VaultException("HashiCorp Vault hasn't returned anything for '$uri'")
                 val auth = response.auth
                 val token = auth["client_token"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token")
                 val accessor = auth["accessor"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
@@ -167,7 +165,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                     .secretId(settings.secretId)
                     .build()
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
-            val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)!!
+            val factory = createClientHttpRequestFactory()
 
             val template = VaultTemplate(endpoint, factory, DummySessionManager()).withWrappedResponses("10m")
 
@@ -215,7 +213,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                     .secretId(settings.secretId)
                     .build()
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
-            val factory = ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)!!
+            val factory = createClientHttpRequestFactory()
 
             val template = VaultTemplate(endpoint, factory, DummySessionManager())
 
