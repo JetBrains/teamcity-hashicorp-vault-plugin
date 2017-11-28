@@ -15,18 +15,18 @@
  */
 package org.jetbrains.teamcity.vault
 
-import org.testcontainers.containers.GenericContainer
-import java.util.*
+import org.springframework.vault.authentication.SimpleSessionManager
+import org.springframework.vault.client.VaultEndpoint
+import org.springframework.vault.support.VaultToken
+import java.net.URI
 
-val vault_version = "0.7.3"
 
-open class VaultDevContainer(override val token: String = UUID.randomUUID().toString())
-    : GenericContainer<VaultDevContainer>("vault:$vault_version"), VaultDevEnvironment {
-    init {
-        withExposedPorts(8200)
-        withEnv("VAULT_DEV_ROOT_TOKEN_ID", token)
-    }
-
-    override val url: String
-        get() = "http://$containerIpAddress:$firstMappedPort"
+interface VaultDevEnvironment {
+    val token: String
+    val url: String
+    val endpoint: VaultEndpoint
+        get() = VaultEndpoint.from(URI.create(url))
+    val simpleSessionManager: SimpleSessionManager
+        get() = SimpleSessionManager { VaultToken.of(token) }
 }
+

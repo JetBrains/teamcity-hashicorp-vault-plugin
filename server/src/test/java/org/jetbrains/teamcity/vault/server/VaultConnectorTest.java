@@ -17,8 +17,10 @@ package org.jetbrains.teamcity.vault.server;
 
 import jetbrains.buildServer.util.CollectionsUtil;
 import kotlin.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.vault.UtilKt;
 import org.jetbrains.teamcity.vault.VaultDevContainer;
+import org.jetbrains.teamcity.vault.VaultDevEnvironment;
 import org.jetbrains.teamcity.vault.VaultFeatureSettings;
 import org.jetbrains.teamcity.vault.support.VaultTemplate;
 import org.junit.ClassRule;
@@ -41,11 +43,16 @@ public class VaultConnectorTest {
     @ClassRule
     public static final VaultDevContainer vault = new VaultDevContainer();
 
+    @NotNull
+    protected VaultDevEnvironment getVault() {
+        return vault;
+    }
+
     @Test
     public void testVaultIsUpAndRunning() throws Exception {
         final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
 
-        final VaultTemplate template = new VaultTemplate(vault.getEndpoint(), factory, () -> VaultToken.of(vault.getToken()));
+        final VaultTemplate template = new VaultTemplate(getVault().getEndpoint(), factory, () -> VaultToken.of(getVault().getToken()));
 
         final VaultHealth health = template.opsForSys().health();
         then(health.isInitialized()).isTrue();
@@ -57,7 +64,7 @@ public class VaultConnectorTest {
     @Test
     public void testWrappedTokenCreated() throws Exception {
         final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
-        final VaultTemplate template = new VaultTemplate(vault.getEndpoint(), factory, () -> VaultToken.of(vault.getToken()));
+        final VaultTemplate template = new VaultTemplate(getVault().getEndpoint(), factory, () -> VaultToken.of(getVault().getToken()));
 
         // Ensure approle auth enabled
         template.opsForSys().authMount("approle", VaultMount.create("approle"));
@@ -72,7 +79,7 @@ public class VaultConnectorTest {
         Pair<String, String> credentials = getAppRoleCredentials(template, "auth/approle/role/testrole");
 
 
-        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(vault.getUrl(), credentials.getFirst(), credentials.getSecond()));
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(getVault().getUrl(), credentials.getFirst(), credentials.getSecond()));
 
         then(wrapped.getFirst()).isNotNull();
         then(wrapped.getSecond()).isNotNull();
@@ -82,7 +89,7 @@ public class VaultConnectorTest {
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped.getFirst()))
                 .build();
-        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(vault.getUrl(), "", ""));
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(getVault().getUrl(), "", ""));
         final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
         final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 
