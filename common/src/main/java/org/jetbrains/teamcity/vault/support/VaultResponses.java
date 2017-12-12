@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault.support;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -135,9 +136,11 @@ public abstract class VaultResponses {
 
 			try {
 				Map<String, Object> map = OBJECT_MAPPER.readValue(json.getBytes(),
-						Map.class);
+						new TypeReference<Map<String, Object>>() {
+						});
 				if (map.containsKey("errors")) {
 
+					//noinspection unchecked
 					Collection<String> errors = (Collection<String>) map.get("errors");
 					if (errors.size() == 1) {
 						return errors.iterator().next();

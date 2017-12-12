@@ -262,7 +262,8 @@ public class VaultTemplate implements InitializingBean, VaultOperations, Disposa
             return Collections.emptyList();
         }
 
-        return (List) read.getData().get("keys");
+        //noinspection unchecked
+        return (List<String>) read.getData().get("keys");
     }
 
     @Override
