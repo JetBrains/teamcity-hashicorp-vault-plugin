@@ -63,23 +63,32 @@ public class VaultConnectorTest {
 
     @Test
     public void testWrappedTokenCreated() throws Exception {
+        doTestWrapperTokenCreated("approle");
+    }
+
+    @Test
+    public void testWrappedTokenCreatedNonStandardAuthPath() throws Exception {
+        doTestWrapperTokenCreated("teamcity/auth");
+    }
+
+    private void doTestWrapperTokenCreated(String authMountPath) {
         final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
         final VaultTemplate template = new VaultTemplate(getVault().getEndpoint(), factory, () -> VaultToken.of(getVault().getToken()));
 
         // Ensure approle auth enabled
-        template.opsForSys().authMount("approle", VaultMount.create("approle"));
-        then(template.opsForSys().getAuthMounts()).containsKey("approle/");
-        template.write("auth/approle/role/testrole", CollectionsUtil.asMap(
+        template.opsForSys().authMount(authMountPath, VaultMount.create("approle"));
+        then(template.opsForSys().getAuthMounts()).containsKey(authMountPath + "/");
+        template.write("auth/" + authMountPath + "/role/testrole", CollectionsUtil.asMap(
                 "secret_id_ttl", "10m",
                 "token_num_uses", "10",
                 "token_ttl", "20m",
                 "token_max_ttl", "30m",
                 "secret_id_num_uses", "40"
         ));
-        Pair<String, String> credentials = getAppRoleCredentials(template, "auth/approle/role/testrole");
+        Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
 
 
-        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(getVault().getUrl(), credentials.getFirst(), credentials.getSecond()));
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings(getVault().getUrl(), authMountPath, credentials.getFirst(), credentials.getSecond()));
 
         then(wrapped.getFirst()).isNotNull();
         then(wrapped.getSecond()).isNotNull();
@@ -89,7 +98,7 @@ public class VaultConnectorTest {
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped.getFirst()))
                 .build();
-        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(getVault().getUrl(), "", ""));
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings(getVault().getUrl(), authMountPath, "", ""));
         final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
         final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 

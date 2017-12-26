@@ -82,7 +82,17 @@
         <props:textProperty name="${keys.URL}"
                             className="longField textProperty_max-width js_max-width"/>
         <span class="error" id="error_${keys.URL}"/>
-        <span class="smallNote">Format: https://<vaultserver>:<port></span>
+        <span class="smallNote">Format: https://&lt;vaultserver&gt;:&lt;port&gt;</span>
+    </td>
+</tr>
+
+<tr class="advancedSetting">
+    <td><label for="${keys.ENDPOINT}">AppRole auth endpoint path:</label></td>
+    <td>
+        <props:textProperty name="${keys.ENDPOINT}"
+                            className="longField textProperty_max-width js_max-width"/>
+        <span class="error" id="error_${keys.ENDPOINT}"/>
+        <span class="smallNote">Path where AppRole auth endpoint mounted, e.g. <code>approle</code></span>
     </td>
 </tr>
 

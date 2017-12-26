@@ -35,6 +35,7 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
 
     override fun getDefaultProperties(): Map<String, String> {
         return mapOf(
+                VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
                 VaultConstants.FeatureSettings.URL to "http://localhost:8200"
         )
     }
@@ -51,9 +52,11 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
         fun getParametersProcessor(): PropertiesProcessor {
             return PropertiesProcessor {
                 val errors = ArrayList<InvalidProperty>()
-                VaultFeatureSettings(it)
                 if (it[VaultConstants.FeatureSettings.URL].isNullOrBlank()) {
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
+                }
+                if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
+                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
                 }
                 if (it[VaultConstants.FeatureSettings.ROLE_ID].isNullOrBlank()) {
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.ROLE_ID, "Should not be empty"))
@@ -61,6 +64,10 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 if (it[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
                 }
+
+                // Convert slashes if needed of add new fields
+                VaultFeatureSettings(it).toMap(it)
+
                 return@PropertiesProcessor errors
             }
         }

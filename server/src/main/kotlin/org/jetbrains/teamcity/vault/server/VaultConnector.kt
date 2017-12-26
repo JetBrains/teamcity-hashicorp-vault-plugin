@@ -101,7 +101,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
         private fun getRealToken(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
-                    .path("approle")
+                    .path(settings.getNormalizedEndpoint())
                     .roleId(settings.roleId)
                     .secretId(settings.secretId)
                     .build()
@@ -160,7 +160,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
         @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
-                    .path("approle")
+                    .path(settings.getNormalizedEndpoint())
                     .roleId(settings.roleId)
                     .secretId(settings.secretId)
                     .build()
@@ -208,7 +208,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
         @JvmStatic
         fun doRequestToken(settings: VaultFeatureSettings): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
-                    .path("approle")
+                    .path(settings.getNormalizedEndpoint())
                     .roleId(settings.roleId)
                     .secretId(settings.secretId)
                     .build()

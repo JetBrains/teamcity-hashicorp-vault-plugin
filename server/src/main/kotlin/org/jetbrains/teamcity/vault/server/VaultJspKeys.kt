@@ -20,6 +20,8 @@ import org.jetbrains.teamcity.vault.VaultConstants
 class VaultJspKeys {
     val URL = VaultConstants.FeatureSettings.URL
 
+    val ENDPOINT = VaultConstants.FeatureSettings.ENDPOINT
+
     val ROLE_ID = VaultConstants.FeatureSettings.ROLE_ID
     val SECRET_ID = VaultConstants.FeatureSettings.SECRET_ID
 

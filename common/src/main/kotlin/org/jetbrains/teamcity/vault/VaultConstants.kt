@@ -15,6 +15,8 @@
  */
 package org.jetbrains.teamcity.vault
 
+import org.springframework.vault.authentication.AppRoleAuthenticationOptions
+
 object VaultConstants {
     val FEATURE_SUPPORTED_AGENT_PARAMETER = "teamcity.vault.supported"
 
@@ -33,6 +35,9 @@ object VaultConstants {
 
         // Feature settings
         @JvmField val URL = "url"
+
+        @JvmField val ENDPOINT = "endpoint"
+        @JvmField val DEFAULT_ENDPOINT_PATH = AppRoleAuthenticationOptions.DEFAULT_APPROLE_AUTHENTICATION_PATH
 
         @JvmField val ROLE_ID = "role-id"
         @JvmField val SECRET_ID = "secure:secret-id"
