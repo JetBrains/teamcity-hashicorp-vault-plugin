@@ -66,15 +66,26 @@ class VaultParametersResolver {
         return VaultParametersFetcher(client, logger).doFetchAndPrepareReplacements(parameters)
     }
 
+    class UnresolvedParameters(message: String, val errors: List<String>) : Exception(message) {
+        override val message: String
+            get() = super.message!!
+    }
+
     class VaultParametersFetcher(private val client: VaultTemplate,
                                  private val logger: BuildProgressLogger) {
         fun doFetchAndPrepareReplacements(parameters: List<VaultParameter>): HashMap<String, String> {
-            val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath })
+            val errors = ArrayList<String>()
+            val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath }, errors)
 
-            return getReplacements(parameters, responses)
+            val replacements = getReplacements(parameters, responses, errors)
+
+            if (errors.isNotEmpty()) {
+                throw UnresolvedParameters("Errors during HashiCorp Vault values resolving", errors)
+            }
+            return replacements
         }
 
-        private fun fetch(client: VaultTemplate, paths: Collection<String>): HashMap<String, VaultResponse?> {
+        private fun fetch(client: VaultTemplate, paths: Collection<String>, errors: MutableList<String>): HashMap<String, VaultResponse?> {
             val responses = HashMap<String, VaultResponse?>(paths.size)
 
             for (path in paths.toSet()) {
@@ -82,20 +93,24 @@ class VaultParametersResolver {
                     val response = client.read(path.removePrefix("/"))
                     responses[path] = response
                 } catch (e: Exception) {
-                    logger.warning("Failed to fetch data for path '$path'")
+                    val error = "Failed to fetch data for path '$path'"
+                    logger.warning(error)
+                    errors.add(error)
                     responses[path] = null
                 }
             }
             return responses
         }
 
-        private fun getReplacements(parameters: List<VaultParameter>, responses: Map<String, VaultResponse?>): HashMap<String, String> {
+        private fun getReplacements(parameters: List<VaultParameter>, responses: Map<String, VaultResponse?>, errors: MutableList<String>): HashMap<String, String> {
             val replacements = HashMap<String, String>()
 
             for (parameter in parameters) {
                 val response = responses[parameter.vaultPath]
                 if (response == null) {
-                    logger.warning("Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault")
+                    val error = "Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault"
+                    logger.warning(error)
+                    errors.add(error)
                     continue
                 }
                 val value = extract(response, parameter) ?: continue

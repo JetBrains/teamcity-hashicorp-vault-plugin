@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault.agent
 
+import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.AgentLifeCycleAdapter
 import jetbrains.buildServer.agent.AgentRunningBuild
 import org.jetbrains.teamcity.vault.VaultConstants
@@ -26,6 +27,11 @@ class FailBuildListener : AgentLifeCycleAdapter() {
 
         if (url == null || url.isNullOrBlank()) return
 
-        runningBuild.stopBuild("HashiCorp Vault is not supported on this agent. Please add agent requirement for '${VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER}' parameter or run agent using Java 1.8")
+        val message = "HashiCorp Vault is not supported on this agent. Please add agent requirement for '${VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER}' parameter or run agent using Java 1.8"
+
+        runningBuild.buildLogger.logBuildProblem(BuildProblemData.createBuildProblem(
+                "VC_${runningBuild.buildTypeId}_AJ", "VaultConnection", message
+        ))
+        runningBuild.stopBuild(message)
     }
 }

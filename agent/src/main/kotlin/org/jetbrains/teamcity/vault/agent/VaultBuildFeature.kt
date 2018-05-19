@@ -26,6 +26,8 @@ import org.springframework.vault.authentication.CubbyholeAuthentication
 import org.springframework.vault.authentication.CubbyholeAuthenticationOptions
 import org.springframework.vault.authentication.LifecycleAwareSessionManager
 import org.springframework.vault.support.VaultToken
+import jetbrains.buildServer.serverSide.crypt.EncryptUtil
+import jetbrains.buildServer.BuildProblemData
 import java.util.concurrent.ConcurrentHashMap
 
 class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
@@ -83,8 +85,12 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                 sessions[runningBuild.buildId] = sessionManager
                 token = sessionManager.sessionToken.token
             } catch (e: Exception) {
-                logger.error("Failed to unwrap HashiCorp Vault token: " + e.message)
+                val message = "Failed to unwrap HashiCorp Vault token: " + e.message
+                logger.logBuildProblem(BuildProblemData.createBuildProblem(
+                        VaultConstants.FeatureSettings.FEATURE_TYPE + '-' + EncryptUtil.md5(message),
+                        VaultConstants.FeatureSettings.FEATURE_TYPE, message))
                 logger.exception(e)
+                runningBuild.stopBuild(message)
                 return@activity
             }
             logger.message("HashiCorp Vault token successfully fetched")
@@ -97,7 +103,16 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                 logger.message("${VaultConstants.AgentEnvironment.VAULT_ADDR} and ${VaultConstants.AgentEnvironment.VAULT_TOKEN} evnironment variables were added")
             }
 
-            myVaultParametersResolver.resolve(runningBuild, settings, token)
+            try {
+                myVaultParametersResolver.resolve(runningBuild, settings, token)
+            } catch (e: VaultParametersResolver.UnresolvedParameters) {
+                val message = e.message
+                logger.logBuildProblem(BuildProblemData.createBuildProblem(
+                        VaultConstants.FeatureSettings.FEATURE_TYPE + '-' + EncryptUtil.md5(message),
+                        VaultConstants.FeatureSettings.FEATURE_TYPE, message))
+                runningBuild.stopBuild(message)
+                return@activity
+            }
         }
     }
 
