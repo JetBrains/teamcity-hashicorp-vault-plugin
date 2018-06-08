@@ -18,10 +18,8 @@ package org.jetbrains.teamcity.vault
 import org.testcontainers.containers.GenericContainer
 import java.util.*
 
-val vault_version = "0.7.3"
-
-open class VaultDevContainer(override val token: String = UUID.randomUUID().toString())
-    : GenericContainer<VaultDevContainer>("vault:$vault_version"), VaultDevEnvironment {
+open class VaultDevContainer(override val token: String = UUID.randomUUID().toString(), version: String = "0.7.3")
+    : GenericContainer<VaultDevContainer>("vault:$version"), VaultDevEnvironment {
     init {
         withExposedPorts(8200)
         withEnv("VAULT_DEV_ROOT_TOKEN_ID", token)
