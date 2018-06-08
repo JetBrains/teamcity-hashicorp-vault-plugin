@@ -106,7 +106,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                     .secretId(settings.secretId)
                     .build()
 
-            val login = getAppRoleLogin(options)
+            val login = getAppRoleLogin(settings)
             try {
                 val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
                 val response = template.postForObject(uri, login, VaultResponse::class.java)
@@ -128,11 +128,11 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             return entity.statusCode == HttpStatus.NO_CONTENT
         }
 
-        private fun getAppRoleLogin(options: AppRoleAuthenticationOptions): Map<String, String> {
+        private fun getAppRoleLogin(settings: VaultFeatureSettings): Map<String, String> {
             val login = HashMap<String, String>(2)
-            login.put("role_id", options.roleId)
-            options.secretId.nullIfEmpty()?.let {
-                login.put("secret_id", it)
+            login["role_id"] = settings.roleId
+            settings.secretId.nullIfEmpty()?.let {
+                login["secret_id"] = it
             }
             return login
         }
@@ -169,7 +169,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
             val template = VaultTemplate(endpoint, factory, DummySessionManager()).withWrappedResponses("10m")
 
-            val login = getAppRoleLogin(options)
+            val login = getAppRoleLogin(settings)
 
             try {
                 val path = "auth/${options.path}/login"
@@ -217,7 +217,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
             val template = VaultTemplate(endpoint, factory, DummySessionManager())
 
-            val login = getAppRoleLogin(options)
+            val login = getAppRoleLogin(settings)
 
             try {
                 val vaultResponse = template.write("auth/${options.path}/login", login)
