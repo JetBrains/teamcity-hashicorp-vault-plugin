@@ -49,17 +49,7 @@ object VaultReferencesUtil {
         if (!value.contains(VaultConstants.VAULT_PARAMETER_PREFIX)) return emptyList()
 
         val references = ArrayList<String>(1)
-        ReferencesResolverUtil.resolve(value, object : ReferencesResolverUtil.ReferencesResolverListener {
-            override fun appendText(text: String) {}
-
-            override fun appendReference(referenceKey: String): Boolean {
-                if (referenceKey.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX)) {
-                    references.add(referenceKey)
-                }
-                return true
-            }
-
-        })
+        references.addAll(ReferencesResolverUtil.getReferences(value, arrayOf(VaultConstants.VAULT_PARAMETER_PREFIX), true))
         return references
     }
 }
