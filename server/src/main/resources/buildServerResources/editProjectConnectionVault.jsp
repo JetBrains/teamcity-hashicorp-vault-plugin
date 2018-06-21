@@ -77,6 +77,14 @@
     </td>
 </tr>
 <tr>
+    <td><label for="${keys.PARAMETER_PREFIX}">Parameter prefix:</label><l:star/></td>
+    <td>
+        <props:textProperty name="${keys.PARAMETER_PREFIX}" className="longField"/>
+        <span class="error" id="error_${keys.PARAMETER_PREFIX}"></span>
+        <span class="smallNote">Provide some prefix to use in parameters in case of multiple vault connections.</span>
+    </td>
+</tr>
+<tr>
     <td><label for="${keys.URL}">Vault URL:</label></td>
     <td>
         <props:textProperty name="${keys.URL}"

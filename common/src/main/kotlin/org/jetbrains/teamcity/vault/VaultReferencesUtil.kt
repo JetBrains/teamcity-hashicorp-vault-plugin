@@ -19,10 +19,10 @@ import jetbrains.buildServer.parameters.ReferencesResolverUtil
 
 object VaultReferencesUtil {
 
-    @JvmStatic fun hasReferences(parameters: Map<String, String>): Boolean {
+    @JvmStatic fun hasReferences(parameters: Map<String, String>, prefixes: Collection<String>): Boolean {
         for ((_, value) in parameters) {
             if (!ReferencesResolverUtil.mayContainReference(value)) continue
-            val refs = getVaultReferences(value)
+            val refs = getVaultReferences(value,prefixes)
             if (refs.isNotEmpty()) {
                 return true
             }
@@ -30,10 +30,15 @@ object VaultReferencesUtil {
         return false
     }
 
-    @JvmStatic fun collect(parameters: Map<String, String>, references: MutableCollection<String>, keys: MutableCollection<String>? = null) {
+    @JvmStatic fun collect(parameters: Map<String, String>, references: MutableCollection<String>, prefix: String, keys: MutableCollection<String>? = null) {
+        val prefixes = ArrayList<String>(1)
+        prefixes.add(prefix)
+        collect(parameters, references, prefixes,keys)
+    }
+    @JvmStatic fun collect(parameters: Map<String, String>, references: MutableCollection<String>, prefixes: Collection<String>, keys: MutableCollection<String>? = null) {
         for ((key, value) in parameters) {
             if (!ReferencesResolverUtil.mayContainReference(value)) continue
-            val refs = getVaultReferences(value)
+            val refs = getVaultReferences(value,prefixes)
             if (refs.isNotEmpty()) {
                 keys?.add(key)
                 references.addAll(refs)
@@ -41,15 +46,17 @@ object VaultReferencesUtil {
         }
     }
 
-    @JvmStatic fun getVaultPath(ref: String): String {
-        return ref.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX).ensureHasPrefix("/")
+    @JvmStatic fun getVaultPath(ref: String, prefix: String): String {
+        return ref.removePrefix(prefix + ":").ensureHasPrefix("/")
     }
 
-    private fun getVaultReferences(value: String): Collection<String> {
-        if (!value.contains(VaultConstants.VAULT_PARAMETER_PREFIX)) return emptyList()
+    private fun getVaultReferences(value: String, prefixes: Collection<String>): Collection<String> {
+        if (!prefixes.any { prefix -> value.contains(prefix + ":") }) return emptyList()
 
-        val references = ArrayList<String>(1)
-        references.addAll(ReferencesResolverUtil.getReferences(value, arrayOf(VaultConstants.VAULT_PARAMETER_PREFIX), true))
+        val references = ArrayList<String>(prefixes.count())
+        prefixes.forEach { prefix ->
+            references.addAll(ReferencesResolverUtil.getReferences(value, arrayOf(prefix + ":"), true))
+        }
         return references
     }
 }

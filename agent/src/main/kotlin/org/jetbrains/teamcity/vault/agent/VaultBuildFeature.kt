@@ -53,64 +53,74 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
     override fun buildStarted(runningBuild: AgentRunningBuild) {
         val parameters = runningBuild.sharedConfigParameters
-        val url = parameters[VaultConstants.URL_PROPERTY]
-        val wrapped = parameters[VaultConstants.WRAPPED_TOKEN_PROPERTY]
+        val vaultInstancePrefixes = parameters.keys.filter {
+            it.startsWith(VaultConstants.WRAPPED_TOKEN_PROPERTY + ".")
+        }.map { parameterKey: String ->
+            parameterKey.removePrefix(VaultConstants.WRAPPED_TOKEN_PROPERTY + ".")
+        }
 
-        if (url == null || url.isNullOrBlank()) return
+        vaultInstancePrefixes.forEach { prefix ->
+            val url = parameters[VaultConstants.URL_PROPERTY + ".$prefix"]
+            val wrapped = parameters[VaultConstants.WRAPPED_TOKEN_PROPERTY + ".$prefix"]
 
-        val logger = runningBuild.buildLogger
-        logger.activity("HashiCorp Vault", VaultConstants.FeatureSettings.FEATURE_TYPE) {
-            // TODO: Use better constructor / refactor VaultFeatureSettings
-            val settings = VaultFeatureSettings(url, "", "")
+            if(url == null || url.isNullOrBlank())
+                return@forEach
+            val logger = runningBuild.buildLogger
+            logger.activity("HashiCorp \"$prefix\" Vault", VaultConstants.FeatureSettings.FEATURE_TYPE) {
+                val settings = VaultFeatureSettings(prefix, url)
 
-            if (wrapped == null || wrapped.isNullOrEmpty()) {
-                logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token not found", null)
-                return@activity
-            }
-            if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
-                logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token value is incorrect, seems there was error fetching token on TeamCity server side", null)
-                return@activity
-            }
-            val token: String
-            try {
-                val options = CubbyholeAuthenticationOptions.builder()
-                        .wrapped()
-                        .initialToken(VaultToken.of(wrapped))
-                        .build()
-                val template = createRestTemplate(settings)
-                val authentication = CubbyholeAuthentication(options, template)
+                if (wrapped == null || wrapped.isNullOrEmpty()) {
+                    logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
+                    return@activity
+                }
+                if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
+                    logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token value for url $url is incorrect, seems there was error fetching token on TeamCity server side", null)
+                    return@activity
+                }
+                val token: String
+                try {
+                    val options = CubbyholeAuthenticationOptions.builder()
+                            .wrapped()
+                            .initialToken(VaultToken.of(wrapped))
+                            .build()
+                    val template = createRestTemplate(settings)
+                    val authentication = CubbyholeAuthentication(options, template)
 
-                val timeout = (parameters[VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY] ?: "60").toLongOrNull() ?: 60
+                    val timeout = (parameters[VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY] ?: "60").toLongOrNull()
+                            ?: 60
 
-                val sessionManager = object : LifecycleAwareSessionManager(authentication, scheduler, template,
-                        LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS)
-                ) {
-                    override fun renewToken(): Boolean {
-                        LOG.info("Renewing Vault token")
-                        return super.renewToken().also {
-                            if (it) logger.message("Renewed HashiCorp Vault token successfully")
-                            else logger.warning("Failed to refresh HashiCorp Vault token")
+                    val sessionManager = object : LifecycleAwareSessionManager(authentication, scheduler, template,
+                            LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS)
+                    ) {
+                        override fun renewToken(): Boolean {
+                            LOG.info("Renewing Vault token")
+                            return super.renewToken().also {
+                                if (it) logger.message("Renewed HashiCorp Vault token successfully")
+                                else logger.warning("Failed to refresh HashiCorp Vault token")
+                            }
                         }
                     }
+                    sessions[runningBuild.buildId] = sessionManager
+                    token = sessionManager.sessionToken.token
+                } catch (e: Exception) {
+                    logger.error("Failed to unwrap HashiCorp Vault token: " + e.message)
+                    logger.exception(e)
+                    return@activity
                 }
-                sessions[runningBuild.buildId] = sessionManager
-                token = sessionManager.sessionToken.token
-            } catch (e: Exception) {
-                logger.error("Failed to unwrap HashiCorp Vault token: " + e.message)
-                logger.exception(e)
-                return@activity
+                logger.message("HashiCorp Vault token successfully fetched")
+
+                runningBuild.passwordReplacer.addPassword(token)
+
+                if (isShouldSetEnvParameters(parameters)) {
+
+                    runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_TOKEN + ".$prefix", token)
+                    runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_ADDR + ".$prefix", settings.url)
+
+                    logger.message("${VaultConstants.AgentEnvironment.VAULT_ADDR}.$prefix and ${VaultConstants.AgentEnvironment.VAULT_TOKEN}.$prefix evnironment variables were added")
+                }
+
+                myVaultParametersResolver.resolve(runningBuild, settings, token)
             }
-            logger.message("HashiCorp Vault token successfully fetched")
-
-            runningBuild.passwordReplacer.addPassword(token)
-
-            if (isShouldSetEnvParameters(parameters)) {
-                runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_TOKEN, token)
-                runningBuild.addSharedEnvironmentVariable(VaultConstants.AgentEnvironment.VAULT_ADDR, settings.url)
-                logger.message("${VaultConstants.AgentEnvironment.VAULT_ADDR} and ${VaultConstants.AgentEnvironment.VAULT_TOKEN} evnironment variables were added")
-            }
-
-            myVaultParametersResolver.resolve(runningBuild, settings, token)
         }
     }
 

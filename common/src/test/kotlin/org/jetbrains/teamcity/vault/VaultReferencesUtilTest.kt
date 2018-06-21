@@ -25,7 +25,7 @@ class VaultReferencesUtilTest {
         then(VaultReferencesUtil.hasReferences(map)).isTrue()
         val keys = HashSet<String>()
         val refs = HashSet<String>()
-        VaultReferencesUtil.collect(map, refs, keys)
+        VaultReferencesUtil.collect(map, refs, Arrays.asList("vault"), keys)
         then(keys).containsOnly(map.keys.first())
         then(refs).containsOnly("vault:/test")
     }
@@ -36,7 +36,7 @@ class VaultReferencesUtilTest {
         then(VaultReferencesUtil.hasReferences(map)).isTrue()
         val keys = HashSet<String>()
         val refs = HashSet<String>()
-        VaultReferencesUtil.collect(map, refs, keys)
+        VaultReferencesUtil.collect(map, refs, Arrays.asList("vault"), keys)
         then(keys).containsOnly(map.keys.first())
         then(refs).containsOnly("vault:/testA", "vault:/test B")
     }

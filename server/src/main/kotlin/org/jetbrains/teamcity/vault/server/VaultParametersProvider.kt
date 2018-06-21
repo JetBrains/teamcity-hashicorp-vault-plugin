@@ -22,6 +22,7 @@ import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvid
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultReferencesUtil
 import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
+import org.jetbrains.teamcity.vault.VaultFeatureSettings
 
 class VaultParametersProvider : AbstractBuildParametersProvider() {
     companion object {
@@ -40,6 +41,7 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
     }
 
     override fun getParametersAvailableOnAgent(build: SBuild): Collection<String> {
+        val buildType = build.buildType ?: return emptyList()
         if (build.isFinished) return emptyList()
 
         if (!isFeatureEnabled(build)) return emptyList()
@@ -50,7 +52,13 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
             exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_TOKEN
             exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_ADDR
         }
-        VaultReferencesUtil.collect(parameters, exposed)
+        val connectionFeatures = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
+            VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
+        }
+        val vaultFeatures = connectionFeatures.map {
+            VaultFeatureSettings(it.parameters)
+        }
+        VaultReferencesUtil.collect(parameters, exposed, vaultFeatures.map { feature -> feature.parameterPrefix })
         return exposed
     }
 }
