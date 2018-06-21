@@ -45,11 +45,13 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     init {
         dispatcher.addListener(object : BuildServerAdapter() {
             override fun buildFinished(build: SRunningBuild) {
-                val info = myBuildsTokens.remove(build.buildId) ?: return
-                if (info == LeasedWrappedTokenInfo.FAILED_TO_FETCH) return
-                myPendingRemoval.add(info)
-                if (revoke(info)) {
-                    myPendingRemoval.remove(info)
+                val infos = myBuildsTokens.remove(build.buildId) ?: return
+                infos.values.forEach { info ->
+                    if (info == LeasedWrappedTokenInfo.FAILED_TO_FETCH) return
+                    myPendingRemoval.add(info)
+                    if (revoke(info)) {
+                        myPendingRemoval.remove(info)
+                    }
                 }
             }
         })
@@ -241,25 +243,29 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     }
 
     // TODO: Support server restart
-    private val myBuildsTokens: MutableMap<Long, LeasedWrappedTokenInfo> = ConcurrentHashMap()
+    private val myBuildsTokens: MutableMap<Long, MutableMap<String,LeasedWrappedTokenInfo>> = ConcurrentHashMap()
     private val myPendingRemoval: MutableSet<LeasedWrappedTokenInfo> = ConcurrentHashSet()
     private val myLocks = Striped.lazyWeakLock(64)
 
     fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String {
-        val info = myBuildsTokens[build.buildId]
-        if (info != null) return info.wrapped
+        val infos = myBuildsTokens.getOrDefault(build.buildId,ConcurrentHashMap())
+        val info = infos[settings.parameterPrefix]
+        if(info != null) return info.wrapped
 
         myLocks.get(build.buildId).withLock {
             @Suppress("NAME_SHADOWING")
-            val info = myBuildsTokens[build.buildId]
-            if (info != null) return info.wrapped
-
+            val infos = myBuildsTokens.getOrDefault(build.buildId,ConcurrentHashMap())
+            @Suppress("NAME_SHADOWING")
+            val info = infos[settings.parameterPrefix]
+            if(info != null) return info.wrapped
             try {
                 val (token, accessor) = doRequestWrappedToken(settings)
-                myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo(token, accessor, settings)
+                infos[settings.parameterPrefix] = LeasedWrappedTokenInfo(token, accessor, settings);
+                myBuildsTokens[build.buildId] = infos;
                 return token
             } catch (e: Exception) {
-                myBuildsTokens[build.buildId] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
+                infos[settings.parameterPrefix] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
+                myBuildsTokens[build.buildId] = infos;
                 throw e
             }
         }

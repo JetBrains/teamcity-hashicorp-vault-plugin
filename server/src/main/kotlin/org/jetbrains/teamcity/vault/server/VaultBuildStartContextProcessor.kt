@@ -31,23 +31,25 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)!!
 
-        private fun getFeature(build: SBuild): VaultFeatureSettings? {
-            val buildType = build.buildType ?: return null
+        private fun getFeature(build: SBuild): List<VaultFeatureSettings> {
+            val buildType = build.buildType ?: return emptyList()
 
-            val connectionFeature = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).firstOrNull {
+            val connectionFeatures = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
                 VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
             }
-            if (connectionFeature != null) {
-                return VaultFeatureSettings(connectionFeature.parameters)
+            val vaultFeatures = connectionFeatures.map {
+                VaultFeatureSettings(it.parameters)
             }
-            return null
+            return vaultFeatures
         }
 
         internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {
             val parameters = build.buildOwnParameters
+            val features = getFeature(build)
+            val prefixes = features.map { it.parameterPrefix }.toSet()
             return isShouldSetEnvParameters(parameters)
                     // Slowest part:
-                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all)
+                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all, prefixes)
         }
 
     }
@@ -55,15 +57,19 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
     override fun updateParameters(context: BuildStartContext) {
         val build = context.build
 
-        val settings = getFeature(build) ?: return
+        val settingsList = getFeature(build)
+        if(settingsList.isEmpty())
+            return;
 
         if (!isShouldEnableVaultIntegration(build)) {
             LOG.debug("There's no need to fetch vault parameter for build $build")
             return
         }
 
-        val wrapped: String = try {
-            connector.requestWrappedToken(build, settings)
+        val wrappedTokens: List<Pair<String,String>> = try {
+            settingsList.map {
+                Pair(it.parameterPrefix,connector.requestWrappedToken(build, it))
+            }
         } catch (e: Throwable) {
             val message = "Failed to fetch HashiCorp Vault wrapped token: ${e.message}"
             LOG.warn(message, e)
@@ -73,7 +79,11 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             return
         }
 
-        context.addSharedParameter(VaultConstants.WRAPPED_TOKEN_PROPERTY, wrapped)
-        context.addSharedParameter(VaultConstants.URL_PROPERTY, settings.url)
+        wrappedTokens.forEach { (prefix: String, token: String) ->
+            context.addSharedParameter(VaultConstants.WRAPPED_TOKEN_PROPERTY + "." + prefix, token)
+        }
+        settingsList.forEach { settings: VaultFeatureSettings ->
+            context.addSharedParameter(VaultConstants.URL_PROPERTY + "." + settings.parameterPrefix, settings.url)
+        }
     }
 }
