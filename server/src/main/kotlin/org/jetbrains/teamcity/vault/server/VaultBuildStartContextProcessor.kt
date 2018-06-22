@@ -40,6 +40,13 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             val vaultFeatures = connectionFeatures.map {
                 VaultFeatureSettings(it.parameters)
             }
+            vaultFeatures.groupBy { it.parameterPrefix }.forEach { (prefix, prefixes) ->
+                if(prefixes.size > 1) {
+                    build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection",
+                        "Multiple vault connections with prefix \"$prefix\" present"
+                    ))
+                }
+            }
             return vaultFeatures
         }
 
