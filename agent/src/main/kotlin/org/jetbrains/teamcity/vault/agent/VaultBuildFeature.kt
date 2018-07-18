@@ -82,9 +82,17 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
                 val timeout = (parameters[VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY] ?: "60").toLongOrNull() ?: 60
 
-                val sessionManager = LifecycleAwareSessionManager(authentication, scheduler, template,
+                val sessionManager = object : LifecycleAwareSessionManager(authentication, scheduler, template,
                         LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS)
-                )
+                ) {
+                    override fun renewToken(): Boolean {
+                        LOG.info("Renewing Vault token")
+                        return super.renewToken().also {
+                            if (it) logger.message("Renewed HashiCorp Vault token successfully")
+                            else logger.warning("Failed to refresh HashiCorp Vault token")
+                        }
+                    }
+                }
                 sessions[runningBuild.buildId] = sessionManager
                 token = sessionManager.sessionToken.token
             } catch (e: Exception) {
