@@ -27,6 +27,7 @@ import org.springframework.vault.authentication.CubbyholeAuthenticationOptions
 import org.springframework.vault.authentication.LifecycleAwareSessionManager
 import org.springframework.vault.support.VaultToken
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                         private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
@@ -79,7 +80,11 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                 val template = createRestTemplate(settings)
                 val authentication = CubbyholeAuthentication(options, template)
 
-                val sessionManager = LifecycleAwareSessionManager(authentication, scheduler, template)
+                val timeout = (parameters[VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY] ?: "60").toLongOrNull() ?: 60
+
+                val sessionManager = LifecycleAwareSessionManager(authentication, scheduler, template,
+                        LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS)
+                )
                 sessions[runningBuild.buildId] = sessionManager
                 token = sessionManager.sessionToken.token
             } catch (e: Exception) {

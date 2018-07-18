@@ -17,11 +17,13 @@ package org.jetbrains.teamcity.vault
 
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
 
+@Suppress("MayBeConstant")
 object VaultConstants {
     val FEATURE_SUPPORTED_AGENT_PARAMETER = "teamcity.vault.supported"
 
     val URL_PROPERTY = "teamcity.vault.url"
     val WRAPPED_TOKEN_PROPERTY = "teamcity.vault.wrapped.token"
+    val TOKEN_REFRESH_TIMEOUT_PROPERTY = "teamcity.vault.token.refresh.timeout"
 
     @JvmField val VAULT_PARAMETER_PREFIX = "vault:"
 
