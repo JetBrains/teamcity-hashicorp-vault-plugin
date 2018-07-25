@@ -52,7 +52,7 @@ public class VaultConnectorTest {
     public void testVaultIsUpAndRunning() throws Exception {
         final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
 
-        final VaultTemplate template = new VaultTemplate(getVault().getEndpoint(), factory, () -> VaultToken.of(getVault().getToken()));
+        final VaultTemplate template = getVault().getTemplate(factory);
 
         final VaultHealth health = template.opsForSys().health();
         then(health.isInitialized()).isTrue();
@@ -73,7 +73,7 @@ public class VaultConnectorTest {
 
     private void doTestWrapperTokenCreated(String authMountPath) {
         final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
-        final VaultTemplate template = new VaultTemplate(getVault().getEndpoint(), factory, () -> VaultToken.of(getVault().getToken()));
+        final VaultTemplate template = getVault().getTemplate(factory);
 
         // Ensure approle auth enabled
         template.opsForSys().authMount(authMountPath, VaultMount.create("approle"));

@@ -56,7 +56,7 @@ public class VaultParametersResolverTest {
                 return requestFactory.createRequest(uri, httpMethod);
             }
         };
-        template = new VaultTemplate(vault.getEndpoint(), factory, vault.getSimpleSessionManager());
+        template = vault.getTemplate(factory);
         resolver = new VaultParametersResolver();
         feature = new VaultFeatureSettings(vault.getUrl(), "", "");
     }
