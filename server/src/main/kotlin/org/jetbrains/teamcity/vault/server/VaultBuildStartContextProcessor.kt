@@ -31,28 +31,36 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)!!
 
-        private fun getFeature(build: SBuild): List<VaultFeatureSettings> {
+        private fun getFeatures(build: SBuild, reportProblems: Boolean): List<VaultFeatureSettings> {
             val buildType = build.buildType ?: return emptyList()
 
             val connectionFeatures = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
                 VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
             }
+
+            // Two features with same prefix cannot coexist in same project
+            // Though it's possible to override feature with same prefix in subproject
+
+            if (reportProblems) {
+                connectionFeatures.groupBy { it.projectId }.forEach { pid, features ->
+                    features.groupBy { it.parameters[VaultConstants.FeatureSettings.PARAMETER_PREFIX] }
+                            .filterValues { it.size > 1 }
+                            .forEach{ prefix, _ ->
+                                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${prefix}_$pid", "VaultConnection",
+                                        "Multiple vault connections with prefix \"$prefix\" present in project $pid"
+                                ))
+                            }
+                }
+            }
             val vaultFeatures = connectionFeatures.map {
                 VaultFeatureSettings(it.parameters)
             }
-            vaultFeatures.groupBy { it.parameterPrefix }.forEach { (prefix, prefixes) ->
-                if(prefixes.size > 1) {
-                    build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection",
-                        "Multiple vault connections with prefix \"$prefix\" present"
-                    ))
-                }
-            }
-            return vaultFeatures
+            return vaultFeatures.groupBy { it.parameterPrefix }.map { (_, v) -> v.first() }
         }
 
         internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {
             val parameters = build.buildOwnParameters
-            val features = getFeature(build)
+            val features = getFeatures(build, false)
             val prefixes = features.map { it.parameterPrefix }.toSet()
             return isShouldSetEnvParameters(parameters)
                     // Slowest part:
@@ -64,7 +72,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
     override fun updateParameters(context: BuildStartContext) {
         val build = context.build
 
-        val settingsList = getFeature(build)
+        val settingsList = getFeatures(build, true)
         if(settingsList.isEmpty())
             return;
 
