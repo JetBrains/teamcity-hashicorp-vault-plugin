@@ -66,7 +66,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
             if(url == null || url.isNullOrBlank())
                 return@forEach
             val logger = runningBuild.buildLogger
-            logger.activity("HashiCorp \"$prefix\" Vault", VaultConstants.FeatureSettings.FEATURE_TYPE) {
+            logger.activity("HashiCorp Vault ($prefix)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
                 val settings = VaultFeatureSettings(prefix, url)
 
                 if (wrapped == null || wrapped.isNullOrEmpty()) {
