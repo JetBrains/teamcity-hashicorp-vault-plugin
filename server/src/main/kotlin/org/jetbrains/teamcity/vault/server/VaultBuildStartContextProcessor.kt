@@ -26,6 +26,7 @@ import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.VaultReferencesUtil
 import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
+import org.jetbrains.teamcity.vault.*
 
 class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor {
     companion object {
@@ -55,13 +56,13 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             val vaultFeatures = connectionFeatures.map {
                 VaultFeatureSettings(it.parameters)
             }
-            return vaultFeatures.groupBy { it.parameterPrefix }.map { (_, v) -> v.first() }
+            return vaultFeatures.groupBy { it.prefix }.map { (_, v) -> v.first() }
         }
 
         internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {
             val parameters = build.buildOwnParameters
             val features = getFeatures(build, false)
-            val prefixes = features.map { it.parameterPrefix }.toSet()
+            val prefixes = features.map { it.prefix }.toSet()
             return isShouldSetEnvParameters(parameters)
                     // Slowest part:
                     || VaultReferencesUtil.hasReferences(build.parametersProvider.all, prefixes)
@@ -83,7 +84,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
         val wrappedTokens: List<Pair<String,String>> = try {
             settingsList.map {
-                Pair(it.parameterPrefix,connector.requestWrappedToken(build, it))
+                Pair(it.prefix,connector.requestWrappedToken(build, it))
             }
         } catch (e: Throwable) {
             val message = "Failed to fetch HashiCorp Vault wrapped token: ${e.message}"
@@ -95,10 +96,10 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
         }
 
         wrappedTokens.forEach { (prefix: String, token: String) ->
-            context.addSharedParameter(VaultConstants.WRAPPED_TOKEN_PROPERTY + "." + prefix, token)
+            context.addSharedParameter(VaultConstants.PARAMETER_PREFIX + prefixOrDefault(prefix) + VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX, token)
         }
         settingsList.forEach { settings: VaultFeatureSettings ->
-            context.addSharedParameter(VaultConstants.URL_PROPERTY + "." + settings.parameterPrefix, settings.url)
+            context.addSharedParameter(VaultConstants.PARAMETER_PREFIX + prefixOrDefault(settings.prefix) + VaultConstants.URL_PROPERTY_SUFFIX, settings.url)
         }
     }
 }
