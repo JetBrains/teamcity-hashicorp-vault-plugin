@@ -34,6 +34,12 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.DefaultUriTemplateHandler
 import java.net.URI
 
+fun prefixOrDefault(prefix: String): String {
+    if (prefix.equals(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX))
+        return ""
+    else
+        return ".$prefix"
+}
 
 fun isJava8OrNewer(): Boolean {
     return VersionComparatorUtil.compare(System.getProperty("java.specification.version"), "1.8") >= 0

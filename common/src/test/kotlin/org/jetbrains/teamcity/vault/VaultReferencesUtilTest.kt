@@ -17,26 +17,29 @@ package org.jetbrains.teamcity.vault
 
 import org.assertj.core.api.BDDAssertions.then
 import org.junit.Test
+import java.util.*
 
 class VaultReferencesUtilTest {
     @Test
     fun testSimpleReference() {
+        val prefixes = Arrays.asList("vault");
         val map = mapOf("a" to "%vault:/test%")
-        then(VaultReferencesUtil.hasReferences(map)).isTrue()
+        then(VaultReferencesUtil.hasReferences(map,prefixes)).isTrue()
         val keys = HashSet<String>()
         val refs = HashSet<String>()
-        VaultReferencesUtil.collect(map, refs, Arrays.asList("vault"), keys)
+        VaultReferencesUtil.collect(map, refs, prefixes, keys)
         then(keys).containsOnly(map.keys.first())
         then(refs).containsOnly("vault:/test")
     }
 
     @Test
     fun testManyReferencesInOneParameter() {
+        val prefixes = Arrays.asList("vault");
         val map = mapOf("a" to "%vault:/testA% %vault:/test B%")
-        then(VaultReferencesUtil.hasReferences(map)).isTrue()
+        then(VaultReferencesUtil.hasReferences(map,prefixes)).isTrue()
         val keys = HashSet<String>()
         val refs = HashSet<String>()
-        VaultReferencesUtil.collect(map, refs, Arrays.asList("vault"), keys)
+        VaultReferencesUtil.collect(map, refs, prefixes, keys)
         then(keys).containsOnly(map.keys.first())
         then(refs).containsOnly("vault:/testA", "vault:/test B")
     }

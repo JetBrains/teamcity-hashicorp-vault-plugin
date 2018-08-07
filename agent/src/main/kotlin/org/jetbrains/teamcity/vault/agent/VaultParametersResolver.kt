@@ -37,7 +37,7 @@ class VaultParametersResolver {
     }
 
     fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {
-        val references = getReleatedParameterReferences(build, settings.parameterPrefix)
+        val references = getReleatedParameterReferences(build, settings.prefix)
         if (references.isEmpty()) {
             LOG.info("There's nothing to resolve")
             return
@@ -45,11 +45,11 @@ class VaultParametersResolver {
         val logger = build.buildLogger
         logger.message("${references.size} Vault ${"reference".pluralize(references)} to resolve: $references")
 
-        val parameters = references.map { VaultParameter.extract(VaultReferencesUtil.getVaultPath(it, settings.parameterPrefix)) }
+        val parameters = references.map { VaultParameter.extract(VaultReferencesUtil.getVaultPath(it, settings.prefix)) }
 
         val replacements = doFetchAndPrepareReplacements(settings, token, parameters, logger)
 
-        replaceParametersReferences(build, replacements, references, settings.parameterPrefix)
+        replaceParametersReferences(build, replacements, references, settings.prefix)
 
         replacements.values.forEach { build.passwordReplacer.addPassword(it) }
     }

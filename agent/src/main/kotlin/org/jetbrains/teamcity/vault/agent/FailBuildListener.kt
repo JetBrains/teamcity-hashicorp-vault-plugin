@@ -22,10 +22,14 @@ import org.jetbrains.teamcity.vault.VaultConstants
 class FailBuildListener : AgentLifeCycleAdapter() {
     override fun buildStarted(runningBuild: AgentRunningBuild) {
         val parameters = runningBuild.sharedConfigParameters
-        val url = parameters[VaultConstants.URL_PROPERTY]
+        parameters.keys.filter { it.startsWith(VaultConstants.PARAMETER_PREFIX) && it.endsWith(VaultConstants.URL_PROPERTY_SUFFIX) }
+                .forEach {
 
-        if (url == null || url.isNullOrBlank()) return
+                    val url = parameters[it]
 
-        runningBuild.stopBuild("HashiCorp Vault is not supported on this agent. Please add agent requirement for '${VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER}' parameter or run agent using Java 1.8")
+                    if (url == null || url.isNullOrBlank()) return
+
+                    runningBuild.stopBuild("HashiCorp Vault is not supported on this agent. Please add agent requirement for '${VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER}' parameter or run agent using Java 1.8")
+                }
     }
 }

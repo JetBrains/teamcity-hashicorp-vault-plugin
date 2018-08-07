@@ -15,13 +15,13 @@
  */
 package org.jetbrains.teamcity.vault
 
-data class VaultFeatureSettings(val parameterPrefix: String, val url: String, val endpoint: String, val roleId: String, val secretId: String) {
+data class VaultFeatureSettings(val prefix: String, val url: String, val endpoint: String, val roleId: String, val secretId: String) {
 
-    constructor(parameterPrefix: String, url: String) : this(parameterPrefix, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "")
+    constructor(prefix: String, url: String) : this(prefix, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "")
 
     constructor(url: String, roleId: String, secretId: String) : this(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
 
-    constructor(parameterPrefix: String, url: String, roleId: String, secretId: String) : this(parameterPrefix, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
+    constructor(prefix: String, url: String, roleId: String, secretId: String) : this(prefix, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
 
     constructor(map: Map<String, String>) : this(
             map[VaultConstants.FeatureSettings.PARAMETER_PREFIX] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX,
@@ -34,7 +34,7 @@ data class VaultFeatureSettings(val parameterPrefix: String, val url: String, va
 
     fun toMap(map: MutableMap<String, String>) {
         map[VaultConstants.FeatureSettings.URL] = url
-        map[VaultConstants.FeatureSettings.PARAMETER_PREFIX] = parameterPrefix
+        map[VaultConstants.FeatureSettings.PARAMETER_PREFIX] = prefix
         map[VaultConstants.FeatureSettings.ENDPOINT] = getNormalizedEndpoint()
         map[VaultConstants.FeatureSettings.ROLE_ID] = roleId
         map[VaultConstants.FeatureSettings.SECRET_ID] = secretId

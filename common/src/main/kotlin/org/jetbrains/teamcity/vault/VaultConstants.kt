@@ -21,9 +21,11 @@ import org.springframework.vault.authentication.AppRoleAuthenticationOptions
 object VaultConstants {
     val FEATURE_SUPPORTED_AGENT_PARAMETER = "teamcity.vault.supported"
 
-    val URL_PROPERTY = "teamcity.vault.url"
-    val WRAPPED_TOKEN_PROPERTY = "teamcity.vault.wrapped.token"
-    val TOKEN_REFRESH_TIMEOUT_PROPERTY = "teamcity.vault.token.refresh.timeout"
+    val PARAMETER_PREFIX = "teamcity.vault"
+    val URL_PROPERTY_SUFFIX = ".url"
+    val WRAPPED_TOKEN_SEARCH_REGEX = Regex("teamcity\\.vault\\.([^\\.]+)\\.wrapped\\.token")
+    val WRAPPED_TOKEN_PROPERTY_SUFFIX = ".wrapped.token"
+    val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
 
     object AgentEnvironment {
         val VAULT_TOKEN = "VAULT_TOKEN"

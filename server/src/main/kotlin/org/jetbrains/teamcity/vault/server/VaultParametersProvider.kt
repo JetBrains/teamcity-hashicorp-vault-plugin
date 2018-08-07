@@ -47,18 +47,26 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
         if (!isFeatureEnabled(build)) return emptyList()
 
         val exposed = HashSet<String>()
-        val parameters = build.buildOwnParameters
-        if (isShouldSetEnvParameters(parameters)) {
-            exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_TOKEN
-            exposed += Constants.ENV_PREFIX + VaultConstants.AgentEnvironment.VAULT_ADDR
-        }
         val connectionFeatures = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
             VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
         }
         val vaultFeatures = connectionFeatures.map {
             VaultFeatureSettings(it.parameters)
         }
-        VaultReferencesUtil.collect(parameters, exposed, vaultFeatures.map { feature -> feature.parameterPrefix })
+        val parameters = build.buildOwnParameters
+        vaultFeatures.forEach {feature: VaultFeatureSettings ->
+
+            val envPrefix = if(feature.prefix.equals(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX))
+                ""
+            else
+                feature.prefix.toUpperCase() + "_"
+
+            if (isShouldSetEnvParameters(parameters)) {
+                exposed += Constants.ENV_PREFIX + envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN
+                exposed += Constants.ENV_PREFIX + envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR
+            }
+        }
+        VaultReferencesUtil.collect(parameters, exposed, vaultFeatures.map { feature -> feature.prefix })
         return exposed
     }
 }
