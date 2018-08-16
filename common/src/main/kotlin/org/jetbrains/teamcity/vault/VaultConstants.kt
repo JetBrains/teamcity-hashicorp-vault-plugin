@@ -23,7 +23,6 @@ object VaultConstants {
 
     val PARAMETER_PREFIX = "teamcity.vault"
     val URL_PROPERTY_SUFFIX = ".url"
-    val WRAPPED_TOKEN_SEARCH_REGEX = Regex("teamcity\\.vault\\.([^\\.]+)\\.wrapped\\.token")
     val WRAPPED_TOKEN_PROPERTY_SUFFIX = ".wrapped.token"
     val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
 

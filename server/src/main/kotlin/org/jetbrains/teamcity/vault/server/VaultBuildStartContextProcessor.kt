@@ -59,13 +59,11 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             return vaultFeatures.groupBy { it.prefix }.map { (_, v) -> v.first() }
         }
 
-        internal fun isShouldEnableVaultIntegration(build: SBuild): Boolean {
+        internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings): Boolean {
             val parameters = build.buildOwnParameters
-            val features = getFeatures(build, false)
-            val prefixes = features.map { it.prefix }.toSet()
-            return isShouldSetEnvParameters(parameters)
+            return isShouldSetEnvParameters(parameters,settings.prefix)
                     // Slowest part:
-                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all, prefixes)
+                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all, settings.prefix)
         }
 
     }
@@ -75,30 +73,26 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
         val settingsList = getFeatures(build, true)
         if(settingsList.isEmpty())
-            return;
-
-        if (!isShouldEnableVaultIntegration(build)) {
-            LOG.debug("There's no need to fetch vault parameter for build $build")
             return
-        }
 
-        val wrappedTokens: List<Pair<String,String>> = try {
-            settingsList.map {
-                Pair(it.prefix,connector.requestWrappedToken(build, it))
+        settingsList.map {settings ->
+            if (!isShouldEnableVaultIntegration(build, settings)) {
+                LOG.debug("There's no need to fetch vault parameter for build $build (${settings.prefix})")
+                return@map
             }
-        } catch (e: Throwable) {
-            val message = "Failed to fetch HashiCorp Vault wrapped token: ${e.message}"
-            LOG.warn(message, e)
-            build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection",
-                    message + ": " + e.toString() + ", see teamcity-server.log for details"
-            ))
-            return
-        }
 
-        wrappedTokens.forEach { (prefix: String, token: String) ->
-            context.addSharedParameter(VaultConstants.PARAMETER_PREFIX + prefixOrDefault(prefix) + VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX, token)
-        }
-        settingsList.forEach { settings: VaultFeatureSettings ->
+            val wrappedToken: String = try {
+                connector.requestWrappedToken(build, settings)
+            } catch (e: Throwable) {
+                val message = "Failed to fetch HashiCorp Vault wrapped token (${settings.prefix}): ${e.message}"
+                LOG.warn(message, e)
+                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection",
+                        message + ": " + e.toString() + ", see teamcity-server.log for details"
+                ))
+                return@map
+            }
+
+            context.addSharedParameter(VaultConstants.PARAMETER_PREFIX + prefixOrDefault(settings.prefix) + VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX, wrappedToken)
             context.addSharedParameter(VaultConstants.PARAMETER_PREFIX + prefixOrDefault(settings.prefix) + VaultConstants.URL_PROPERTY_SUFFIX, settings.url)
         }
     }

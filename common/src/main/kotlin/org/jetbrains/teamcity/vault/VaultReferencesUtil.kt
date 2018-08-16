@@ -19,10 +19,10 @@ import jetbrains.buildServer.parameters.ReferencesResolverUtil
 
 object VaultReferencesUtil {
 
-    @JvmStatic fun hasReferences(parameters: Map<String, String>, prefixes: Collection<String>): Boolean {
+    @JvmStatic fun hasReferences(parameters: Map<String, String>, prefix: String): Boolean {
         for ((_, value) in parameters) {
             if (!ReferencesResolverUtil.mayContainReference(value)) continue
-            val refs = getVaultReferences(value,prefixes)
+            val refs = getVaultReferences(value,arrayListOf(prefix))
             if (refs.isNotEmpty()) {
                 return true
             }
@@ -31,9 +31,7 @@ object VaultReferencesUtil {
     }
 
     @JvmStatic fun collect(parameters: Map<String, String>, references: MutableCollection<String>, prefix: String, keys: MutableCollection<String>? = null) {
-        val prefixes = ArrayList<String>(1)
-        prefixes.add(prefix)
-        collect(parameters, references, prefixes,keys)
+        collect(parameters, references, arrayListOf(prefix),keys)
     }
     @JvmStatic fun collect(parameters: Map<String, String>, references: MutableCollection<String>, prefixes: Collection<String>, keys: MutableCollection<String>? = null) {
         for ((key, value) in parameters) {
