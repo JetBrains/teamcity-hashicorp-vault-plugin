@@ -22,24 +22,24 @@ import java.util.*
 class VaultReferencesUtilTest {
     @Test
     fun testSimpleReference() {
-        val prefixes = Arrays.asList("vault");
+        val prefix = "vault"
         val map = mapOf("a" to "%vault:/test%")
-        then(VaultReferencesUtil.hasReferences(map,prefixes)).isTrue()
+        then(VaultReferencesUtil.hasReferences(map,prefix)).isTrue()
         val keys = HashSet<String>()
         val refs = HashSet<String>()
-        VaultReferencesUtil.collect(map, refs, prefixes, keys)
+        VaultReferencesUtil.collect(map, refs, prefix, keys)
         then(keys).containsOnly(map.keys.first())
         then(refs).containsOnly("vault:/test")
     }
 
     @Test
     fun testManyReferencesInOneParameter() {
-        val prefixes = Arrays.asList("vault");
+        val prefix = "vault"
         val map = mapOf("a" to "%vault:/testA% %vault:/test B%")
-        then(VaultReferencesUtil.hasReferences(map,prefixes)).isTrue()
+        then(VaultReferencesUtil.hasReferences(map,prefix)).isTrue()
         val keys = HashSet<String>()
         val refs = HashSet<String>()
-        VaultReferencesUtil.collect(map, refs, prefixes, keys)
+        VaultReferencesUtil.collect(map, refs, prefix, keys)
         then(keys).containsOnly(map.keys.first())
         then(refs).containsOnly("vault:/testA", "vault:/test B")
     }

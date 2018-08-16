@@ -54,10 +54,10 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
     override fun buildStarted(runningBuild: AgentRunningBuild) {
         val parameters = runningBuild.sharedConfigParameters
-        val vaultInstancePrefixes = parameters.keys.map { parameterKey: String ->
-            VaultConstants.WRAPPED_TOKEN_SEARCH_REGEX.find(parameterKey)
-        }.filterNotNull().map { matchResult: MatchResult ->
-            matchResult.value
+        val vaultInstancePrefixes = parameters.keys.filter { parameterKey: String ->
+            parameterKey.startsWith(VaultConstants.PARAMETER_PREFIX) && parameterKey.endsWith(VaultConstants.URL_PROPERTY_SUFFIX)
+        }.map { parameterKey: String ->
+            parameterKey.removePrefix(VaultConstants.PARAMETER_PREFIX + ".").removeSuffix(VaultConstants.URL_PROPERTY_SUFFIX)
         }
 
         vaultInstancePrefixes.forEach { prefix ->
@@ -65,8 +65,9 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
             val url = parameters[VaultConstants.PARAMETER_PREFIX + prefixOrDefault + VaultConstants.URL_PROPERTY_SUFFIX]
             val wrapped = parameters[VaultConstants.PARAMETER_PREFIX + prefixOrDefault + VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX]
 
-            if (url == null || url.isNullOrBlank())
+            if (url == null || url.isNullOrBlank()) {
                 return@forEach
+            }
             val logger = runningBuild.buildLogger
             logger.activity("HashiCorp Vault" + if (prefix.equals("")) "" else " ($prefix)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
                 val settings = VaultFeatureSettings(prefix, url)
@@ -87,7 +88,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                             .build()
                     val template = createRestTemplate(settings)
                     val authentication = CubbyholeAuthentication(options, template)
-                    
+
                     val timeout = (parameters[VaultConstants.PARAMETER_PREFIX + prefixOrDefault + VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX] ?: "60").toLongOrNull()
                             ?: 60
 
@@ -113,7 +114,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
                 runningBuild.passwordReplacer.addPassword(token)
 
-                if (isShouldSetEnvParameters(parameters)) {
+                if (isShouldSetEnvParameters(parameters, prefix)) {
                     val envPrefix = if(prefix.equals(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX))
                         ""
                     else
@@ -122,7 +123,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                     runningBuild.addSharedEnvironmentVariable(envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN, token)
                     runningBuild.addSharedEnvironmentVariable(envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR, settings.url)
 
-                    logger.message("${envPrefix}${VaultConstants.AgentEnvironment.VAULT_ADDR} and ${envPrefix}${VaultConstants.AgentEnvironment.VAULT_TOKEN} evnironment variables were added")
+                    logger.message("${envPrefix}${VaultConstants.AgentEnvironment.VAULT_ADDR} and ${envPrefix}${VaultConstants.AgentEnvironment.VAULT_TOKEN} environment variables were added")
                 }
 
                 myVaultParametersResolver.resolve(runningBuild, settings, token)

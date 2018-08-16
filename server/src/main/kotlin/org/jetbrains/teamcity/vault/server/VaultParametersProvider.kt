@@ -61,7 +61,7 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
             else
                 feature.prefix.toUpperCase() + "_"
 
-            if (isShouldSetEnvParameters(parameters)) {
+            if (isShouldSetEnvParameters(parameters, feature.prefix)) {
                 exposed += Constants.ENV_PREFIX + envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN
                 exposed += Constants.ENV_PREFIX + envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR
             }
