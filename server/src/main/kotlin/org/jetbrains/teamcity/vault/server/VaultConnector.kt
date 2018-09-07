@@ -116,7 +116,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 val accessor = auth["accessor"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
                 return token to accessor
             } catch (e: HttpStatusCodeException) {
-                throw ConnectionException("Cannot login using AppRole: ${getError(e)}", e)
+                throw getReadableException(e, settings)
             }
         }
 
@@ -158,6 +158,24 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             return body
         }
 
+        private fun getReadableException(cause: HttpStatusCodeException, settings: VaultFeatureSettings): ConnectionException {
+            val err = getError(cause)
+            val prefix = "Cannot log in to HashiCorp Vault using AppRole credentials"
+            val message: String
+            message = setOf("failed to validate credentials: ", "failed to validate SecretID: ")
+                    .find { err.startsWith(it) }
+                    ?.let {
+                        val suberror = err.removePrefix(it)
+                        if (suberror.contains("invalid secret_id")) {
+                            return@let "$prefix, SecretID is incorrect or expired"
+                        } else if (suberror.contains("failed to find secondary index for role_id")) {
+                            return@let "$prefix, RoleID is incorrect or there's no such role"
+                        }
+                        return@let null
+                    } ?: "$prefix: $err"
+            return ConnectionException(message.replace(settings.secretId, "*******"), cause)
+        }
+
         @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
                     .path(settings.getNormalizedEndpoint())
@@ -185,21 +203,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             } catch (e: VaultException) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
-                    val err = getError(cause)
-                    val prefix = "Cannot log in to HashiCorp Vault using AppRole credentials"
-                    var message: String? = null
-                    if (err.startsWith("failed to validate SecretID: ")) {
-                        val suberror = err.removePrefix("failed to validate SecretID: ")
-                        if (suberror.contains("invalid secret_id")) {
-                            message = "$prefix, SecretID is incorrect or expired"
-                        } else if (suberror.contains("failed to find secondary index for role_id")) {
-                            message = "$prefix, RoleID is incorrect or there's no such role"
-                        }
-                    }
-                    if (message == null) {
-                        message = "$prefix: $err"
-                    }
-                    throw ConnectionException(message, cause)
+                    throw getReadableException(cause, settings)
                 }
                 throw e
             }
@@ -229,26 +233,11 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             } catch (e: VaultException) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
-                    val err = getError(cause)
-                    val prefix = "Cannot log in to HashiCorp Vault using AppRole credentials"
-                    var message: String? = null
-                    if (err.startsWith("failed to validate SecretID: ")) {
-                        val suberror = err.removePrefix("failed to validate SecretID: ")
-                        if (suberror.contains("invalid secret_id")) {
-                            message = "$prefix, SecretID is incorrect or expired"
-                        } else if (suberror.contains("failed to find secondary index for role_id")) {
-                            message = "$prefix, RoleID is incorrect or there's no such role"
-                        }
-                    }
-                    if (message == null) {
-                        message = "$prefix: $err"
-                    }
-                    throw ConnectionException(message, cause)
+                    throw getReadableException(cause, settings)
                 }
                 throw e
             }
         }
-
     }
 
     // TODO: Support server restart
