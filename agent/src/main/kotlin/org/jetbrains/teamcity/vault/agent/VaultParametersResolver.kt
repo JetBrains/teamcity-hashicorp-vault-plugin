@@ -83,6 +83,7 @@ class VaultParametersResolver {
                     responses[path] = response
                 } catch (e: Exception) {
                     logger.warning("Failed to fetch data for path '$path'")
+                    LOG.warn("Failed to fetch data for path '$path'", e)
                     responses[path] = null
                 }
             }
@@ -96,6 +97,7 @@ class VaultParametersResolver {
                 val response = responses[parameter.vaultPath]
                 if (response == null) {
                     logger.warning("Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault")
+                    LOG.warn("Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault")
                     continue
                 }
                 val value = extract(response, parameter) ?: continue
@@ -134,6 +136,7 @@ class VaultParametersResolver {
                 pattern = JsonPath.compile(updated)
             } catch (e: Throwable) {
                 logger.warning("JsonPath compilation failed for '$updated'")
+                LOG.warn("JsonPath compilation failed for '$updated'")
                 return null
             }
             try {
@@ -149,6 +152,7 @@ class VaultParametersResolver {
                 return value
             } catch (e: Exception) {
                 logger.warning("Cannot extract '$jsonPath' data from '${parameter.vaultPath}', full reference: ${parameter.full}")
+                LOG.warn("Cannot extract '$jsonPath' data from '${parameter.vaultPath}', full reference: ${parameter.full}", e)
                 return null
             }
         }
