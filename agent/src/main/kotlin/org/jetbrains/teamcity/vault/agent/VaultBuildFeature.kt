@@ -54,22 +54,25 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
     override fun buildStarted(runningBuild: AgentRunningBuild) {
         val parameters = runningBuild.sharedConfigParameters
-        val vaultInstancePrefixes = parameters.keys.filter { parameterKey: String ->
-            parameterKey.startsWith(VaultConstants.PARAMETER_PREFIX) && parameterKey.endsWith(VaultConstants.URL_PROPERTY_SUFFIX)
-        }.map { parameterKey: String ->
-            parameterKey.removePrefix(VaultConstants.PARAMETER_PREFIX + ".").removeSuffix(VaultConstants.URL_PROPERTY_SUFFIX)
-        }
+        val vaultInstancePrefixes = parameters.keys
+                .filter { isUrlParameter(it) }
+                .mapNotNull {
+                    it
+                            .removePrefix(VaultConstants.PARAMETER_PREFIX)
+                            .removeSuffix(VaultConstants.URL_PROPERTY_SUFFIX)
+                            .removePrefix(".")
+                }.toSet()
 
         vaultInstancePrefixes.forEach { prefix ->
-            val prefixOrDefault = prefixOrDefault(prefix)
-            val url = parameters[VaultConstants.PARAMETER_PREFIX + prefixOrDefault + VaultConstants.URL_PROPERTY_SUFFIX]
-            val wrapped = parameters[VaultConstants.PARAMETER_PREFIX + prefixOrDefault + VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX]
+            // prefix is either empty string or something like 'id'
+            val url = parameters[getPrefixedParameter(prefix, VaultConstants.URL_PROPERTY_SUFFIX)]
+            val wrapped = parameters[getPrefixedParameter(prefix, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX)]
 
             if (url == null || url.isNullOrBlank()) {
                 return@forEach
             }
             val logger = runningBuild.buildLogger
-            logger.activity("HashiCorp Vault" + if (prefix.equals("")) "" else " ($prefix)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
+            logger.activity("HashiCorp Vault" + if (isDefault(prefix)) "" else " ($prefix)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
                 val settings = VaultFeatureSettings(prefix, url)
 
                 if (wrapped == null || wrapped.isNullOrEmpty()) {
@@ -89,8 +92,8 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                     val template = createRestTemplate(settings)
                     val authentication = CubbyholeAuthentication(options, template)
 
-                    val timeout = (parameters[VaultConstants.PARAMETER_PREFIX + prefixOrDefault + VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX] ?: "60").toLongOrNull()
-                            ?: 60
+                    val timeout = (parameters[getPrefixedParameter(prefix, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)]
+                            ?: "60").toLongOrNull() ?: 60
 
                     val sessionManager = object : LifecycleAwareSessionManager(authentication, scheduler, template,
                             LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS)
@@ -115,15 +118,15 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                 runningBuild.passwordReplacer.addPassword(token)
 
                 if (isShouldSetEnvParameters(parameters, prefix)) {
-                    val envPrefix = if(prefix.equals(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX))
-                        ""
-                    else
-                        prefix.toUpperCase() + "_"
+                    val envPrefix = getEnvPrefix(prefix)
 
-                    runningBuild.addSharedEnvironmentVariable(envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN, token)
-                    runningBuild.addSharedEnvironmentVariable(envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR, settings.url)
+                    val tokenParameter = envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN
+                    val addrParameter = envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR
 
-                    logger.message("${envPrefix}${VaultConstants.AgentEnvironment.VAULT_ADDR} and ${envPrefix}${VaultConstants.AgentEnvironment.VAULT_TOKEN} environment variables were added")
+                    runningBuild.addSharedEnvironmentVariable(tokenParameter, token)
+                    runningBuild.addSharedEnvironmentVariable(addrParameter, settings.url)
+
+                    logger.message("$addrParameter and $tokenParameter environment variables were added")
                 }
 
                 myVaultParametersResolver.resolve(runningBuild, settings, token)

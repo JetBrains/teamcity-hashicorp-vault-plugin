@@ -18,18 +18,13 @@ package org.jetbrains.teamcity.vault.agent
 import jetbrains.buildServer.agent.AgentLifeCycleAdapter
 import jetbrains.buildServer.agent.AgentRunningBuild
 import org.jetbrains.teamcity.vault.VaultConstants
+import org.jetbrains.teamcity.vault.isUrlParameter
 
 class FailBuildListener : AgentLifeCycleAdapter() {
     override fun buildStarted(runningBuild: AgentRunningBuild) {
         val parameters = runningBuild.sharedConfigParameters
-        parameters.keys.filter { it.startsWith(VaultConstants.PARAMETER_PREFIX) && it.endsWith(VaultConstants.URL_PROPERTY_SUFFIX) }
-                .forEach {
-
-                    val url = parameters[it]
-
-                    if (url == null || url.isNullOrBlank()) return
-
-                    runningBuild.stopBuild("HashiCorp Vault is not supported on this agent. Please add agent requirement for '${VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER}' parameter or run agent using Java 1.8")
-                }
+        if (parameters.asSequence().filter { isUrlParameter(it.key) && !it.value.isNullOrBlank() }.any()) {
+            runningBuild.stopBuild("HashiCorp Vault is not supported on this agent. Please add agent requirement for '${VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER}' parameter or run agent using Java 1.8")
+        }
     }
 }

@@ -24,7 +24,7 @@ class VaultReferencesUtilTest {
     fun testSimpleReference() {
         val prefix = "vault"
         val map = mapOf("a" to "%vault:/test%")
-        then(VaultReferencesUtil.hasReferences(map,prefix)).isTrue()
+        then(VaultReferencesUtil.hasReferences(map, prefix)).isTrue()
         val keys = HashSet<String>()
         val refs = HashSet<String>()
         VaultReferencesUtil.collect(map, refs, prefix, keys)
@@ -36,7 +36,7 @@ class VaultReferencesUtilTest {
     fun testManyReferencesInOneParameter() {
         val prefix = "vault"
         val map = mapOf("a" to "%vault:/testA% %vault:/test B%")
-        then(VaultReferencesUtil.hasReferences(map,prefix)).isTrue()
+        then(VaultReferencesUtil.hasReferences(map, prefix)).isTrue()
         val keys = HashSet<String>()
         val refs = HashSet<String>()
         VaultReferencesUtil.collect(map, refs, prefix, keys)

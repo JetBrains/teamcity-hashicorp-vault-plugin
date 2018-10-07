@@ -19,10 +19,7 @@ import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
-import org.jetbrains.teamcity.vault.VaultConstants
-import org.jetbrains.teamcity.vault.VaultReferencesUtil
-import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.*
 
 class VaultParametersProvider : AbstractBuildParametersProvider() {
     companion object {
@@ -32,8 +29,8 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
 
             // It's faster than asking OAuthConectionsManager
             if (project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).any {
-                VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
-            }) return true
+                        VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
+                    }) return true
 
             return false
         }
@@ -54,14 +51,11 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
             VaultFeatureSettings(it.parameters)
         }
         val parameters = build.buildOwnParameters
-        vaultFeatures.forEach {feature: VaultFeatureSettings ->
-
-            val envPrefix = if(feature.prefix.equals(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX))
-                ""
-            else
-                feature.prefix.toUpperCase() + "_"
+        vaultFeatures.forEach { feature: VaultFeatureSettings ->
 
             if (isShouldSetEnvParameters(parameters, feature.prefix)) {
+                val envPrefix = getEnvPrefix(feature.prefix)
+
                 exposed += Constants.ENV_PREFIX + envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN
                 exposed += Constants.ENV_PREFIX + envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR
             }
