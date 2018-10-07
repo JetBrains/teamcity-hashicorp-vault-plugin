@@ -34,12 +34,23 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.DefaultUriTemplateHandler
 import java.net.URI
 
-fun prefixOrDefault(prefix: String): String {
-    if (prefix.equals(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX))
-        return ""
-    else
-        return ".$prefix"
+fun isDefault(prefix: String): Boolean {
+    return prefix == "" || prefix == VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX
 }
+
+fun getEnvPrefix(prefix: String): String {
+    return if (isDefault(prefix)) ""
+    // TODO: Sanitize special symbols in prefix if needed
+    else prefix.toUpperCase() + "_"
+}
+
+fun getPrefixedParameter(prefix: String, suffix: String): String {
+    if (isDefault(prefix)) return VaultConstants.PARAMETER_PREFIX + suffix
+    return VaultConstants.PARAMETER_PREFIX + ".$prefix" + suffix
+}
+
+fun isUrlParameter(value: String) =
+        value.startsWith(VaultConstants.PARAMETER_PREFIX) && value.endsWith(VaultConstants.URL_PROPERTY_SUFFIX)
 
 fun isJava8OrNewer(): Boolean {
     return VersionComparatorUtil.compare(System.getProperty("java.specification.version"), "1.8") >= 0
@@ -87,9 +98,10 @@ private fun createRestTemplate(): RestTemplate {
 }
 
 fun isShouldSetEnvParameters(parameters: MutableMap<String, String>, prefix: String): Boolean {
-    if(parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() ?: false)
+    if (parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() == true)
         return true
 
+    if (isDefault(prefix)) return false
     return parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters + "." + prefix]?.toBoolean() ?: false
 }
 

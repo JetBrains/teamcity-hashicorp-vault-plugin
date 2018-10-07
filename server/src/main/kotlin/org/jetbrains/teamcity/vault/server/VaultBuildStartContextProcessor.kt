@@ -22,10 +22,6 @@ import jetbrains.buildServer.serverSide.BuildStartContext
 import jetbrains.buildServer.serverSide.BuildStartContextProcessor
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
-import org.jetbrains.teamcity.vault.VaultConstants
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import org.jetbrains.teamcity.vault.VaultReferencesUtil
-import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
 import org.jetbrains.teamcity.vault.*
 
 class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor {
@@ -46,7 +42,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 connectionFeatures.groupBy { it.projectId }.forEach { pid, features ->
                     features.groupBy { it.parameters[VaultConstants.FeatureSettings.PARAMETER_PREFIX] }
                             .filterValues { it.size > 1 }
-                            .forEach{ prefix, _ ->
+                            .forEach { prefix, _ ->
                                 build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${prefix}_$pid", "VaultConnection",
                                         "Multiple vault connections with prefix \"$prefix\" present in project $pid"
                                 ))
@@ -61,7 +57,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
         internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings): Boolean {
             val parameters = build.buildOwnParameters
-            return isShouldSetEnvParameters(parameters,settings.prefix)
+            return isShouldSetEnvParameters(parameters, settings.prefix)
                     // Slowest part:
                     || VaultReferencesUtil.hasReferences(build.parametersProvider.all, settings.prefix)
         }
@@ -72,10 +68,10 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
         val build = context.build
 
         val settingsList = getFeatures(build, true)
-        if(settingsList.isEmpty())
+        if (settingsList.isEmpty())
             return
 
-        settingsList.map {settings ->
+        settingsList.map { settings ->
             if (!isShouldEnableVaultIntegration(build, settings)) {
                 LOG.debug("There's no need to fetch vault parameter for build $build (${settings.prefix})")
                 return@map
@@ -92,8 +88,8 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 return@map
             }
 
-            context.addSharedParameter(VaultConstants.PARAMETER_PREFIX + prefixOrDefault(settings.prefix) + VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX, wrappedToken)
-            context.addSharedParameter(VaultConstants.PARAMETER_PREFIX + prefixOrDefault(settings.prefix) + VaultConstants.URL_PROPERTY_SUFFIX, settings.url)
+            context.addSharedParameter(getPrefixedParameter(settings.prefix, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), wrappedToken)
+            context.addSharedParameter(getPrefixedParameter(settings.prefix, VaultConstants.URL_PROPERTY_SUFFIX), settings.url)
         }
     }
 }
