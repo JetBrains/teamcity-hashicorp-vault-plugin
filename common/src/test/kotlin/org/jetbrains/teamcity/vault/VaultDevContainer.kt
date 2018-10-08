@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault
 
+import jetbrains.buildServer.util.ThreadUtil
 import org.testcontainers.containers.GenericContainer
 import java.util.*
 
@@ -23,6 +24,11 @@ open class VaultDevContainer(override val token: String = UUID.randomUUID().toSt
     init {
         withExposedPorts(8200)
         withEnv("VAULT_DEV_ROOT_TOKEN_ID", token)
+    }
+
+    override fun start() {
+        super.start()
+        ThreadUtil.sleep(500)
     }
 
     override val url: String
