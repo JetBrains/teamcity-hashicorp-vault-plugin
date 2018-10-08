@@ -97,11 +97,8 @@ private fun createRestTemplate(): RestTemplate {
 }
 
 fun isShouldSetEnvParameters(parameters: MutableMap<String, String>, namespace: String): Boolean {
-    if (parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() == true)
-        return true
-
-    if (isDefault(namespace)) return false
-    return parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters + "." + namespace]?.toBoolean() ?: false
+    return parameters[getVaultParameterName(namespace, VaultConstants.BehaviourParameters.ExposeEnvSuffix)]
+            ?.toBoolean() ?: false
 }
 
 private fun createUriTemplateHandler(endpoint: VaultEndpoint): DefaultUriTemplateHandler {

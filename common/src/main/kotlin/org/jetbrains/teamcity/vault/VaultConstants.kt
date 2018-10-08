@@ -53,7 +53,7 @@ object VaultConstants {
     }
 
     object BehaviourParameters {
-        val ExposeEnvParameters = "teamcity.vault.set.env"
+        val ExposeEnvSuffix = ".set.env"
     }
 
 
