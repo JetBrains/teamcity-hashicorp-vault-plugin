@@ -54,7 +54,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
     override fun buildStarted(runningBuild: AgentRunningBuild) {
         val parameters = runningBuild.sharedConfigParameters
-        val vaultInstancePrefixes = parameters.keys
+        val namespaces = parameters.keys
                 .filter { isUrlParameter(it) }
                 .mapNotNull {
                     it
@@ -63,17 +63,17 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                             .removePrefix(".")
                 }.toSet()
 
-        vaultInstancePrefixes.forEach { prefix ->
-            // prefix is either empty string or something like 'id'
-            val url = parameters[getPrefixedParameter(prefix, VaultConstants.URL_PROPERTY_SUFFIX)]
-            val wrapped = parameters[getPrefixedParameter(prefix, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX)]
+        namespaces.forEach { namespace ->
+            // namespace is either empty string or something like 'id'
+            val url = parameters[getVaultParameterName(namespace, VaultConstants.URL_PROPERTY_SUFFIX)]
+            val wrapped = parameters[getVaultParameterName(namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX)]
 
             if (url == null || url.isNullOrBlank()) {
                 return@forEach
             }
             val logger = runningBuild.buildLogger
-            logger.activity("HashiCorp Vault" + if (isDefault(prefix)) "" else " ($prefix)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
-                val settings = VaultFeatureSettings(prefix, url)
+            logger.activity("HashiCorp Vault" + if (isDefault(namespace)) "" else " ('$namespace' namespace)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
+                val settings = VaultFeatureSettings(namespace, url)
 
                 if (wrapped == null || wrapped.isNullOrEmpty()) {
                     logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
@@ -92,7 +92,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                     val template = createRestTemplate(settings)
                     val authentication = CubbyholeAuthentication(options, template)
 
-                    val timeout = (parameters[getPrefixedParameter(prefix, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)]
+                    val timeout = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)]
                             ?: "60").toLongOrNull() ?: 60
 
                     val sessionManager = object : LifecycleAwareSessionManager(authentication, scheduler, template,
@@ -117,8 +117,8 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
                 runningBuild.passwordReplacer.addPassword(token)
 
-                if (isShouldSetEnvParameters(parameters, prefix)) {
-                    val envPrefix = getEnvPrefix(prefix)
+                if (isShouldSetEnvParameters(parameters, namespace)) {
+                    val envPrefix = getEnvPrefix(namespace)
 
                     val tokenParameter = envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN
                     val addrParameter = envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR

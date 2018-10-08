@@ -19,10 +19,11 @@ import jetbrains.buildServer.parameters.ReferencesResolverUtil
 
 object VaultReferencesUtil {
 
-    @JvmStatic fun hasReferences(parameters: Map<String, String>, prefix: String): Boolean {
+    @JvmStatic
+    fun hasReferences(parameters: Map<String, String>, namespaces: Collection<String>): Boolean {
         for ((_, value) in parameters) {
             if (!ReferencesResolverUtil.mayContainReference(value)) continue
-            val refs = getVaultReferences(value,arrayListOf(prefix))
+            val refs = getVaultReferences(value, namespaces)
             if (refs.isNotEmpty()) {
                 return true
             }
@@ -30,13 +31,16 @@ object VaultReferencesUtil {
         return false
     }
 
-    @JvmStatic fun collect(parameters: Map<String, String>, references: MutableCollection<String>, prefix: String, keys: MutableCollection<String>? = null) {
-        collect(parameters, references, arrayListOf(prefix),keys)
+    @JvmStatic
+    fun collect(parameters: Map<String, String>, references: MutableCollection<String>, namespace: String, keys: MutableCollection<String>? = null) {
+        collect(parameters, references, arrayListOf(namespace), keys)
     }
-    @JvmStatic fun collect(parameters: Map<String, String>, references: MutableCollection<String>, prefixes: Collection<String>, keys: MutableCollection<String>? = null) {
+
+    @JvmStatic
+    fun collect(parameters: Map<String, String>, references: MutableCollection<String>, namespaces: Collection<String>, keys: MutableCollection<String>? = null) {
         for ((key, value) in parameters) {
             if (!ReferencesResolverUtil.mayContainReference(value)) continue
-            val refs = getVaultReferences(value,prefixes)
+            val refs = getVaultReferences(value, namespaces)
             if (refs.isNotEmpty()) {
                 keys?.add(key)
                 references.addAll(refs)
@@ -44,17 +48,28 @@ object VaultReferencesUtil {
         }
     }
 
-    @JvmStatic fun getVaultPath(ref: String, prefix: String): String {
-        return ref.removePrefix(prefix + ":").ensureHasPrefix("/")
+    @JvmStatic
+    fun getPath(ref: String, namespace: String): String {
+        val prefix = VaultConstants.VAULT_PARAMETER_PREFIX + if (isDefault(namespace)) "" else "$namespace:"
+        return ref.removePrefix(prefix).ensureHasPrefix("/")
     }
 
-    private fun getVaultReferences(value: String, prefixes: Collection<String>): Collection<String> {
-        if (!prefixes.any { prefix -> value.contains(prefix + ":") }) return emptyList()
 
-        val references = ArrayList<String>(prefixes.count())
-        prefixes.forEach { prefix ->
-            references.addAll(ReferencesResolverUtil.getReferences(value, arrayOf(prefix + ":"), true))
-        }
-        return references
+    @JvmStatic
+    fun getNamespace(ref: String): String {
+        val value = ref.removePrefix(VaultConstants.VAULT_PARAMETER_PREFIX)
+        val colon = value.indexOf(':')
+        val slash = value.indexOf('/')
+        if (colon < 0 || (slash in 0..(colon - 1))) return ""
+        return value.substring(0, colon)
+    }
+
+    private fun getVaultReferences(value: String, namespaces: Collection<String>): Collection<String> {
+        val prefixes = namespaces.map { VaultConstants.VAULT_PARAMETER_PREFIX + if (isDefault(it)) "" else "$it:" }
+        if (!prefixes.any { prefix -> value.contains(prefix) }) return emptyList()
+
+        val references = ReferencesResolverUtil.getReferences(value, prefixes.toTypedArray(), true)
+        // If default namespace provided we may found references from other nemaspaces, let's filter them out
+        return references.filter { namespaces.contains(getNamespace(it)) }
     }
 }

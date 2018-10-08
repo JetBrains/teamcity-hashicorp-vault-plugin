@@ -40,11 +40,12 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
             if (reportProblems) {
                 connectionFeatures.groupBy { it.projectId }.forEach { pid, features ->
-                    features.groupBy { it.parameters[VaultConstants.FeatureSettings.PARAMETER_PREFIX] }
+                    features.groupBy { it.parameters[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE }
                             .filterValues { it.size > 1 }
-                            .forEach { prefix, _ ->
-                                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${prefix}_$pid", "VaultConnection",
-                                        "Multiple vault connections with prefix \"$prefix\" present in project $pid"
+                            .forEach { namespace, _ ->
+                                val nsDescripption = if (isDefault(namespace)) "default namespace" else "\"$namespace\" namespace"
+                                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection",
+                                        "Multiple vault connections with $nsDescripption present in project $pid"
                                 ))
                             }
                 }
@@ -52,14 +53,14 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             val vaultFeatures = connectionFeatures.map {
                 VaultFeatureSettings(it.parameters)
             }
-            return vaultFeatures.groupBy { it.prefix }.map { (_, v) -> v.first() }
+            return vaultFeatures.groupBy { it.namespace }.map { (_, v) -> v.first() }
         }
 
         internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings): Boolean {
             val parameters = build.buildOwnParameters
-            return isShouldSetEnvParameters(parameters, settings.prefix)
+            return isShouldSetEnvParameters(parameters, settings.namespace)
                     // Slowest part:
-                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all, settings.prefix)
+                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all, listOf(settings.namespace))
         }
 
     }
@@ -72,15 +73,16 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             return
 
         settingsList.map { settings ->
+            val ns = if (isDefault(settings.namespace)) "" else " ('${settings.namespace}' namespace)"
             if (!isShouldEnableVaultIntegration(build, settings)) {
-                LOG.debug("There's no need to fetch vault parameter for build $build (${settings.prefix})")
+                LOG.debug("There's no need to fetch HsahiCorp Vault$ns parameter for build $build")
                 return@map
             }
 
             val wrappedToken: String = try {
                 connector.requestWrappedToken(build, settings)
             } catch (e: Throwable) {
-                val message = "Failed to fetch HashiCorp Vault wrapped token (${settings.prefix}): ${e.message}"
+                val message = "Failed to fetch HashiCorp Vault$ns wrapped token: ${e.message}"
                 LOG.warn(message, e)
                 build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}", "VaultConnection",
                         message + ": " + e.toString() + ", see teamcity-server.log for details"
@@ -88,8 +90,8 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 return@map
             }
 
-            context.addSharedParameter(getPrefixedParameter(settings.prefix, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), wrappedToken)
-            context.addSharedParameter(getPrefixedParameter(settings.prefix, VaultConstants.URL_PROPERTY_SUFFIX), settings.url)
+            context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), wrappedToken)
+            context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.URL_PROPERTY_SUFFIX), settings.url)
         }
     }
 }

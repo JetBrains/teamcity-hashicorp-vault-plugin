@@ -34,19 +34,18 @@ import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.DefaultUriTemplateHandler
 import java.net.URI
 
-fun isDefault(prefix: String): Boolean {
-    return prefix == "" || prefix == VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX
+fun isDefault(namespace: String): Boolean {
+    return namespace == VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
 }
 
-fun getEnvPrefix(prefix: String): String {
-    return if (isDefault(prefix)) ""
-    // TODO: Sanitize special symbols in prefix if needed
-    else prefix.toUpperCase() + "_"
+fun getEnvPrefix(namespace: String): String {
+    return if (isDefault(namespace)) ""
+    else namespace.replace("[^a-zA-Z0-9_]".toRegex(), "_").toUpperCase() + "_"
 }
 
-fun getPrefixedParameter(prefix: String, suffix: String): String {
-    if (isDefault(prefix)) return VaultConstants.PARAMETER_PREFIX + suffix
-    return VaultConstants.PARAMETER_PREFIX + ".$prefix" + suffix
+fun getVaultParameterName(namespace: String, suffix: String): String {
+    if (isDefault(namespace)) return VaultConstants.PARAMETER_PREFIX + suffix
+    return VaultConstants.PARAMETER_PREFIX + ".$namespace" + suffix
 }
 
 fun isUrlParameter(value: String) =
@@ -97,12 +96,12 @@ private fun createRestTemplate(): RestTemplate {
     return RestTemplate(converters)
 }
 
-fun isShouldSetEnvParameters(parameters: MutableMap<String, String>, prefix: String): Boolean {
+fun isShouldSetEnvParameters(parameters: MutableMap<String, String>, namespace: String): Boolean {
     if (parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters]?.toBoolean() == true)
         return true
 
-    if (isDefault(prefix)) return false
-    return parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters + "." + prefix]?.toBoolean() ?: false
+    if (isDefault(namespace)) return false
+    return parameters[VaultConstants.BehaviourParameters.ExposeEnvParameters + "." + namespace]?.toBoolean() ?: false
 }
 
 private fun createUriTemplateHandler(endpoint: VaultEndpoint): DefaultUriTemplateHandler {
