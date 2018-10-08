@@ -18,6 +18,7 @@ package org.jetbrains.teamcity.vault.agent;
 
 import jetbrains.buildServer.agent.NullBuildProgressLogger;
 import jetbrains.buildServer.util.CollectionsUtil;
+import jetbrains.buildServer.util.VersionComparatorUtil;
 import org.jetbrains.teamcity.vault.VaultDevContainer;
 import org.jetbrains.teamcity.vault.VaultFeatureSettings;
 import org.jetbrains.teamcity.vault.support.VaultTemplate;
@@ -63,13 +64,15 @@ public class VaultParametersResolverTest {
 
     @Test
     public void testSimpleParameterResolvedFromVault() throws Exception {
-        final String path = "secret/test";
-        template.write(path, Collections.singletonMap("value", "TestValue"));
+        writeSecret("test", Collections.singletonMap("value", "TestValue"));
         {
             // Check secret created
-            final VaultResponse response = template.read(path);
-            then(response.getData()).contains(entry("value", "TestValue"));
+            Map<String, Object> data = readSecret("test");
+            then(data).contains(entry("value", "TestValue"));
         }
+
+
+        final String path = getKVPath("test");
 
         final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger());
         then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
@@ -77,8 +80,8 @@ public class VaultParametersResolverTest {
 
     @Test
     public void testSingleValueParameterResolvedFromVault() throws Exception {
-        final String path = "secret/test";
-        template.write(path, Collections.singletonMap("data", "TestValue"));
+        final String path = getKVPath("test");
+        writeSecret(path, Collections.singletonMap("data", "TestValue"));
 
         final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger());
         then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
@@ -86,8 +89,9 @@ public class VaultParametersResolverTest {
 
     @Test
     public void testComplexValueParameterResolvedFromVault() throws Exception {
-        final String path = "secret/test-complex";
-        template.write(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
+        final String path = getKVPath("test-complex");
+        writeSecret(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
+        then(readSecret(path)).contains(entry("first", "TestValueA"));
 
         final List<VaultParameter> parameters = Arrays.asList(
                 new VaultParameter("/" + path, "first"),
@@ -100,8 +104,8 @@ public class VaultParametersResolverTest {
 
     @Test
     public void testComplexValueParameterCallVaultAPIOnlyOnce() throws Exception {
-        final String path = "secret/test-read-once";
-        template.write(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
+        final String path = getKVPath("test-read-once");
+        writeSecret(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
 
         final List<VaultParameter> parameters = Arrays.asList(
                 VaultParameter.extract("/" + path + "!/first"),
@@ -113,5 +117,52 @@ public class VaultParametersResolverTest {
         then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
 
         then(myRequestedURIs).hasSize(1).containsOnlyOnce("/v1/" + path);
+    }
+
+    private boolean isKV2() {
+        return VersionComparatorUtil.compare("0.10", vault.getVersion()) <= 0;
+    }
+
+    private String getKVPath(String path) {
+        return isKV2() ? "secret/data/" + path : "secret/" + path;
+    }
+
+    private VaultResponse writeSecret(String path, Object payload) {
+        if (isKV2()) {
+            String prefix = "secret/data/";
+            if (!path.startsWith(prefix)) {
+                //noinspection AssignmentToMethodParameter
+                path = prefix + path;
+            }
+            return template.write(path, Collections.singletonMap("data", payload));
+        } else {
+            String prefix = "secret/";
+            if (!path.startsWith(prefix)) {
+                //noinspection AssignmentToMethodParameter
+                path = prefix + path;
+            }
+            return template.write(path, payload);
+        }
+    }
+
+    private Map<String, Object> readSecret(String path) {
+        if (isKV2()) {
+            String prefix = "secret/data/";
+            if (!path.startsWith(prefix)) {
+                //noinspection AssignmentToMethodParameter
+                path = prefix + path;
+            }
+            VaultResponse response = template.read(path);
+            //noinspection unchecked
+            return (Map<String, Object>) response.getData().get("data");
+        } else {
+            String prefix = "secret/";
+            if (!path.startsWith(prefix)) {
+                //noinspection AssignmentToMethodParameter
+                path = prefix + path;
+            }
+            VaultResponse response = template.read(path);
+            return response.getData();
+        }
     }
 }

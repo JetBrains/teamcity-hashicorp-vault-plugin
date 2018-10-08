@@ -15,7 +15,6 @@
  */
 package org.jetbrains.teamcity.vault.agent
 
-import com.google.gson.Gson
 import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
 import jetbrains.buildServer.agent.AgentRunningBuild
@@ -108,8 +107,8 @@ class VaultParametersResolver {
 
         private fun extract(response: VaultResponse, parameter: VaultParameter): String? {
             val jsonPath = parameter.jsonPath
+            val data = unwrapKV2IfNeeded(response.data)
             if (jsonPath == null) {
-                val data = response.data
                 if (data.isEmpty()) {
                     logger.warning("There's no data in HashiCorp Vault response for '${parameter.vaultPath}'")
                     return null
@@ -140,7 +139,7 @@ class VaultParametersResolver {
                 return null
             }
             try {
-                val value: Any? = pattern.read(Gson().toJson(response.data))
+                val value: Any? = pattern.read(data)
                 if (value == null) {
                     logger.warning("'$jsonPath' is missing result structure for '${parameter.vaultPath}'")
                     return null
@@ -155,6 +154,29 @@ class VaultParametersResolver {
                 LOG.warn("Cannot extract '$jsonPath' data from '${parameter.vaultPath}', full reference: ${parameter.full}", e)
                 return null
             }
+        }
+
+        private fun unwrapKV2IfNeeded(data: Map<String, Any>): Map<String, Any> {
+            if (isKV2Data(data)) {
+                @Suppress("UNCHECKED_CAST")
+                return data["data"] as Map<String, Any>
+            }
+            return data
+        }
+
+        private fun isKV2Data(map: Map<String, Any>): Boolean {
+            // Some heuristics to understand whether it's KV2 data
+            val data = map["data"]
+            val metadata = map["metadata"]
+            if (data == null || metadata == null) return false
+            if (data !is Map<*, *>) return false
+            if (metadata !is Map<*, *>) return false
+            try {
+                if (!metadata.keys.containsAll(listOf("created_time", "deletion_time", "destroyed", "version"))) return false
+            } catch (ignore: Throwable) {
+                return false
+            }
+            return true
         }
     }
 
