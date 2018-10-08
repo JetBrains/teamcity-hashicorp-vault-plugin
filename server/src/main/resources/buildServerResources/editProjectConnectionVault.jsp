@@ -124,6 +124,15 @@
     </td>
 </tr>
 
+<tr>
+    <td><label for="${keys.FAIL_ON_ERROR}">Fail in case of error</label></td>
+    <td>
+        <props:checkboxProperty name="${keys.FAIL_ON_ERROR}"/>
+        <span class="error" id="error_${keys.FAIL_ON_ERROR}"/>
+        <span class="smallNote">Whether to fail builds in case of parameter resolving error</span>
+    </td>
+</tr>
+
 <forms:submit id="testConnectionButton" type="button" label="Test Connection" className="testConnectionButton"
               onclick="return BS.OAuthConnectionDialog.submitTestConnection();"/>
 <bs:dialog dialogId="testConnectionDialog" title="Test Connection" closeCommand="BS.TestConnectionDialog.close();"

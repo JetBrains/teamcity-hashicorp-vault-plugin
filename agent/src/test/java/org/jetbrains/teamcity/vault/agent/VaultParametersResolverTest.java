@@ -74,7 +74,7 @@ public class VaultParametersResolverTest {
 
         final String path = getKVPath("test");
 
-        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger());
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger()).getReplacements();
         then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
     }
 
@@ -83,7 +83,7 @@ public class VaultParametersResolverTest {
         final String path = getKVPath("test");
         writeSecret(path, Collections.singletonMap("data", "TestValue"));
 
-        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger());
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger()).getReplacements();
         then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
     }
 
@@ -98,7 +98,7 @@ public class VaultParametersResolverTest {
                 new VaultParameter("/" + path, "second")
         );
 
-        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), parameters, new NullBuildProgressLogger());
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), parameters, new NullBuildProgressLogger()).getReplacements();
         then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
     }
 
@@ -113,7 +113,7 @@ public class VaultParametersResolverTest {
         );
 
         myRequestedURIs.clear();
-        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(template, parameters, new NullBuildProgressLogger());
+        final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(template, parameters, new NullBuildProgressLogger()).getReplacements();
         then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
 
         then(myRequestedURIs).hasSize(1).containsOnlyOnce("/v1/" + path);

@@ -15,13 +15,11 @@
  */
 package org.jetbrains.teamcity.vault
 
-data class VaultFeatureSettings(val namespace: String, val url: String, val endpoint: String, val roleId: String, val secretId: String) {
+data class VaultFeatureSettings(val namespace: String, val url: String, val endpoint: String, val roleId: String, val secretId: String, val failOnError: Boolean = false) {
 
-    constructor(namespace: String, url: String) : this(namespace, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "")
+    constructor(namespace: String, url: String, failOnError: Boolean) : this(namespace, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "", failOnError)
 
     constructor(url: String, roleId: String, secretId: String) : this(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
-
-    constructor(namespace: String, url: String, roleId: String, secretId: String) : this(namespace, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
 
     constructor(map: Map<String, String>) : this(
             map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
@@ -29,7 +27,8 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val endp
             // Default value to convert from previous config versions
             (map[VaultConstants.FeatureSettings.ENDPOINT] ?: VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH).removePrefix("/"),
             map[VaultConstants.FeatureSettings.ROLE_ID] ?: "",
-            map[VaultConstants.FeatureSettings.SECRET_ID] ?: ""
+            map[VaultConstants.FeatureSettings.SECRET_ID] ?: "",
+            map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false
     )
 
     fun toMap(map: MutableMap<String, String>) {
@@ -38,6 +37,7 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val endp
         map[VaultConstants.FeatureSettings.ENDPOINT] = getNormalizedEndpoint()
         map[VaultConstants.FeatureSettings.ROLE_ID] = roleId
         map[VaultConstants.FeatureSettings.SECRET_ID] = secretId
+        map[VaultConstants.FeatureSettings.FAIL_ON_ERROR] = failOnError.toString()
     }
 
     fun getNormalizedEndpoint(): String {
