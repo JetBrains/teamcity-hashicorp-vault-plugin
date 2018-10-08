@@ -37,7 +37,7 @@ class VaultParametersResolver {
     }
 
     fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {
-        val references = getReleatedParameterReferences(build, settings.prefix)
+        val references = getReleatedParameterReferences(build, settings.namespace)
         if (references.isEmpty()) {
             LOG.info("There's nothing to resolve")
             return
@@ -45,11 +45,11 @@ class VaultParametersResolver {
         val logger = build.buildLogger
         logger.message("${references.size} Vault ${"reference".pluralize(references)} to resolve: $references")
 
-        val parameters = references.map { VaultParameter.extract(VaultReferencesUtil.getVaultPath(it, settings.prefix)) }
+        val parameters = references.map { VaultParameter.extract(VaultReferencesUtil.getPath(it, settings.namespace)) }
 
         val replacements = doFetchAndPrepareReplacements(settings, token, parameters, logger)
 
-        replaceParametersReferences(build, replacements, references, settings.prefix)
+        replaceParametersReferences(build, replacements, references, settings.namespace)
 
         replacements.values.forEach { build.passwordReplacer.addPassword(it) }
     }
@@ -155,17 +155,17 @@ class VaultParametersResolver {
     }
 
 
-    private fun getReleatedParameterReferences(build: AgentRunningBuild, prefix: String): Collection<String> {
+    private fun getReleatedParameterReferences(build: AgentRunningBuild, namespace: String): Collection<String> {
         val references = HashSet<String>()
-        VaultReferencesUtil.collect(build.sharedConfigParameters, references, prefix)
-        VaultReferencesUtil.collect(build.sharedBuildParameters.allParameters, references, prefix)
+        VaultReferencesUtil.collect(build.sharedConfigParameters, references, namespace)
+        VaultReferencesUtil.collect(build.sharedBuildParameters.allParameters, references, namespace)
         return references.sorted()
     }
 
-    private fun replaceParametersReferences(build: AgentRunningBuild, replacements: HashMap<String, String>, usages: Collection<String>, prefix: String) {
+    private fun replaceParametersReferences(build: AgentRunningBuild, replacements: HashMap<String, String>, usages: Collection<String>, namespace: String) {
         // usage may not have leading slash
         for (usage in usages) {
-            val replacement = replacements[usage.removePrefix(prefix + ":").ensureHasPrefix("/")]
+            val replacement = replacements[VaultReferencesUtil.getPath(usage, namespace)]
             if (replacement != null) {
                 build.addSharedConfigParameter(usage, replacement)
             }

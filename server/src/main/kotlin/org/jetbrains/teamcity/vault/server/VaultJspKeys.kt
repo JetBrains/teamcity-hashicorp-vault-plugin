@@ -18,7 +18,7 @@ package org.jetbrains.teamcity.vault.server
 import org.jetbrains.teamcity.vault.VaultConstants
 
 class VaultJspKeys {
-    val PARAMETER_PREFIX = VaultConstants.FeatureSettings.PARAMETER_PREFIX
+    val NAMESPACE = VaultConstants.FeatureSettings.NAMESPACE
     val URL = VaultConstants.FeatureSettings.URL
 
     val ENDPOINT = VaultConstants.FeatureSettings.ENDPOINT

@@ -77,11 +77,11 @@
     </td>
 </tr>
 <tr>
-    <td><label for="${keys.PARAMETER_PREFIX}">Parameter prefix:</label><l:star/></td>
+    <td><label for="${keys.NAMESPACE}">Parameter namespace:</label></td>
     <td>
-        <props:textProperty name="${keys.PARAMETER_PREFIX}" className="longField"/>
-        <span class="error" id="error_${keys.PARAMETER_PREFIX}"></span>
-        <span class="smallNote">Provide some prefix to use in parameters in case of multiple vault connections.</span>
+        <props:textProperty name="${keys.NAMESPACE}" className="longField"/>
+        <span class="error" id="error_${keys.NAMESPACE}"></span>
+        <span class="smallNote">Provide some namespace to use in parameters in case of multiple vault connections.</span>
     </td>
 </tr>
 <tr>

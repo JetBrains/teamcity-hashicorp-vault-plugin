@@ -53,14 +53,14 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
         val parameters = build.buildOwnParameters
         vaultFeatures.forEach { feature: VaultFeatureSettings ->
 
-            if (isShouldSetEnvParameters(parameters, feature.prefix)) {
-                val envPrefix = getEnvPrefix(feature.prefix)
+            if (isShouldSetEnvParameters(parameters, feature.namespace)) {
+                val envPrefix = getEnvPrefix(feature.namespace)
 
                 exposed += Constants.ENV_PREFIX + envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN
                 exposed += Constants.ENV_PREFIX + envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR
             }
         }
-        VaultReferencesUtil.collect(parameters, exposed, vaultFeatures.map { feature -> feature.prefix })
+        VaultReferencesUtil.collect(parameters, exposed, vaultFeatures.map { feature -> feature.namespace })
         return exposed
     }
 }

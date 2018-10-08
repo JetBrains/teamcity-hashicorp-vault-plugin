@@ -249,22 +249,22 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
 
     fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String {
         val infos = myBuildsTokens.getOrDefault(build.buildId,ConcurrentHashMap())
-        val info = infos[settings.prefix]
+        val info = infos[settings.namespace]
         if(info != null) return info.wrapped
 
         myLocks.get(build.buildId).withLock {
             @Suppress("NAME_SHADOWING")
             val infos = myBuildsTokens.getOrDefault(build.buildId,ConcurrentHashMap())
             @Suppress("NAME_SHADOWING")
-            val info = infos[settings.prefix]
+            val info = infos[settings.namespace]
             if(info != null) return info.wrapped
             try {
                 val (token, accessor) = doRequestWrappedToken(settings)
-                infos[settings.prefix] = LeasedWrappedTokenInfo(token, accessor, settings);
+                infos[settings.namespace] = LeasedWrappedTokenInfo(token, accessor, settings);
                 myBuildsTokens[build.buildId] = infos;
                 return token
             } catch (e: Exception) {
-                infos[settings.prefix] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
+                infos[settings.namespace] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
                 myBuildsTokens[build.buildId] = infos;
                 throw e
             }

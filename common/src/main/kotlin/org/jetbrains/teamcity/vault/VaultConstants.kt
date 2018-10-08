@@ -26,6 +26,8 @@ object VaultConstants {
     val WRAPPED_TOKEN_PROPERTY_SUFFIX = ".wrapped.token"
     val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
 
+    @JvmField val VAULT_PARAMETER_PREFIX = "vault:"
+
     object AgentEnvironment {
         val VAULT_TOKEN = "VAULT_TOKEN"
         val VAULT_ADDR = "VAULT_ADDR"
@@ -35,8 +37,8 @@ object VaultConstants {
         @JvmField val FEATURE_TYPE = "teamcity-vault"
 
         // Feature settings
-        @JvmField val PARAMETER_PREFIX = "parameter-prefix"
-        @JvmField val DEFAULT_PARAMETER_PREFIX = "vault"
+        @JvmField val NAMESPACE = "namespace"
+        @JvmField val DEFAULT_PARAMETER_NAMESPACE = ""
 
         @JvmField val URL = "url"
 

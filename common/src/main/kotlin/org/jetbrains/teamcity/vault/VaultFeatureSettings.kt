@@ -15,16 +15,16 @@
  */
 package org.jetbrains.teamcity.vault
 
-data class VaultFeatureSettings(val prefix: String, val url: String, val endpoint: String, val roleId: String, val secretId: String) {
+data class VaultFeatureSettings(val namespace: String, val url: String, val endpoint: String, val roleId: String, val secretId: String) {
 
-    constructor(prefix: String, url: String) : this(prefix, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "")
+    constructor(namespace: String, url: String) : this(namespace, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "")
 
-    constructor(url: String, roleId: String, secretId: String) : this(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
+    constructor(url: String, roleId: String, secretId: String) : this(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
 
-    constructor(prefix: String, url: String, roleId: String, secretId: String) : this(prefix, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
+    constructor(namespace: String, url: String, roleId: String, secretId: String) : this(namespace, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
 
     constructor(map: Map<String, String>) : this(
-            map[VaultConstants.FeatureSettings.PARAMETER_PREFIX] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX,
+            map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
             map[VaultConstants.FeatureSettings.URL] ?: "",
             // Default value to convert from previous config versions
             (map[VaultConstants.FeatureSettings.ENDPOINT] ?: VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH).removePrefix("/"),
@@ -34,7 +34,7 @@ data class VaultFeatureSettings(val prefix: String, val url: String, val endpoin
 
     fun toMap(map: MutableMap<String, String>) {
         map[VaultConstants.FeatureSettings.URL] = url
-        map[VaultConstants.FeatureSettings.PARAMETER_PREFIX] = prefix
+        map[VaultConstants.FeatureSettings.NAMESPACE] = namespace
         map[VaultConstants.FeatureSettings.ENDPOINT] = getNormalizedEndpoint()
         map[VaultConstants.FeatureSettings.ROLE_ID] = roleId
         map[VaultConstants.FeatureSettings.SECRET_ID] = secretId
@@ -51,7 +51,7 @@ data class VaultFeatureSettings(val prefix: String, val url: String, val endpoin
     companion object {
         fun getDefaultParameters(): Map<String, String> {
             return mapOf(
-                    VaultConstants.FeatureSettings.PARAMETER_PREFIX to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX,
+                    VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
                     VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE,
                     VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
                     VaultConstants.FeatureSettings.URL to "http://localhost:8200"

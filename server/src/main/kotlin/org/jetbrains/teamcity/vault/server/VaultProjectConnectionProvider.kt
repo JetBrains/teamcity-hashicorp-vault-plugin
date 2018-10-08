@@ -22,6 +22,7 @@ import jetbrains.buildServer.serverSide.oauth.OAuthProvider
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.isDefault
 
 class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) : OAuthProvider() {
     override fun getType(): String = VaultConstants.FeatureSettings.FEATURE_TYPE
@@ -30,14 +31,15 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
 
     override fun describeConnection(connection: OAuthConnectionDescriptor): String {
         val settings = VaultFeatureSettings(connection.parameters)
-        return "Connection to HashiCorp Vault server at ${settings.url}"
+        return "Connection to HashiCorp Vault server at ${settings.url}" +
+                if (isDefault(settings.namespace)) "" else ", namespace '${settings.namespace}'"
     }
 
     override fun getDefaultProperties(): Map<String, String> {
         return mapOf(
                 VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
                 VaultConstants.FeatureSettings.URL to "http://localhost:8200",
-                VaultConstants.FeatureSettings.PARAMETER_PREFIX to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_PREFIX
+                VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
         )
     }
 
@@ -56,8 +58,11 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 if (it[VaultConstants.FeatureSettings.URL].isNullOrBlank()) {
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
                 }
-                if (it[VaultConstants.FeatureSettings.PARAMETER_PREFIX].isNullOrBlank()) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.PARAMETER_PREFIX, "Should not be empty"))
+                // NAMESPACE can be empty, means default one
+                val namespace = it[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
+                val namespaceRegex = "[a-zA-Z0-9_]+"
+                if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
+                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.NAMESPACE, "Non-default namespace should match regex '$namespaceRegex'"))
                 }
                 if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
