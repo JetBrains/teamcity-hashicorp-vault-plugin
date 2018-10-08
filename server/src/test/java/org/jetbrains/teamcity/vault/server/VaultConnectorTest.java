@@ -58,7 +58,7 @@ public class VaultConnectorTest {
         then(health.isInitialized()).isTrue();
         then(health.isSealed()).isFalse();
         then(health.isStandby()).isFalse();
-        then(health.getVersion()).isEqualTo("0.7.3");
+        then(health.getVersion()).isEqualTo(vault.getVersion());
     }
 
     @Test
