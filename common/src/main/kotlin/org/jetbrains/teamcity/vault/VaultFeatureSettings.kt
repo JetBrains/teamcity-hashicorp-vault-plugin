@@ -15,7 +15,7 @@
  */
 package org.jetbrains.teamcity.vault
 
-data class VaultFeatureSettings(val namespace: String, val url: String, val endpoint: String, val roleId: String, val secretId: String, val failOnError: Boolean = false) {
+data class VaultFeatureSettings(val namespace: String, val url: String, val endpoint: String, val roleId: String, val secretId: String, val failOnError: Boolean = true) {
 
     constructor(namespace: String, url: String, failOnError: Boolean) : this(namespace, url, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "", failOnError)
 
@@ -28,7 +28,7 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val endp
             (map[VaultConstants.FeatureSettings.ENDPOINT] ?: VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH).removePrefix("/"),
             map[VaultConstants.FeatureSettings.ROLE_ID] ?: "",
             map[VaultConstants.FeatureSettings.SECRET_ID] ?: "",
-            map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false
+            map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: true
     )
 
     fun toMap(map: MutableMap<String, String>) {
