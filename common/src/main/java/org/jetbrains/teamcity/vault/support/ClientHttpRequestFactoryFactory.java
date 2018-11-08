@@ -15,7 +15,10 @@
  */
 package org.jetbrains.teamcity.vault.support;
 
-import org.apache.http.*;
+import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider;
+import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -25,24 +28,18 @@ import org.apache.http.impl.conn.DefaultSchemePortResolver;
 import org.apache.http.impl.conn.SystemDefaultRoutePlanner;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpProcessor;
-import org.springframework.core.io.Resource;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.vault.support.ClientOptions;
-import org.springframework.vault.support.SslConfiguration;
 
-import javax.net.ssl.*;
-import java.io.IOException;
-import java.io.InputStream;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import java.net.ProxySelector;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 
 /**
  * Simplified copy of {@link org.springframework.vault.config.ClientHttpRequestFactoryFactory}
@@ -53,112 +50,39 @@ import java.security.cert.CertificateException;
  * {@link ClientHttpRequestFactory} depending on the available dependencies.
  *
  * @author Mark Paluch
+ * @author Vladislav Rassokhin
  */
 public class ClientHttpRequestFactoryFactory {
 
-    private static final boolean HTTP_COMPONENTS_PRESENT = ClassUtils.isPresent(
-            "org.apache.http.client.HttpClient",
-            ClientHttpRequestFactoryFactory.class.getClassLoader());
-
     /**
      * Create a {@link ClientHttpRequestFactory} for the given {@link ClientOptions} and
-     * {@link SslConfiguration}.
+     * {@link SSLTrustStoreProvider}.
      *
-     * @param options          must not be {@literal null}
-     * @param sslConfiguration must not be {@literal null}
+     * @param options
+     * @param trustStoreProvider
      * @return a new {@link ClientHttpRequestFactory}. Lifecycle beans must be initialized
      * after obtaining.
      */
-    public static ClientHttpRequestFactory create(ClientOptions options,
-                                                  SslConfiguration sslConfiguration) {
-
-        Assert.notNull(options, "ClientOptions must not be null");
-        Assert.notNull(sslConfiguration, "SslConfiguration must not be null");
-
+    public static ClientHttpRequestFactory create(@NotNull ClientOptions options,
+                                                  @Nullable SSLTrustStoreProvider trustStoreProvider) {
         try {
-
-            if (HTTP_COMPONENTS_PRESENT) {
-                return HttpComponents.usingHttpComponents(options, sslConfiguration);
-            }
-
-
+            return HttpComponents.usingHttpComponents(options, trustStoreProvider);
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException(e);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
         }
-
-        return org.springframework.vault.config.ClientHttpRequestFactoryFactory.create(options, sslConfiguration);
     }
 
-    static SSLContext getSSLContext(SslConfiguration sslConfiguration)
-            throws GeneralSecurityException, IOException {
+    static SSLContext getSSLContext(@NotNull KeyStore trustStore)
+            throws GeneralSecurityException {
 
-        KeyManager[] keyManagers = sslConfiguration.getKeyStore() != null ? createKeyManagerFactory(
-                sslConfiguration.getKeyStore(), sslConfiguration.getKeyStorePassword())
-                .getKeyManagers() : null;
-
-        TrustManager[] trustManagers = sslConfiguration.getTrustStore() != null ? createTrustManagerFactory(
-                sslConfiguration.getTrustStore(),
-                sslConfiguration.getTrustStorePassword()).getTrustManagers()
-                : null;
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(trustStore);
+        TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
 
         SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(keyManagers, trustManagers, null);
+        sslContext.init(null, trustManagers, null);
 
         return sslContext;
-    }
-
-    private static KeyManagerFactory createKeyManagerFactory(Resource keystoreFile,
-                                                             String storePassword) throws GeneralSecurityException, IOException {
-
-        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-
-        loadKeyStore(keystoreFile, storePassword, keyStore);
-
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory
-                .getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(keyStore,
-                StringUtils.hasText(storePassword) ? storePassword.toCharArray()
-                        : new char[0]);
-
-        return keyManagerFactory;
-    }
-
-    private static TrustManagerFactory createTrustManagerFactory(Resource trustFile,
-                                                                 String storePassword) throws GeneralSecurityException, IOException {
-
-        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-
-        loadKeyStore(trustFile, storePassword, trustStore);
-
-        TrustManagerFactory trustManagerFactory = TrustManagerFactory
-                .getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        trustManagerFactory.init(trustStore);
-
-        return trustManagerFactory;
-    }
-
-    private static void loadKeyStore(Resource keyStoreResource, String storePassword,
-                                     KeyStore keyStore) throws IOException, NoSuchAlgorithmException,
-            CertificateException {
-
-        InputStream inputStream = null;
-        try {
-            inputStream = keyStoreResource.getInputStream();
-            keyStore.load(inputStream,
-                    StringUtils.hasText(storePassword) ? storePassword.toCharArray()
-                            : null);
-        } finally {
-            if (inputStream != null) {
-                inputStream.close();
-            }
-        }
-    }
-
-    private static boolean hasSslConfiguration(SslConfiguration sslConfiguration) {
-        return sslConfiguration.getTrustStore() != null
-                || sslConfiguration.getKeyStore() != null;
     }
 
     /**
@@ -168,20 +92,19 @@ public class ClientHttpRequestFactoryFactory {
      */
     static class HttpComponents {
 
-        static ClientHttpRequestFactory usingHttpComponents(ClientOptions options,
-                                                            SslConfiguration sslConfiguration) throws GeneralSecurityException,
-                IOException {
+        static ClientHttpRequestFactory usingHttpComponents(@NotNull ClientOptions options,
+                                                            @Nullable SSLTrustStoreProvider trustStoreProvider) throws GeneralSecurityException {
 
             HttpClientBuilder httpClientBuilder = HttpClients.custom();
 
             httpClientBuilder.setRoutePlanner(new SystemDefaultRoutePlanner(
                     DefaultSchemePortResolver.INSTANCE, ProxySelector.getDefault()));
 
-            if (hasSslConfiguration(sslConfiguration)) {
+            KeyStore trustStore = trustStoreProvider != null ? trustStoreProvider.getTrustStore() : null;
 
-                SSLContext sslContext = getSSLContext(sslConfiguration);
-                SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(
-                        sslContext);
+            if (trustStore != null) {
+                SSLContext sslContext = getSSLContext(trustStore);
+                SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext);
                 httpClientBuilder.setSSLSocketFactory(sslSocketFactory);
                 httpClientBuilder.setSslcontext(sslContext);
             }
@@ -200,7 +123,7 @@ public class ClientHttpRequestFactoryFactory {
             // Fix weird problem `ProtocolException: Content-Length header already present` from `org.apache.http.protocol.RequestContent`
             httpClientBuilder.addInterceptorFirst(new HttpRequestInterceptor() {
                 @Override
-                public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
+                public void process(HttpRequest request, HttpContext context) {
                     if (request instanceof HttpEntityEnclosingRequest) {
                         request.removeHeaders(HTTP.TRANSFER_ENCODING);
                         request.removeHeaders(HTTP.CONTENT_LEN);

@@ -19,6 +19,7 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.EventDispatcher
+import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler
@@ -30,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
+                        private val trustStoreProvider: SSLTrustStoreProvider,
                         private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
     companion object {
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultBuildFeature::class.java.name)!!
@@ -91,7 +93,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                             .wrapped()
                             .initialToken(VaultToken.of(wrapped))
                             .build()
-                    val template = createRestTemplate(settings)
+                    val template = createRestTemplate(settings, trustStoreProvider)
                     val authentication = CubbyholeAuthentication(options, template)
 
                     val timeout = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)]

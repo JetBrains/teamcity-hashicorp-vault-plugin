@@ -27,6 +27,7 @@ import jetbrains.buildServer.serverSide.BuildServerListener
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.EventDispatcher
+import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.http.HttpStatus
@@ -41,7 +42,7 @@ import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.withLock
 
-class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
+class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private val trustStoreProvider: SSLTrustStoreProvider) {
     init {
         dispatcher.addListener(object : BuildServerAdapter() {
             override fun buildFinished(build: SRunningBuild) {
@@ -49,7 +50,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
                 infos.values.forEach { info ->
                     if (info == LeasedWrappedTokenInfo.FAILED_TO_FETCH) return
                     myPendingRemoval.add(info)
-                    if (revoke(info)) {
+                    if (revoke(info, trustStoreProvider)) {
                         myPendingRemoval.remove(info)
                     }
                 }
@@ -63,10 +64,10 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
         /**
          * @return true if operation succeed
          */
-        @JvmStatic fun revoke(info: LeasedWrappedTokenInfo): Boolean {
+        @JvmStatic fun revoke(info: LeasedWrappedTokenInfo, trustStoreProvider: SSLTrustStoreProvider): Boolean {
             val settings = info.connection
             try {
-                val template = createRestTemplate(settings)
+                val template = createRestTemplate(settings, trustStoreProvider)
                 // Login and retrieve server token
                 val (token, accessor) = getRealToken(template, settings)
 
@@ -86,10 +87,10 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
          * @return true if operation succeed
          */
         @JvmStatic
-        fun revoke(info: LeasedTokenInfo): Boolean {
+        fun revoke(info: LeasedTokenInfo, trustStoreProvider: SSLTrustStoreProvider): Boolean {
             val settings = info.connection
             try {
-                val template = createRestTemplate(settings)
+                val template = createRestTemplate(settings, trustStoreProvider)
                 // Login and retrieve server token
                 template.withVaultToken(info.token)
                 // Revoke token by accessor
@@ -178,14 +179,14 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             return ConnectionException(message.replace(settings.secretId, "*******"), cause)
         }
 
-        @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings): Pair<String, String> {
+        @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
                     .path(settings.getNormalizedEndpoint())
                     .roleId(settings.roleId)
                     .secretId(settings.secretId)
                     .build()
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
-            val factory = createClientHttpRequestFactory()
+            val factory = createClientHttpRequestFactory(trustStoreProvider)
 
             val template = VaultTemplate(endpoint, factory, DummySessionManager()).withWrappedResponses("10m")
 
@@ -212,14 +213,14 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
         }
 
         @JvmStatic
-        fun doRequestToken(settings: VaultFeatureSettings): Pair<String, String> {
+        fun doRequestToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
                     .path(settings.getNormalizedEndpoint())
                     .roleId(settings.roleId)
                     .secretId(settings.secretId)
                     .build()
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
-            val factory = createClientHttpRequestFactory()
+            val factory = createClientHttpRequestFactory(trustStoreProvider)
 
             val template = VaultTemplate(endpoint, factory, DummySessionManager())
 
@@ -259,7 +260,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
             val info = infos[settings.namespace]
             if(info != null) return info.wrapped
             try {
-                val (token, accessor) = doRequestWrappedToken(settings)
+                val (token, accessor) = doRequestWrappedToken(settings, trustStoreProvider)
                 infos[settings.namespace] = LeasedWrappedTokenInfo(token, accessor, settings);
                 myBuildsTokens[build.buildId] = infos;
                 return token
@@ -272,7 +273,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>) {
     }
 
     fun tryRequestToken(settings: VaultFeatureSettings): LeasedTokenInfo {
-        val (token, accessor) = doRequestToken(settings)
+        val (token, accessor) = doRequestToken(settings, trustStoreProvider)
         return LeasedTokenInfo(token, accessor, settings)
     }
 

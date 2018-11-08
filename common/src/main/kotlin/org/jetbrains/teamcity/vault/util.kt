@@ -18,6 +18,7 @@ package org.jetbrains.teamcity.vault
 import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.VersionComparatorUtil
+import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.support.ClientHttpRequestFactoryFactory
 import org.jetbrains.teamcity.vault.support.MappingJackson2HttpMessageConverter
 import org.springframework.http.client.ClientHttpRequestFactory
@@ -29,7 +30,6 @@ import org.springframework.vault.client.VaultClients
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.client.VaultHttpHeaders
 import org.springframework.vault.support.ClientOptions
-import org.springframework.vault.support.SslConfiguration
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.DefaultUriTemplateHandler
 import java.net.URI
@@ -55,13 +55,13 @@ fun isJava8OrNewer(): Boolean {
     return VersionComparatorUtil.compare(System.getProperty("java.specification.version"), "1.8") >= 0
 }
 
-fun createClientHttpRequestFactory(): ClientHttpRequestFactory {
-    return ClientHttpRequestFactoryFactory.create(ClientOptions(), SslConfiguration.NONE)
+fun createClientHttpRequestFactory(trustStoreProvider: SSLTrustStoreProvider): ClientHttpRequestFactory {
+    return ClientHttpRequestFactoryFactory.create(ClientOptions(), trustStoreProvider)
 }
 
-fun createRestTemplate(settings: VaultFeatureSettings): RestTemplate {
+fun createRestTemplate(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): RestTemplate {
     val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
-    val factory = createClientHttpRequestFactory()
+    val factory = createClientHttpRequestFactory(trustStoreProvider)
     // HttpComponents.usingHttpComponents(options, sslConfiguration)
 
     return createRestTemplate(endpoint, factory)

@@ -50,7 +50,7 @@ public class VaultConnectorTest {
 
     @Test
     public void testVaultIsUpAndRunning() throws Exception {
-        final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
+        final ClientHttpRequestFactory factory = createClientHttpRequestFactory(() -> null);
 
         final VaultTemplate template = getVault().getTemplate(factory);
 
@@ -72,7 +72,7 @@ public class VaultConnectorTest {
     }
 
     private void doTestWrapperTokenCreated(String authMountPath) {
-        final ClientHttpRequestFactory factory = createClientHttpRequestFactory();
+        final ClientHttpRequestFactory factory = createClientHttpRequestFactory(() -> null);
         final VaultTemplate template = getVault().getTemplate(factory);
 
         // Ensure approle auth enabled
@@ -88,7 +88,7 @@ public class VaultConnectorTest {
         Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
 
 
-        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings("vault", getVault().getUrl(), authMountPath, credentials.getFirst(), credentials.getSecond(), false));
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings("vault", getVault().getUrl(), authMountPath, credentials.getFirst(), credentials.getSecond(), false), () -> null);
 
         then(wrapped.getFirst()).isNotNull();
         then(wrapped.getSecond()).isNotNull();
@@ -98,7 +98,7 @@ public class VaultConnectorTest {
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped.getFirst()))
                 .build();
-        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings("vault", getVault().getUrl(), authMountPath, "", "", false));
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings("vault", getVault().getUrl(), authMountPath, "", "", false), () -> null);
         final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
         final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 

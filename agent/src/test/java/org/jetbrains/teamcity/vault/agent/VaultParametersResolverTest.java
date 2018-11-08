@@ -19,6 +19,7 @@ package org.jetbrains.teamcity.vault.agent;
 import jetbrains.buildServer.agent.NullBuildProgressLogger;
 import jetbrains.buildServer.util.CollectionsUtil;
 import jetbrains.buildServer.util.VersionComparatorUtil;
+import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider;
 import org.jetbrains.teamcity.vault.VaultDevContainer;
 import org.jetbrains.teamcity.vault.VaultFeatureSettings;
 import org.jetbrains.teamcity.vault.support.VaultTemplate;
@@ -50,7 +51,8 @@ public class VaultParametersResolverTest {
 
     @Before
     public void setUp() throws Exception {
-        ClientHttpRequestFactory factory = new AbstractClientHttpRequestFactoryWrapper(createClientHttpRequestFactory()) {
+        SSLTrustStoreProvider emptyTrustStoreProvider = new EmtpySSLTrustStoreProvider();
+        ClientHttpRequestFactory factory = new AbstractClientHttpRequestFactoryWrapper(createClientHttpRequestFactory(emptyTrustStoreProvider)) {
             @Override
             protected ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod, ClientHttpRequestFactory requestFactory) throws IOException {
                 myRequestedURIs.add(uri.getPath());
@@ -58,7 +60,7 @@ public class VaultParametersResolverTest {
             }
         };
         template = vault.getTemplate(factory);
-        resolver = new VaultParametersResolver();
+        resolver = new VaultParametersResolver(emptyTrustStoreProvider);
         feature = new VaultFeatureSettings(vault.getUrl(), "", "");
     }
 
@@ -165,4 +167,5 @@ public class VaultParametersResolverTest {
             return response.getData();
         }
     }
+
 }

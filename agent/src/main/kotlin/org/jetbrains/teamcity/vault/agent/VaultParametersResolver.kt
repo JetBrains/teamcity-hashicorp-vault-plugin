@@ -21,6 +21,7 @@ import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.log.Loggers
+import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.vault.authentication.SimpleSessionManager
@@ -31,7 +32,7 @@ import java.net.URI
 import java.util.*
 import kotlin.collections.HashSet
 
-class VaultParametersResolver {
+class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvider) {
     companion object {
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultParametersResolver::class.java.name)!!
     }
@@ -63,7 +64,7 @@ class VaultParametersResolver {
 
     fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>, logger: BuildProgressLogger): ResolvingResult {
         val endpoint = VaultEndpoint.from(URI.create(settings.url))
-        val factory = createClientHttpRequestFactory()
+        val factory = createClientHttpRequestFactory(trustStoreProvider)
         val client = VaultTemplate(endpoint, factory, SimpleSessionManager({ VaultToken.of(token) }))
 
         return doFetchAndPrepareReplacements(client, parameters, logger)
