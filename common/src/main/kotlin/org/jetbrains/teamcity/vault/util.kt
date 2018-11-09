@@ -153,6 +153,9 @@ fun <T> BuildProgressLogger.activity(activityName: String, activityType: String,
     this.activityStarted(activityName, activityType)
     try {
         return body()
+    } catch (t: Throwable) {
+        this.internalError(activityType, "Exception occured: ${t.message}", t)
+        throw t
     } finally {
         this.activityFinished(activityName, activityType)
     }
