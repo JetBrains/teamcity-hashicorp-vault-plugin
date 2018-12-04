@@ -141,5 +141,9 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
         val manager = sessions[build.buildId] ?: return
         manager.destroy()
     }
+
+    override fun buildFinished(build: AgentRunningBuild, buildStatus: BuildFinishedStatus) {
+        sessions.remove(build.buildId)
+    }
 }
 
