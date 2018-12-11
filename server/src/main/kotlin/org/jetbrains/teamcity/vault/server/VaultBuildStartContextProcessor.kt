@@ -78,7 +78,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
         settingsList.map { settings ->
             val ns = if (isDefault(settings.namespace)) "" else " ('${settings.namespace}' namespace)"
             if (!isShouldEnableVaultIntegration(build, settings)) {
-                LOG.debug("There's no need to fetch HsahiCorp Vault$ns parameter for build $build")
+                LOG.debug("There's no need to fetch HashiCorp Vault$ns parameter for build $build")
                 return@map
             }
 
