@@ -38,24 +38,26 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
             // Two features with same prefix cannot coexist in same project
             // Though it's possible to override feature with same prefix in subproject
+            val projectToFeaturePairs = connectionFeatures.map {
+                it.projectId to VaultFeatureSettings(it.parameters)
+            }
 
             if (reportProblems) {
-                connectionFeatures.groupBy { it.projectId }.forEach { pid, features ->
-                    features.groupBy { it.parameters[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE }
+                projectToFeaturePairs.groupBy({ it.first }, { it.second }).forEach { pid, features ->
+                    features.groupBy { it.namespace }
                             .filterValues { it.size > 1 }
                             .forEach { namespace, clashing ->
-                                val nsDescripption = if (isDefault(namespace)) "default namespace" else "\"$namespace\" namespace"
-                                val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project $pid"
+                                val nsDescripption = if (isDefault(namespace)) "default namespace" else "'$namespace' namespace"
+                                val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project '$pid'"
                                 build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection", message))
-                                if (clashing.any { it.parameters[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() != false }) {
+                                if (clashing.any { it.failOnError }) {
                                     build.stop(null, message)
                                 }
                             }
                 }
             }
-            val vaultFeatures = connectionFeatures.map {
-                VaultFeatureSettings(it.parameters)
-            }
+            val vaultFeatures = projectToFeaturePairs.map { it.second }
+
             return vaultFeatures.groupBy { it.namespace }.map { (_, v) -> v.first() }
         }
 
