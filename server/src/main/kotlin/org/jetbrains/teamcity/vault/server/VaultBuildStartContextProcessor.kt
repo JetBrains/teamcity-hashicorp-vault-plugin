@@ -21,6 +21,7 @@ import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.BuildStartContext
 import jetbrains.buildServer.serverSide.BuildStartContextProcessor
 import jetbrains.buildServer.serverSide.SBuild
+import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import org.jetbrains.teamcity.vault.*
 
@@ -28,7 +29,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)!!
 
-        private fun getFeatures(build: SBuild, reportProblems: Boolean): List<VaultFeatureSettings> {
+        private fun getFeatures(build: SRunningBuild, reportProblems: Boolean): List<VaultFeatureSettings> {
             val buildType = build.buildType ?: return emptyList()
 
             val connectionFeatures = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
@@ -42,11 +43,13 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 connectionFeatures.groupBy { it.projectId }.forEach { pid, features ->
                     features.groupBy { it.parameters[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE }
                             .filterValues { it.size > 1 }
-                            .forEach { namespace, _ ->
+                            .forEach { namespace, clashing ->
                                 val nsDescripption = if (isDefault(namespace)) "default namespace" else "\"$namespace\" namespace"
-                                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection",
-                                        "Multiple vault connections with $nsDescripption present in project $pid"
-                                ))
+                                val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project $pid"
+                                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection", message))
+                                if (clashing.any { it.parameters[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() != false }) {
+                                    build.stop(null, message)
+                                }
                             }
                 }
             }
@@ -84,9 +87,11 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             } catch (e: Throwable) {
                 val message = "Failed to fetch HashiCorp Vault$ns wrapped token: ${e.message}"
                 LOG.warn(message, e)
-                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.namespace}", "VaultConnection",
-                        message + ": " + e.toString() + ", see teamcity-server.log for details"
-                ))
+                val msg = message + ": " + e.toString() + ", see teamcity-server.log for details"
+                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.namespace}", "VaultConnection", msg))
+                if (settings.failOnError) {
+                    build.stop(null, msg)
+                }
                 return@map
             }
 
