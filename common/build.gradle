@@ -20,7 +20,7 @@ teamcity {
 }
 
 dependencies {
-    compile('org.springframework.vault:spring-vault-core:1.0.2.RELEASE') {
+    compile('org.springframework.vault:spring-vault-core:1.1.3.RELEASE') {
         exclude group: 'org.springframework'
     }
     provided "org.springframework:spring-web:${springVersion}"
