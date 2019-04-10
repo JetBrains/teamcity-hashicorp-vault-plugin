@@ -20,11 +20,11 @@ import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.EventDispatcher
 import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.support.LifecycleAwareSessionManager
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler
 import org.springframework.vault.authentication.CubbyholeAuthentication
 import org.springframework.vault.authentication.CubbyholeAuthenticationOptions
-import org.springframework.vault.authentication.LifecycleAwareSessionManager
 import org.springframework.vault.support.VaultToken
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -95,19 +95,10 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                     val authentication = CubbyholeAuthentication(options, template)
 
                     val timeout = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)]
-                            ?: "60").toLongOrNull() ?: 60
+                            ?: "15").toLongOrNull() ?: 15
 
-                    val sessionManager = object : LifecycleAwareSessionManager(authentication, scheduler, template,
-                            LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS)
-                    ) {
-                        override fun renewToken(): Boolean {
-                            LOG.info("Renewing Vault token")
-                            return super.renewToken().also {
-                                if (it) logger.message("Renewed HashiCorp Vault token successfully")
-                                else logger.warning("Failed to refresh HashiCorp Vault token")
-                            }
-                        }
-                    }
+                    val sessionManager = LifecycleAwareSessionManager(authentication, scheduler, template,
+                        LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS), logger)
                     sessions[runningBuild.buildId] = sessionManager
                     token = sessionManager.sessionToken.token
                 } catch (e: Exception) {
