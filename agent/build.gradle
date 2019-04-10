@@ -24,7 +24,7 @@ dependencies {
     compile('com.jayway.jsonpath:json-path:2.4.0') {
         exclude group: 'org.slf4j'
     }
-    compile('org.springframework.vault:spring-vault-core:1.0.2.RELEASE') {
+    compile('org.springframework.vault:spring-vault-core:1.1.3.RELEASE') {
         exclude group: 'org.springframework'
     }
     compile 'org.apache.httpcomponents:httpclient:4.3.6'
