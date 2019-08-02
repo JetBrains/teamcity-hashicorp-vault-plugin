@@ -17,6 +17,7 @@ apply plugin: 'java'
 apply plugin: 'java'
 
 apply plugin: 'com.github.rodm.teamcity-server'
+apply plugin: 'com.github.rodm.teamcity-environments'
 
 ext {
     downloadsDir = project.findProperty('downloads.dir') ?: "$rootDir/downloads"
@@ -58,7 +59,7 @@ teamcity {
         baseDataDir = 'data'
 
         teamcity2017_1 {
-            version = '2017.1.3'
+            version = '2017.1.5'
             serverOptions = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5600 -DTC.res.disableAll=true -Dteamcity.development.mode=true"
             agentOptions = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5601"
         }
