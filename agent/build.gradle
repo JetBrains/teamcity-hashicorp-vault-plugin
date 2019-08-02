@@ -20,21 +20,21 @@ dependencies {
     compile(project(':common')) {
         exclude group: 'org.apache.httpcomponents'
     }
-    compile "org.springframework:spring-web:${springVersion}"
+    compile "org.springframework:spring-web:$spring_version"
     compile('com.jayway.jsonpath:json-path:2.4.0') {
         exclude group: 'org.slf4j'
     }
-    compile('org.springframework.vault:spring-vault-core:1.1.3.RELEASE') {
+    compile("org.springframework.vault:spring-vault-core:$sprint_vault_version") {
         exclude group: 'org.springframework'
     }
-    compile 'org.apache.httpcomponents:httpclient:4.3.6'
+    compile "org.apache.httpcomponents:httpclient:$httpclient_version"
 
     testCompile project(path: ':common', configuration: 'testOutput')
-    testCompile "org.jetbrains.teamcity:tests-support:${teamcityVersion}"
+    testCompile "org.jetbrains.teamcity:tests-support:$teamcity_version"
 }
 
 teamcity {
-    version = teamcityVersion
+    version = teamcity_version
 
     agent {
         descriptor {
