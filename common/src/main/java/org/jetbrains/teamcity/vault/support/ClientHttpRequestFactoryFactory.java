@@ -15,7 +15,9 @@
  */
 package org.jetbrains.teamcity.vault.support;
 
-import org.apache.http.*;
+import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -25,12 +27,10 @@ import org.apache.http.impl.conn.DefaultSchemePortResolver;
 import org.apache.http.impl.conn.SystemDefaultRoutePlanner;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpProcessor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.Resource;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.vault.support.ClientOptions;
 import org.springframework.vault.support.SslConfiguration;
@@ -56,10 +56,6 @@ import java.security.cert.CertificateException;
  */
 public class ClientHttpRequestFactoryFactory {
 
-    private static final boolean HTTP_COMPONENTS_PRESENT = ClassUtils.isPresent(
-            "org.apache.http.client.HttpClient",
-            ClientHttpRequestFactoryFactory.class.getClassLoader());
-
     /**
      * Create a {@link ClientHttpRequestFactory} for the given {@link ClientOptions} and
      * {@link SslConfiguration}.
@@ -69,26 +65,15 @@ public class ClientHttpRequestFactoryFactory {
      * @return a new {@link ClientHttpRequestFactory}. Lifecycle beans must be initialized
      * after obtaining.
      */
-    public static ClientHttpRequestFactory create(ClientOptions options,
-                                                  SslConfiguration sslConfiguration) {
-
-        Assert.notNull(options, "ClientOptions must not be null");
-        Assert.notNull(sslConfiguration, "SslConfiguration must not be null");
-
+    public static ClientHttpRequestFactory create(@NotNull ClientOptions options,
+                                                  @NotNull SslConfiguration sslConfiguration) {
         try {
-
-            if (HTTP_COMPONENTS_PRESENT) {
-                return HttpComponents.usingHttpComponents(options, sslConfiguration);
-            }
-
-
+            return HttpComponents.usingHttpComponents(options, sslConfiguration);
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException(e);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
-
-        return org.springframework.vault.config.ClientHttpRequestFactoryFactory.create(options, sslConfiguration);
     }
 
     static SSLContext getSSLContext(SslConfiguration sslConfiguration)
@@ -200,7 +185,7 @@ public class ClientHttpRequestFactoryFactory {
             // Fix weird problem `ProtocolException: Content-Length header already present` from `org.apache.http.protocol.RequestContent`
             httpClientBuilder.addInterceptorFirst(new HttpRequestInterceptor() {
                 @Override
-                public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
+                public void process(HttpRequest request, HttpContext context) {
                     if (request instanceof HttpEntityEnclosingRequest) {
                         request.removeHeaders(HTTP.TRANSFER_ENCODING);
                         request.removeHeaders(HTTP.CONTENT_LEN);
