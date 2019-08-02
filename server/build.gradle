@@ -28,7 +28,7 @@ dependencies {
         exclude group: 'org.apache.httpcomponents'
     }
 
-    provided "org.jetbrains.teamcity.internal:web:${teamcityVersion}"
+    provided "org.jetbrains.teamcity.internal:web:$teamcity_version"
 
     agent project(path: ':agent', configuration: 'plugin')
 
@@ -36,7 +36,7 @@ dependencies {
 }
 
 teamcity {
-    version = teamcityVersion
+    version = teamcity_version
 
     server {
         descriptor {

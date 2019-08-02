@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 buildscript {
-    ext.kotlinVersion = '1.1.4-2'
+    ext.kotlin_version = '1.1.4-2'
     repositories {
         mavenLocal()
         maven {
@@ -23,15 +23,21 @@ buildscript {
     }
     dependencies {
         classpath group: 'com.github.rodm', name: 'gradle-teamcity-plugin', version: '1.0'
-        classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: "${kotlinVersion}"
+        classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: kotlin_version
     }
 }
 
 ext {
-    teamcityVersion = '2017.1'
-    springVersion = '4.2.6.RELEASE'
     version_prefix = '0.1'
+    teamcity_version = '2017.1'
+    // compile
+    spring_version = '4.2.6.RELEASE'
+    sprint_vault_version = '1.1.3.RELEASE'
+    httpclient_version = '4.3.6' // version is relevant to one used inside TeamCity
+    // tests
     jetty_version = '9.4.7.v20170914'
+    testcontainers_version = '1.9.1'
+    assertj_version = '1.7.1'
 }
 
 group = 'org.jetbrains.teamcity.vault'
@@ -53,7 +59,7 @@ subprojects {
     targetCompatibility = "1.6"
 
     dependencies {
-        compile("org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}")
+        compile("org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}")
     }
     if (System.getenv('TEAMCITY_VERSION') != null) {
         test.ignoreFailures = true
