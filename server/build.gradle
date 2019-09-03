@@ -72,3 +72,6 @@ targetCompatibility = "1.8"
 // Do not include version into plugin archive name
 project.tasks.getByName('serverPlugin').version = ''
 
+// Fix after https://github.com/rodm/gradle-teamcity-plugin/commit/ca6d5dd4946f670a30cf39f837ae3aea831ef9eb
+project.tasks.getByName('serverPlugin').baseName = "${project.rootProject.name}"
+
