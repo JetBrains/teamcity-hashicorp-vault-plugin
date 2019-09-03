@@ -30,6 +30,7 @@ dependencies {
     }
 
     provided "org.jetbrains.teamcity.internal:web:$teamcity_version"
+    provided "org.jetbrains.teamcity:oauth:$teamcity_version"
 
     agent project(path: ':agent', configuration: 'plugin')
 
