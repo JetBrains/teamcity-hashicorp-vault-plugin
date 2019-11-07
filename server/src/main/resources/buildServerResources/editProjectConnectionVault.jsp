@@ -133,6 +133,26 @@
     </td>
 </tr>
 
+<tr class="advancedSetting">
+    <td><label for="${keys.BACKOFF_PERIOD}">Retry backoff period</label></td>
+    <td>
+        <props:textProperty name="${keys.BACKOFF_PERIOD}"
+                            className="longField textProperty_max-width js_max-width"/>
+        <span class="error" id="error_${keys.BACKOFF_PERIOD}"/>
+        <span class="smallNote">The back off period in milliseconds</span>
+    </td>
+</tr>
+
+<tr class="advancedSetting">
+    <td><label for="${keys.MAX_ATTEMPTS}">Retry attempts</label></td>
+    <td>
+        <props:textProperty name="${keys.MAX_ATTEMPTS}"
+                            className="longField textProperty_max-width js_max-width"/>
+        <span class="error" id="error_${keys.MAX_ATTEMPTS}"/>
+        <span class="smallNote">The maximum number of attempts</span>
+    </td>
+</tr>
+
 <forms:submit id="testConnectionButton" type="button" label="Test Connection" className="testConnectionButton"
               onclick="return BS.OAuthConnectionDialog.submitTestConnection();"/>
 <bs:dialog dialogId="testConnectionDialog" title="Test Connection" closeCommand="BS.TestConnectionDialog.close();"

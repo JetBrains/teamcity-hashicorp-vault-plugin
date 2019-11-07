@@ -98,6 +98,8 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             }
 
             context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX), settings.failOnError.toString())
+            context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.MAX_ATTEMPTS_PERIOD_PROPERTY_SUFFIX), settings.maxAttempts.toString())
+            context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.BACKOFF_PERIOD_PROPERTY_SUFFIX), settings.backoffPeriod.toString())
             context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), wrappedToken)
             context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.URL_PROPERTY_SUFFIX), settings.url)
         }

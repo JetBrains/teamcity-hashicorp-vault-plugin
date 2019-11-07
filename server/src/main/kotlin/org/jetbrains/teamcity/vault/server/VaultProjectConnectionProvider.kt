@@ -73,6 +73,14 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 if (it[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
                 }
+                val backoffPeriod = it[VaultConstants.FeatureSettings.BACKOFF_PERIOD]?.toLongOrNull() ?: VaultConstants.FeatureSettings.DEFAULT_BACKOFF_PERIOD
+                if (backoffPeriod < 0) {
+                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.BACKOFF_PERIOD, "Should be positive"))
+                }
+                val maxAttempts = it[VaultConstants.FeatureSettings.MAX_ATTEMPTS]?.toIntOrNull() ?: VaultConstants.FeatureSettings.DEFAULT_MAX_ATTEMPTS
+                if (maxAttempts < 0) {
+                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.MAX_ATTEMPTS, "Should be positive"))
+                }
 
                 // Convert slashes if needed of add new fields
                 VaultFeatureSettings(it).toMap(it)
