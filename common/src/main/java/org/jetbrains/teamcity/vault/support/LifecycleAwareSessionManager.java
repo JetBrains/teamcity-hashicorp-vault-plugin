@@ -131,7 +131,6 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 
             this.token = renewed;
             LOG.info("Renewed HashiCorp Vault token successfully");
-            logger.message("Renewed HashiCorp Vault token successfully");
             return true;
         } catch (HttpStatusCodeException e) {
             logger.warning("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getStatusCode() + " " + VaultResponses.getError(e.getResponseBodyAsString()));
