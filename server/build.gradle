@@ -47,7 +47,7 @@ teamcity {
             description = 'Provides support for HashiCorp Vault Secrets Manager'
             version = project.version
 
-            vendorName = 'JetBrains, s.r.o.'
+            vendorName = 'JetBrains'
             vendorUrl = 'https://www.jetbrains.com'
 
             useSeparateClassloader = true
