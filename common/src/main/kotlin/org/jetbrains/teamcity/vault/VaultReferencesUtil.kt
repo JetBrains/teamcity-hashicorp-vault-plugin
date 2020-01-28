@@ -39,6 +39,7 @@ object VaultReferencesUtil {
     @JvmStatic
     fun collect(parameters: Map<String, String>, references: MutableCollection<String>, namespaces: Collection<String>, keys: MutableCollection<String>? = null) {
         for ((key, value) in parameters) {
+            if (key.startsWith("dep.")) continue
             if (!ReferencesResolverUtil.mayContainReference(value)) continue
             val refs = getVaultReferences(value, namespaces)
             if (refs.isNotEmpty()) {

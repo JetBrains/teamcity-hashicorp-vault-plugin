@@ -69,6 +69,18 @@ class VaultReferencesUtilTest {
     }
 
     @Test
+    fun testReferencesIgnoredInDepParameters() {
+        val namespaces = listOf("")
+        val map = mapOf("a" to "%vault:/test%", "dep.type.a" to "%vault:/test-dep%")
+        then(VaultReferencesUtil.hasReferences(map, namespaces)).isTrue()
+        val keys = HashSet<String>()
+        val refs = HashSet<String>()
+        VaultReferencesUtil.collect(map, refs, namespaces, keys)
+        then(keys).containsOnly(map.keys.first())
+        then(refs).containsOnly("vault:/test")
+    }
+
+    @Test
     fun testPathExtractedCorrectly() {
         doVaultPathTest("first", "vault:first:/test", "/test")
         doVaultPathTest("second", "vault:second:/test", "/test")
