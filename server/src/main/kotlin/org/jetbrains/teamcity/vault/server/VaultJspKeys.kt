@@ -29,4 +29,7 @@ class VaultJspKeys {
     val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
 
     val AGENT_REQUIREMENT = VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT
+
+    val BACKOFF_PERIOD = VaultConstants.FeatureSettings.BACKOFF_PERIOD
+    val MAX_ATTEMPTS = VaultConstants.FeatureSettings.MAX_ATTEMPTS
 }

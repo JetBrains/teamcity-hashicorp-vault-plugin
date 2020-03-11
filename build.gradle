@@ -32,6 +32,7 @@ ext {
     teamcity_version = '2018.1'
     // compile
     spring_version = '4.2.9.RELEASE'
+    spring_retry_version = '1.2.4.RELEASE'
     sprint_vault_version = '1.1.3.RELEASE'
     httpclient_version = '4.3.6' // version is relevant to one used inside TeamCity
     // tests

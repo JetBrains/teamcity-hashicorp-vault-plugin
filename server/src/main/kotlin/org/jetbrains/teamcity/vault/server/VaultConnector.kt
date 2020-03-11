@@ -29,6 +29,7 @@ import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.support.RetryRestTemplate
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -37,7 +38,6 @@ import org.springframework.vault.authentication.AppRoleAuthenticationOptions
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
 import org.springframework.web.client.HttpStatusCodeException
-import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.withLock
@@ -67,7 +67,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         @JvmStatic fun revoke(info: LeasedWrappedTokenInfo, trustStoreProvider: SSLTrustStoreProvider): Boolean {
             val settings = info.connection
             try {
-                val template = createRestTemplate(settings, trustStoreProvider)
+                val template = createRetryRestTemplate(settings, trustStoreProvider)
                 // Login and retrieve server token
                 val (token, accessor) = getRealToken(template, settings)
 
@@ -90,7 +90,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         fun revoke(info: LeasedTokenInfo, trustStoreProvider: SSLTrustStoreProvider): Boolean {
             val settings = info.connection
             try {
-                val template = createRestTemplate(settings, trustStoreProvider)
+                val template = createRetryRestTemplate(settings, trustStoreProvider)
                 // Login and retrieve server token
                 template.withVaultToken(info.token)
                 // Revoke token by accessor
@@ -102,7 +102,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             return false
         }
 
-        private fun getRealToken(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
+        private fun getRealToken(template: RetryRestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
                     .path(settings.getNormalizedEndpoint())
                     .roleId(settings.roleId)
@@ -126,7 +126,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         /**
          * @return true if operation succeed
          */
-        private fun revokeAccessor(template: RestTemplate, accessor: String): Boolean {
+        private fun revokeAccessor(template: RetryRestTemplate, accessor: String): Boolean {
             val entity = template.postForEntity("/auth/token/revoke-accessor", mapOf("accessor" to accessor), VaultResponse::class.java)
             return entity.statusCode == HttpStatus.NO_CONTENT
         }

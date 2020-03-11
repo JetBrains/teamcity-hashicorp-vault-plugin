@@ -61,7 +61,7 @@ public class VaultParametersResolverTest {
         };
         template = vault.getTemplate(factory);
         resolver = new VaultParametersResolver(emptyTrustStoreProvider);
-        feature = new VaultFeatureSettings(vault.getUrl(), "", "");
+        feature = new VaultFeatureSettings(vault.getUrl(), "", "", 0L, 1);
     }
 
     @Test

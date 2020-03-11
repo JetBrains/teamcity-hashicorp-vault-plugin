@@ -23,6 +23,11 @@ dependencies {
     compile("org.springframework.vault:spring-vault-core:$sprint_vault_version") {
         exclude group: 'org.springframework'
     }
+
+    compile ("org.springframework.retry:spring-retry:$spring_retry_version") {
+        exclude group: 'org.springframework'
+    }
+
     provided "org.springframework:spring-web:$spring_version"
     provided "org.apache.httpcomponents:httpclient:$httpclient_version"
 

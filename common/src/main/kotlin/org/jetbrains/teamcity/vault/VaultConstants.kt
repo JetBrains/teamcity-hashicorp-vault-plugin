@@ -25,6 +25,8 @@ object VaultConstants {
     val URL_PROPERTY_SUFFIX = ".url"
     val WRAPPED_TOKEN_PROPERTY_SUFFIX = ".wrapped.token"
     val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
+    val BACKOFF_PERIOD_PROPERTY_SUFFIX = ".backoffPeriod"
+    val MAX_ATTEMPTS_PERIOD_PROPERTY_SUFFIX = ".maxAttempts"
     val FAIL_ON_ERROR_PROPERTY_SUFFIX = ".failOnError"
 
     @JvmField val VAULT_PARAMETER_PREFIX = "vault:"
@@ -50,6 +52,12 @@ object VaultConstants {
         @JvmField val SECRET_ID = "secure:secret-id"
 
         @JvmField val FAIL_ON_ERROR = "fail-on-error"
+
+        @JvmField val BACKOFF_PERIOD = "backoff-period"
+        @JvmField val DEFAULT_BACKOFF_PERIOD = 1500L
+
+        @JvmField val MAX_ATTEMPTS = "max-attempts"
+        @JvmField val DEFAULT_MAX_ATTEMPTS = 3
 
         @JvmField val AGENT_SUPPORT_REQUIREMENT = "teamcity.vault.requirement"
         @JvmField val AGENT_SUPPORT_REQUIREMENT_VALUE = "%$FEATURE_SUPPORTED_AGENT_PARAMETER%"

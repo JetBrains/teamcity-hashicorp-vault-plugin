@@ -32,7 +32,6 @@ import org.springframework.vault.support.VaultResponse;
 import org.springframework.vault.support.VaultToken;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestOperations;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 
@@ -51,9 +50,9 @@ public class VaultTemplate {
     private ClientHttpRequestFactory requestFactory;
     private SessionManager sessionManager;
 
-    private RestTemplate sessionTemplate;
+    private RetryRestTemplate sessionTemplate;
 
-    private RestTemplate plainTemplate;
+    private RetryRestTemplate plainTemplate;
 
     /**
      * Create a new {@link VaultTemplate} with a {@link VaultEndpoint},
@@ -71,7 +70,7 @@ public class VaultTemplate {
         this.sessionManager = sessionManager;
 
         this.sessionTemplate = createSessionTemplate(vaultEndpoint, clientHttpRequestFactory);
-        this.plainTemplate = UtilKt.createRestTemplate(vaultEndpoint, clientHttpRequestFactory);
+        this.plainTemplate = UtilKt.createRetryRestTemplate(vaultEndpoint, clientHttpRequestFactory);
     }
 
     private VaultTemplate(@NotNull VaultTemplate origin, @NotNull final String wrapTTL) {
@@ -87,12 +86,12 @@ public class VaultTemplate {
         sessionTemplate.getInterceptors().add(interceptor);
     }
 
-    private RestTemplate createSessionTemplate(VaultEndpoint endpoint,
+    private RetryRestTemplate createSessionTemplate(VaultEndpoint endpoint,
                                                ClientHttpRequestFactory requestFactory) {
 
-        RestTemplate restTemplate = UtilKt.createRestTemplate(endpoint, requestFactory);
+        RetryRestTemplate retryRestTemplate = UtilKt.createRetryRestTemplate(endpoint, requestFactory);
 
-        restTemplate.getInterceptors().add(new ClientHttpRequestInterceptor() {
+        retryRestTemplate.getInterceptors().add(new ClientHttpRequestInterceptor() {
 
             @Override
             public ClientHttpResponse intercept(HttpRequest request, byte[] body,
@@ -110,7 +109,7 @@ public class VaultTemplate {
             }
         });
 
-        return restTemplate;
+        return retryRestTemplate;
     }
 
     public VaultTemplate withWrappedResponses(String wrapTTL) {
