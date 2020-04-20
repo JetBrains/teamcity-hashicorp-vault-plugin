@@ -60,7 +60,7 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 }
                 // NAMESPACE can be empty, means default one
                 val namespace = it[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
-                val namespaceRegex = "[a-zA-Z0-9_]+"
+                val namespaceRegex = "[a-zA-Z0-9_-]+"
                 if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.NAMESPACE, "Non-default namespace should match regex '$namespaceRegex'"))
                 }
