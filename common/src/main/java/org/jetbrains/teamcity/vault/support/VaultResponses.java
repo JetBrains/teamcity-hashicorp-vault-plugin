@@ -17,9 +17,11 @@ package org.jetbrains.teamcity.vault.support;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpInputMessage;
+import org.springframework.http.MediaType;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.vault.VaultException;
@@ -55,7 +57,7 @@ public abstract class VaultResponses {
 
 		Assert.notNull(e, "HttpStatusCodeException must not be null");
 
-		String message = VaultResponses.getError(e.getResponseBodyAsString());
+		String message = VaultResponses.getError(e);
 
 		if (StringUtils.hasText(message)) {
 			return new VaultException(String.format("Status %s: %s", e.getStatusCode(),
@@ -76,7 +78,7 @@ public abstract class VaultResponses {
 
 		Assert.notNull(e, "HttpStatusCodeException must not be null");
 
-		String message = VaultResponses.getError(e.getResponseBodyAsString());
+		String message = VaultResponses.getError(e);
 
 		if (StringUtils.hasText(message)) {
 			return new VaultException(String.format("Status %s %s: %s",
@@ -125,21 +127,25 @@ public abstract class VaultResponses {
 	/**
 	 * Obtain the error message from a JSON response.
 	 *
-	 * @param json must not be {@literal null}.
+	 * @param e must not be {@literal null}.
 	 * @return
 	 */
-	public static String getError(String json) {
+	public static String getError(@NotNull HttpStatusCodeException e) {
+		String body = e.getResponseBodyAsString();
+		MediaType contentType;
+		try {
+			HttpHeaders headers = e.getResponseHeaders();
+			contentType = headers != null ? headers.getContentType() : null;
+		} catch (Exception ignored) {
+			return body;
+		}
 
-		Assert.notNull(json, "Error JSON must not be null!");
-
-		if (json.contains("\"errors\":")) {
-
+		if (MediaType.APPLICATION_JSON.includes(contentType)) {
 			try {
-				Map<String, Object> map = OBJECT_MAPPER.readValue(json.getBytes(),
+				Map<String, Object> map = OBJECT_MAPPER.readValue(body.getBytes(),
 						new TypeReference<Map<String, Object>>() {
 						});
 				if (map.containsKey("errors")) {
-
 					//noinspection unchecked
 					Collection<String> errors = (Collection<String>) map.get("errors");
 					if (errors.size() == 1) {
@@ -147,13 +153,11 @@ public abstract class VaultResponses {
 					}
 					return errors.toString();
 				}
-
-			}
-			catch (IOException o_O) {
+			} catch (IOException ignored) {
 				// ignore
 			}
 		}
-		return json;
+		return body;
 	}
 
 	/**
