@@ -27,7 +27,6 @@ import org.springframework.vault.authentication.ClientAuthentication;
 import org.springframework.vault.authentication.LoginToken;
 import org.springframework.vault.authentication.SessionManager;
 import org.springframework.vault.client.VaultHttpHeaders;
-import org.springframework.vault.client.VaultResponses;
 import org.springframework.vault.support.VaultResponse;
 import org.springframework.vault.support.VaultToken;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -81,18 +80,30 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
     }
 
     protected void revoke(VaultToken token) {
-        try {
-            restOperations.postForObject("auth/token/revoke-self",
-                    new HttpEntity<Object>(VaultHttpHeaders.from(token)), Map.class);
-        } catch (HttpStatusCodeException e) {
-            String message = "Cannot revoke HashiCorp Vault token: " + VaultResponses.getError(e.getResponseBodyAsString());
-            LOG.warn(message, e);
-            logger.warning(message);
-        } catch (RuntimeException e) {
-            String message = "Cannot revoke HashiCorp Vault token";
-            LOG.warn(message, e);
-            logger.warning(message + ": " + e.getMessage());
+        RuntimeException e = null;
+        int[] backoffs = {1, 3, 6, 0}; // last is not used
+        for (int backoff : backoffs) {
+            try {
+                restOperations.postForObject("auth/token/revoke-self",
+                        new HttpEntity<Object>(VaultHttpHeaders.from(token)), Map.class);
+                return;
+            } catch (RuntimeException re) {
+                e = re;
+                try {
+                    //noinspection ImplicitNumericConversion
+                    TimeUnit.SECONDS.sleep(backoff);
+                } catch (InterruptedException ignored) {
+                }
+            }
         }
+        String message = "Cannot revoke HashiCorp Vault token: ";
+        if (e instanceof HttpStatusCodeException) {
+            message += VaultResponses.getError((HttpStatusCodeException) e);
+        } else {
+            message += e.getMessage();
+        }
+        LOG.warn(message, e);
+        logger.warning(message);
     }
 
     /**
@@ -134,8 +145,8 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
             logger.message("Renewed HashiCorp Vault token successfully");
             return true;
         } catch (HttpStatusCodeException e) {
-            logger.warning("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getStatusCode() + " " + VaultResponses.getError(e.getResponseBodyAsString()));
-            LOG.warn("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getStatusCode() + " " + VaultResponses.getError(e.getResponseBodyAsString()), e);
+            logger.warning("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getStatusCode() + " " + VaultResponses.getError(e));
+            LOG.warn("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getStatusCode() + " " + VaultResponses.getError(e), e);
             this.token = null;
             return false;
         } catch (RuntimeException e) {
