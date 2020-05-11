@@ -68,6 +68,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
         namespaces.forEach { namespace ->
             // namespace is either empty string or something like 'id'
             val url = parameters[getVaultParameterName(namespace, VaultConstants.URL_PROPERTY_SUFFIX)]
+            val vaultNamespace = parameters[getVaultParameterName(namespace, VaultConstants.VAULT_NAMESPACE_PROPERTY_SUFFIX)] ?: ""
             val wrapped = parameters[getVaultParameterName(namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX)]
             val failOnError = parameters[getVaultParameterName(namespace, VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX)]
                     ?.toBoolean() ?: false
@@ -77,7 +78,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
             }
             val logger = runningBuild.buildLogger
             logger.activity("HashiCorp Vault" + if (isDefault(namespace)) "" else " ('$namespace' namespace)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
-                val settings = VaultFeatureSettings(namespace, url, failOnError)
+                val settings = VaultFeatureSettings(namespace, url, vaultNamespace, failOnError)
 
                 if (wrapped == null || wrapped.isNullOrEmpty()) {
                     logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
@@ -139,4 +140,3 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
         sessions.remove(build.buildId)
     }
 }
-

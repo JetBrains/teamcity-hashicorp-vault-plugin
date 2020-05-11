@@ -33,4 +33,7 @@ open class VaultDevContainer(override val token: String = UUID.randomUUID().toSt
 
     override val url: String
         get() = "http://$containerIpAddress:$firstMappedPort"
+
+    override val vaultNamespace: String
+        get() = ""
 }

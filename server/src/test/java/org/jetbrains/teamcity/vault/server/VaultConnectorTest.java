@@ -101,7 +101,7 @@ public class VaultConnectorTest {
         Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
 
 
-        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings("vault", getVault().getUrl(), authMountPath, credentials.getFirst(), credentials.getSecond(), false), SSL_TRUST_STORE_PROVIDER);
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings("vault", getVault().getUrl(), "", authMountPath, credentials.getFirst(), credentials.getSecond(), false), SSL_TRUST_STORE_PROVIDER);
 
         then(wrapped.getFirst()).isNotNull();
         then(wrapped.getSecond()).isNotNull();
@@ -111,7 +111,7 @@ public class VaultConnectorTest {
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped.getFirst()))
                 .build();
-        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings("vault", getVault().getUrl(), authMountPath, "", "", false), SSL_TRUST_STORE_PROVIDER);
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings("vault", getVault().getUrl(), "", authMountPath, "", "", false), SSL_TRUST_STORE_PROVIDER);
         final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
         final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 
@@ -131,7 +131,7 @@ public class VaultConnectorTest {
 
     private void doTestWrapperTokenAutoUpdates(String authMountPath) {
         final ClientHttpRequestFactory factory = createClientHttpRequestFactory(SSL_TRUST_STORE_PROVIDER);
-        final VaultTemplate template = new VaultTemplate(getVault().getEndpoint(), factory, () -> VaultToken.of(getVault().getToken()));
+        final VaultTemplate template = new VaultTemplate(getVault().getEndpoint(), getVault().getVaultNamespace(), factory, () -> VaultToken.of(getVault().getToken()));
 
         // Ensure approle auth enabled
         template.opsForSys().authMount(authMountPath, VaultMount.create("approle"));
@@ -148,7 +148,7 @@ public class VaultConnectorTest {
         Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
 
 
-        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings("", getVault().getUrl(), authMountPath, credentials.getFirst(), credentials.getSecond(), true), SSL_TRUST_STORE_PROVIDER);
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(new VaultFeatureSettings("", getVault().getUrl(), "", authMountPath, credentials.getFirst(), credentials.getSecond(), true), SSL_TRUST_STORE_PROVIDER);
 
         then(wrapped.getFirst()).isNotNull();
         then(wrapped.getSecond()).isNotNull();
@@ -158,7 +158,7 @@ public class VaultConnectorTest {
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped.getFirst()))
                 .build();
-        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings("", getVault().getUrl(), authMountPath, "", "", true), SSL_TRUST_STORE_PROVIDER);
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(new VaultFeatureSettings("", getVault().getUrl(), "", authMountPath, "", "", true), SSL_TRUST_STORE_PROVIDER);
         final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
         final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 

@@ -48,6 +48,7 @@ import java.io.IOException;
 public class VaultTemplate {
 
     private VaultEndpoint endpoint;
+    private String namespace;
     private ClientHttpRequestFactory requestFactory;
     private SessionManager sessionManager;
 
@@ -64,18 +65,20 @@ public class VaultTemplate {
      * @param sessionManager           must not be {@literal null}.
      */
     public VaultTemplate(@NotNull VaultEndpoint vaultEndpoint,
+                         @NotNull String vaultNamespace,
                          @NotNull ClientHttpRequestFactory clientHttpRequestFactory,
                          @NotNull SessionManager sessionManager) {
         this.endpoint = vaultEndpoint;
+        this.namespace = vaultNamespace;
         this.requestFactory = clientHttpRequestFactory;
         this.sessionManager = sessionManager;
 
-        this.sessionTemplate = createSessionTemplate(vaultEndpoint, clientHttpRequestFactory);
-        this.plainTemplate = UtilKt.createRestTemplate(vaultEndpoint, clientHttpRequestFactory);
+        this.sessionTemplate = createSessionTemplate(vaultEndpoint, namespace, clientHttpRequestFactory);
+        this.plainTemplate = UtilKt.createRestTemplate(vaultEndpoint, namespace, clientHttpRequestFactory);
     }
 
     private VaultTemplate(@NotNull VaultTemplate origin, @NotNull final String wrapTTL) {
-        this(origin.endpoint, origin.requestFactory, origin.sessionManager);
+        this(origin.endpoint, origin.namespace, origin.requestFactory, origin.sessionManager);
         final ClientHttpRequestInterceptor interceptor = new ClientHttpRequestInterceptor() {
             @Override
             public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
@@ -88,9 +91,10 @@ public class VaultTemplate {
     }
 
     private RestTemplate createSessionTemplate(VaultEndpoint endpoint,
+                                               String namespace,
                                                ClientHttpRequestFactory requestFactory) {
 
-        RestTemplate restTemplate = UtilKt.createRestTemplate(endpoint, requestFactory);
+        RestTemplate restTemplate = UtilKt.createRestTemplate(endpoint, namespace, requestFactory);
 
         restTemplate.getInterceptors().add(new ClientHttpRequestInterceptor() {
 
