@@ -48,6 +48,7 @@ import java.io.IOException;
 public class VaultTemplate {
 
     private VaultEndpoint endpoint;
+    private String namespace;
     private ClientHttpRequestFactory requestFactory;
     private SessionManager sessionManager;
 
@@ -64,18 +65,24 @@ public class VaultTemplate {
      * @param sessionManager           must not be {@literal null}.
      */
     public VaultTemplate(@NotNull VaultEndpoint vaultEndpoint,
+                         @NotNull String vaultNamespace,
                          @NotNull ClientHttpRequestFactory clientHttpRequestFactory,
                          @NotNull SessionManager sessionManager) {
         this.endpoint = vaultEndpoint;
+        this.namespace = vaultNamespace;
         this.requestFactory = clientHttpRequestFactory;
         this.sessionManager = sessionManager;
 
         this.sessionTemplate = createSessionTemplate(vaultEndpoint, clientHttpRequestFactory);
         this.plainTemplate = UtilKt.createRestTemplate(vaultEndpoint, clientHttpRequestFactory);
+
+        ClientHttpRequestInterceptor namespaceInterceptor = VaultInterceptors.createNamespaceInterceptor(namespace);
+        this.plainTemplate.getInterceptors().add(namespaceInterceptor);
+        this.sessionTemplate.getInterceptors().add(namespaceInterceptor);
     }
 
     private VaultTemplate(@NotNull VaultTemplate origin, @NotNull final String wrapTTL) {
-        this(origin.endpoint, origin.requestFactory, origin.sessionManager);
+        this(origin.endpoint, origin.namespace, origin.requestFactory, origin.sessionManager);
         final ClientHttpRequestInterceptor interceptor = new ClientHttpRequestInterceptor() {
             @Override
             public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {

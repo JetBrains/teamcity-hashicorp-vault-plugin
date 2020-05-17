@@ -28,10 +28,11 @@ interface VaultDevEnvironment {
     val url: String
     val endpoint: VaultEndpoint
         get() = VaultEndpoint.from(URI.create(url))
+    val vaultNamespace: String
     val simpleSessionManager: SimpleSessionManager
         get() = SimpleSessionManager { VaultToken.of(token) }
 
     fun getTemplate(factory: ClientHttpRequestFactory): VaultTemplate =
-            VaultTemplate(endpoint, factory, simpleSessionManager)
+            VaultTemplate(endpoint, vaultNamespace, factory, simpleSessionManager)
 }
 

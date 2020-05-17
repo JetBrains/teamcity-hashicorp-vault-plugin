@@ -81,7 +81,7 @@
     <td>
         <props:textProperty name="${keys.NAMESPACE}" className="longField"/>
         <span class="error" id="error_${keys.NAMESPACE}"></span>
-        <span class="smallNote">Provide some namespace to use in parameters in case of multiple vault connections.</span>
+        <span class="smallNote">Provide some namespace to use in TeamCity parameters in case of multiple vault connections.</span>
     </td>
 </tr>
 <tr>
@@ -91,6 +91,16 @@
                             className="longField textProperty_max-width js_max-width"/>
         <span class="error" id="error_${keys.URL}"/>
         <span class="smallNote">Format: https://&lt;vaultserver&gt;:&lt;port&gt;</span>
+    </td>
+</tr>
+
+<tr class="advancedSetting">
+    <td><label for="${keys.VAULT_NAMESPACE}">Vault Namespace:</label></td>
+    <td>
+        <props:textProperty name="${keys.VAULT_NAMESPACE}"
+                            className="longField textProperty_max-width js_max-width"/>
+        <span class="error" id="error_${keys.VAULT_NAMESPACE}"/>
+        <span class="smallNote">Vault namespace auth method and secrets engines are housed under.</span>
     </td>
 </tr>
 

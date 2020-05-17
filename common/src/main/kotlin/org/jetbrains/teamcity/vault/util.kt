@@ -21,6 +21,7 @@ import jetbrains.buildServer.util.VersionComparatorUtil
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.support.ClientHttpRequestFactoryFactory
 import org.jetbrains.teamcity.vault.support.MappingJackson2HttpMessageConverter
+import org.jetbrains.teamcity.vault.support.VaultInterceptors
 import org.springframework.http.client.ClientHttpRequestFactory
 import org.springframework.http.client.ClientHttpRequestInterceptor
 import org.springframework.http.converter.ByteArrayHttpMessageConverter
@@ -64,7 +65,9 @@ fun createRestTemplate(settings: VaultFeatureSettings, trustStoreProvider: SSLTr
     val factory = createClientHttpRequestFactory(trustStoreProvider)
     // HttpComponents.usingHttpComponents(options, sslConfiguration)
 
-    return createRestTemplate(endpoint, factory)
+    return createRestTemplate(endpoint, factory).also {
+        it.interceptors.add(VaultInterceptors.createNamespaceInterceptor(settings.vaultNamespace))
+    }
 }
 
 fun createRestTemplate(endpoint: VaultEndpoint, factory: ClientHttpRequestFactory): RestTemplate {

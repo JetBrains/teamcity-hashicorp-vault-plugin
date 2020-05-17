@@ -20,6 +20,7 @@ import org.jetbrains.teamcity.vault.VaultConstants
 class VaultJspKeys {
     val NAMESPACE = VaultConstants.FeatureSettings.NAMESPACE
     val URL = VaultConstants.FeatureSettings.URL
+    val VAULT_NAMESPACE = VaultConstants.FeatureSettings.VAULT_NAMESPACE
 
     val ENDPOINT = VaultConstants.FeatureSettings.ENDPOINT
 

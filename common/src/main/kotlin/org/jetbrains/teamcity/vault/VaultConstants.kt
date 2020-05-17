@@ -23,6 +23,7 @@ object VaultConstants {
 
     val PARAMETER_PREFIX = "teamcity.vault"
     val URL_PROPERTY_SUFFIX = ".url"
+    val VAULT_NAMESPACE_PROPERTY_SUFFIX = ".vault.namespace"
     val WRAPPED_TOKEN_PROPERTY_SUFFIX = ".wrapped.token"
     val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
     val FAIL_ON_ERROR_PROPERTY_SUFFIX = ".failOnError"
@@ -40,6 +41,9 @@ object VaultConstants {
         // Feature settings
         @JvmField val NAMESPACE = "namespace"
         @JvmField val DEFAULT_PARAMETER_NAMESPACE = ""
+
+        @JvmField val VAULT_NAMESPACE = "vault-namespace"
+        @JvmField val DEFAULT_VAULT_NAMESPACE = ""
 
         @JvmField val URL = "url"
 
