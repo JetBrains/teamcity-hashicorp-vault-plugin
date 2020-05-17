@@ -5,7 +5,11 @@
       <item index="0" class="java.lang.String" itemvalue="com.fasterxml.jackson.annotation.JsonAnySetter" />
     </list>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" project-jdk-name="IDEA jdk" project-jdk-type="JavaSDK">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_6" default="false" project-jdk-name="1.8" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/classes" />
+  </component>
+  <component name="TaskProjectConfiguration">
+    <server type="GitHub" url="https://github.com" />
   </component>
 </project>
