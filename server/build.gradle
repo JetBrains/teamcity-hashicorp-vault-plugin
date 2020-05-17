@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 apply plugin: 'java'
-apply plugin: 'java'
+apply plugin: 'kotlin'
 
 apply plugin: 'com.github.rodm.teamcity-server'
 apply plugin: 'com.github.rodm.teamcity-environments'
@@ -69,6 +69,13 @@ teamcity {
 
 sourceCompatibility = "1.8"
 targetCompatibility = "1.8"
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    kotlinOptions { jvmTarget = '1.8' }
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+}
+
 
 // Do not include version into plugin archive name
 project.tasks.getByName('serverPlugin').version = ''
