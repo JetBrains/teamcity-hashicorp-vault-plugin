@@ -34,7 +34,7 @@ dependencies {
 
     agent project(path: ':agent', configuration: 'plugin')
 
-    testCompile project(path: ':common', configuration: 'testOutput')
+    testImplementation(testFixtures(project(':common')))
 }
 
 teamcity {

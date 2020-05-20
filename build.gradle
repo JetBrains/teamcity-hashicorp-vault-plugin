@@ -53,6 +53,7 @@ subprojects {
     version = rootProject.version
 
     apply plugin: 'java'
+    apply plugin: 'java-test-fixtures'
     apply plugin: 'kotlin'
 
     sourceCompatibility = "1.6"

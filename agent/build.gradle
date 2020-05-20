@@ -31,7 +31,7 @@ dependencies {
     }
     compile "org.apache.httpcomponents:httpclient:$httpclient_version"
 
-    testCompile project(path: ':common', configuration: 'testOutput')
+    testImplementation(testFixtures(project(':common')))
     testCompile "org.jetbrains.teamcity:tests-support:$teamcity_version"
 }
 

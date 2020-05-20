@@ -26,21 +26,11 @@ dependencies {
     provided "org.springframework:spring-web:$spring_version"
     provided "org.apache.httpcomponents:httpclient:$httpclient_version"
 
-    testCompile "org.testcontainers:testcontainers:$testcontainers_version"
-    testCompile "org.assertj:assertj-core:$assertj_version"
-    testCompile "org.eclipse.jetty:jetty-server:$jetty_version"
-}
+    testFixturesApi "org.testcontainers:testcontainers:$testcontainers_version"
+    testFixturesApi "org.assertj:assertj-core:$assertj_version"
+    testFixturesApi "org.eclipse.jetty:jetty-server:$jetty_version"
 
-task jarTest(type: Jar, dependsOn: testClasses) {
-    from sourceSets.test.output
-    classifier = 'test'
-}
-
-configurations {
-    testOutput
-    testOutput.extendsFrom(testCompile)
-}
-
-artifacts {
-    testOutput jarTest
+    testFixturesApi "org.jetbrains.teamcity:tests-support:${teamcity_version}"
+    testFixturesApi "org.springframework:spring-web:$spring_version"
+    testFixturesApi "org.apache.httpcomponents:httpclient:$httpclient_version"
 }
