@@ -19,7 +19,7 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
 
     constructor(namespace: String, url: String, vaultNamespace: String, failOnError: Boolean) : this(namespace, url, vaultNamespace, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "", failOnError)
 
-    constructor(url: String, roleId: String, secretId: String) : this(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, url, VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
+    constructor(url: String, vaultNamespace: String, roleId: String, secretId: String) : this(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, url, vaultNamespace, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
 
     constructor(map: Map<String, String>) : this(
             map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,

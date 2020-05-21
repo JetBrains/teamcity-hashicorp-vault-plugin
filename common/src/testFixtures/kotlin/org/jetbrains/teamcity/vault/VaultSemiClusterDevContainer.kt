@@ -34,9 +34,6 @@ open class VaultSemiClusterDevContainer(val vault: VaultDevEnvironment)
     override val url: String
         get() = "http://localhost:$jetty_port"
 
-    override val vaultNamespace: String
-        get() = ""
-
     val used: Boolean
         get() = _used
 

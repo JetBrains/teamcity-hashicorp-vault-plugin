@@ -22,10 +22,13 @@ import jetbrains.buildServer.util.VersionComparatorUtil;
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider;
 import org.jetbrains.teamcity.vault.VaultDevContainer;
 import org.jetbrains.teamcity.vault.VaultFeatureSettings;
+import org.jetbrains.teamcity.vault.VaultTestUtil;
 import org.jetbrains.teamcity.vault.support.VaultTemplate;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.AbstractClientHttpRequestFactoryWrapper;
 import org.springframework.http.client.ClientHttpRequest;
@@ -40,6 +43,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.jetbrains.teamcity.vault.UtilKt.createClientHttpRequestFactory;
 
+@RunWith(Parameterized.class)
 public class VaultParametersResolverTest {
     @ClassRule
     public static final VaultDevContainer vault = new VaultDevContainer();
@@ -48,6 +52,14 @@ public class VaultParametersResolverTest {
     private VaultFeatureSettings feature;
     private VaultTemplate template;
     private final List<String> myRequestedURIs = new ArrayList<String>();
+
+    @Parameterized.Parameters(name = "NS: {0}")
+    public static Iterable<?> data() {
+        return Arrays.asList("ns1", "", "ns2");
+    }
+
+    @Parameterized.Parameter()
+    public String vaultNamespace;
 
     @Before
     public void setUp() throws Exception {
@@ -59,9 +71,9 @@ public class VaultParametersResolverTest {
                 return requestFactory.createRequest(uri, httpMethod);
             }
         };
-        template = vault.getTemplate(factory);
+        template = VaultTestUtil.createNamespaceAndTemplate(vault, factory, vaultNamespace);
         resolver = new VaultParametersResolver(emptyTrustStoreProvider);
-        feature = new VaultFeatureSettings(vault.getUrl(), "", "");
+        feature = new VaultFeatureSettings(vault.getUrl(), vaultNamespace, "", "");
     }
 
     @Test
