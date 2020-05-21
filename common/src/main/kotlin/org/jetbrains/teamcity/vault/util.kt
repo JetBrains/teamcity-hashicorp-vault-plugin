@@ -65,8 +65,8 @@ fun createRestTemplate(settings: VaultFeatureSettings, trustStoreProvider: SSLTr
     val factory = createClientHttpRequestFactory(trustStoreProvider)
     // HttpComponents.usingHttpComponents(options, sslConfiguration)
 
-    return createRestTemplate(endpoint, factory).also {
-        it.interceptors.add(VaultInterceptors.createNamespaceInterceptor(settings.vaultNamespace))
+    return createRestTemplate(endpoint, factory).also { tempalte ->
+        VaultInterceptors.createNamespaceInterceptor(settings.vaultNamespace)?.let { tempalte.interceptors.add(it) }
     }
 }
 

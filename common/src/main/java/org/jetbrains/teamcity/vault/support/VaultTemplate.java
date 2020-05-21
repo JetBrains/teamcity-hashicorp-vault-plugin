@@ -77,8 +77,10 @@ public class VaultTemplate {
         this.plainTemplate = UtilKt.createRestTemplate(vaultEndpoint, clientHttpRequestFactory);
 
         ClientHttpRequestInterceptor namespaceInterceptor = VaultInterceptors.createNamespaceInterceptor(namespace);
-        this.plainTemplate.getInterceptors().add(namespaceInterceptor);
-        this.sessionTemplate.getInterceptors().add(namespaceInterceptor);
+        if (namespaceInterceptor != null) {
+            this.plainTemplate.getInterceptors().add(namespaceInterceptor);
+            this.sessionTemplate.getInterceptors().add(namespaceInterceptor);
+        }
     }
 
     private VaultTemplate(@NotNull VaultTemplate origin, @NotNull final String wrapTTL) {

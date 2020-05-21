@@ -15,6 +15,8 @@
  */
 package org.jetbrains.teamcity.vault.support;
 
+import jetbrains.buildServer.util.StringUtil;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
@@ -26,7 +28,11 @@ import java.io.IOException;
 public class VaultInterceptors {
     public static final String VAULT_NAMESPACE_HEADER = "X-Vault-Namespace";
 
-    public static ClientHttpRequestInterceptor createNamespaceInterceptor(final String namespace) {
+    @Nullable
+    public static ClientHttpRequestInterceptor createNamespaceInterceptor(@Nullable final String namespace) {
+        if (StringUtil.isEmpty(namespace)) {
+            return null;
+        }
 
         return new ClientHttpRequestInterceptor() {
             @Override
