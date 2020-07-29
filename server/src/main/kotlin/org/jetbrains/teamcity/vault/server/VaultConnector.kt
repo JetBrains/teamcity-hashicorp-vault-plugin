@@ -65,6 +65,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             val settings = info.connection
             try {
                 val template = createRestTemplate(settings, trustStoreProvider)
+                template.errorHandler = VaultResponseErrorHandler()
                 // Login and retrieve server token
                 val (token, accessor) = getRealToken(template, settings)
 
