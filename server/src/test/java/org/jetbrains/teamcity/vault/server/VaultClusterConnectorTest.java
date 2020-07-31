@@ -34,7 +34,7 @@ public class VaultClusterConnectorTest extends VaultConnectorTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         then(jetty.getUsed()).overridingErrorMessage("Jetty redirector should be used in tests").isTrue();
     }
 }

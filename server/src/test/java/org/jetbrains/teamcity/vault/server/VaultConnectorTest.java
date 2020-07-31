@@ -67,7 +67,7 @@ public class VaultConnectorTest {
     public String vaultNamespace;
 
     @Test
-    public void testVaultIsUpAndRunning() throws Exception {
+    public void testVaultIsUpAndRunning() {
         final ClientHttpRequestFactory factory = createClientHttpRequestFactory(SSL_TRUST_STORE_PROVIDER);
         // Do not use namespace for system endpoints
         final VaultTemplate template = VaultTestUtil.createNamespaceAndTemplate(getVault(), factory, "");
@@ -80,12 +80,12 @@ public class VaultConnectorTest {
     }
 
     @Test
-    public void testWrappedTokenCreated() throws Exception {
+    public void testWrappedTokenCreated() {
         doTestWrapperTokenCreated("approle");
     }
 
     @Test
-    public void testWrappedTokenCreatedNonStandardAuthPath() throws Exception {
+    public void testWrappedTokenCreatedNonStandardAuthPath() {
         doTestWrapperTokenCreated("teamcity/auth");
     }
 
@@ -268,7 +268,7 @@ public class VaultConnectorTest {
     private static class MyLifecycleAwareSessionManager extends LifecycleAwareSessionManager {
         List<Boolean> myRenewResults = new ArrayList<>();
 
-        public MyLifecycleAwareSessionManager(@NotNull ClientAuthentication clientAuthentication, @NotNull TaskScheduler taskScheduler, @NotNull RestOperations restOperations, @NotNull LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger refreshTrigger, @NotNull BuildProgressLogger logger) {
+        private MyLifecycleAwareSessionManager(@NotNull ClientAuthentication clientAuthentication, @NotNull TaskScheduler taskScheduler, @NotNull RestOperations restOperations, @NotNull LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger refreshTrigger, @NotNull BuildProgressLogger logger) {
             super(clientAuthentication, taskScheduler, restOperations, refreshTrigger, logger);
         }
 

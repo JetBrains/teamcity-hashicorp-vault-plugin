@@ -62,7 +62,7 @@ public class VaultParametersResolverTest {
     public String vaultNamespace;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         SSLTrustStoreProvider emptyTrustStoreProvider = new EmtpySSLTrustStoreProvider();
         ClientHttpRequestFactory factory = new AbstractClientHttpRequestFactoryWrapper(createClientHttpRequestFactory(emptyTrustStoreProvider)) {
             @Override
@@ -77,7 +77,7 @@ public class VaultParametersResolverTest {
     }
 
     @Test
-    public void testSimpleParameterResolvedFromVault() throws Exception {
+    public void testSimpleParameterResolvedFromVault() {
         writeSecret("test", Collections.singletonMap("value", "TestValue"));
         {
             // Check secret created
@@ -93,7 +93,7 @@ public class VaultParametersResolverTest {
     }
 
     @Test
-    public void testSingleValueParameterResolvedFromVault() throws Exception {
+    public void testSingleValueParameterResolvedFromVault() {
         final String path = getKVPath("test");
         writeSecret(path, Collections.singletonMap("data", "TestValue"));
 
@@ -102,7 +102,7 @@ public class VaultParametersResolverTest {
     }
 
     @Test
-    public void testComplexValueParameterResolvedFromVault() throws Exception {
+    public void testComplexValueParameterResolvedFromVault() {
         final String path = getKVPath("test-complex");
         writeSecret(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
         then(readSecret(path)).contains(entry("first", "TestValueA"));
@@ -117,7 +117,7 @@ public class VaultParametersResolverTest {
     }
 
     @Test
-    public void testComplexValueParameterCallVaultAPIOnlyOnce() throws Exception {
+    public void testComplexValueParameterCallVaultAPIOnlyOnce() {
         final String path = getKVPath("test-read-once");
         writeSecret(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
 
