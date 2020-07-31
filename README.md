@@ -8,3 +8,15 @@ The plugin allows connecting TeamCity to Vault, requesting new credentials when 
 See [blog post](https://blog.jetbrains.com/teamcity/2017/09/vault/) for details.
 
 Download binaries in [Plugin repository](https://plugins.jetbrains.com/plugin/10011-hashicorp-vault-support).
+
+**Notes**
+
+***Server-side token revoke***
+
+It's recommended to add folowing policy to approle, so TeamCity server will be able to revoke token 
+even if TeamCity agent fails to do that on finishing build:
+```hcl
+path "auth/token/revoke-accessor" {
+  capabilities = ["update"]
+}
+```

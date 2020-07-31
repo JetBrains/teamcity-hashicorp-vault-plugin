@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault.server
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.util.concurrent.Striped
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.containers.ConcurrentHashSet
@@ -33,10 +34,12 @@ import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
+import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.withLock
 
 class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private val trustStoreProvider: SSLTrustStoreProvider) {
@@ -61,21 +64,26 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         /**
          * @return true if operation succeed
          */
-        @JvmStatic fun revoke(info: LeasedWrappedTokenInfo, trustStoreProvider: SSLTrustStoreProvider): Boolean {
+        @JvmStatic
+        fun revoke(info: LeasedWrappedTokenInfo, trustStoreProvider: SSLTrustStoreProvider, catch: Boolean = true): Boolean {
             val settings = info.connection
             try {
                 val template = createRestTemplate(settings, trustStoreProvider)
                 // Login and retrieve server token
-                val (token, accessor) = getRealToken(template, settings)
+                val (token, _) = getRealToken(template, settings)
 
                 template.withVaultToken(token)
-                // Revoke agent token
-                revokeAccessor(template, info.accessor)
-                // Revoke server token
-                revokeAccessor(template, accessor)
+                try {
+                    // Revoke agent token
+                    revokeAccessor(template, info.accessor, info.connection.roleId)
+                } finally {
+                    // Revoke server token we just obtained
+                    revokeSelf(template)
+                }
                 return true
             } catch(e: Exception) {
                 LOG.warnAndDebugDetails("Failed to revoke token", e)
+                if (!catch) throw e
             }
             return false
         }
@@ -88,11 +96,9 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             val settings = info.connection
             try {
                 val template = createRestTemplate(settings, trustStoreProvider)
-                // Login and retrieve server token
                 template.withVaultToken(info.token)
-                // Revoke token by accessor
-                revokeAccessor(template, info.accessor)
-                return true
+                // Revoke token
+                return revokeSelf(template)
             } catch (e: Exception) {
                 LOG.warnAndDebugDetails("Failed to revoke token", e)
             }
@@ -121,11 +127,65 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         }
 
         /**
+         * @return true if operation succeed or it doesn't makes sense to try again later
+         */
+        private fun revokeAccessor(template: RestTemplate, accessor: String, approle: String): Boolean {
+            template.errorHandler = object : DefaultResponseErrorHandler() {
+                override fun hasError(statusCode: HttpStatus?): Boolean {
+                    if (statusCode == HttpStatus.FORBIDDEN || statusCode == HttpStatus.BAD_REQUEST) return false
+                    return super.hasError(statusCode)
+                }
+            }
+            val entity = template.postForEntity("/auth/token/revoke-accessor", mapOf("accessor" to accessor), ObjectNode::class.java)
+            if (entity.statusCode == HttpStatus.NO_CONTENT) {
+                // OK
+                return true
+            }
+            val error = VaultResponses.getError(entity.body)
+            val suffix = error?.replace('\n', ' ')?.let { ". Error message: $it" } ?: ""
+            if (entity.statusCode == HttpStatus.FORBIDDEN) {
+                LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give approle '$approle' 'update' access to '/auth/token/revoke-accessor'$suffix")
+                return true
+            }
+            if (entity.statusCode == HttpStatus.BAD_REQUEST) {
+                val message = "Failed to revoke token via accessor '$accessor': server returned 400, most probably token was already revoked$suffix"
+                if (error?.contains("invalid accessor") == true) {
+                    LOG.info(message)
+                } else {
+                    LOG.warn(message)
+                }
+                return true
+            }
+            LOG.warn("Unexpected response from Hashicorp Vault during token accessor revocation: ${entity.statusCodeValue}")
+            return false
+        }
+
+        /**
          * @return true if operation succeed
          */
-        private fun revokeAccessor(template: RestTemplate, accessor: String): Boolean {
-            val entity = template.postForEntity("/auth/token/revoke-accessor", mapOf("accessor" to accessor), VaultResponse::class.java)
-            return entity.statusCode == HttpStatus.NO_CONTENT
+        private fun revokeSelf(template: RestTemplate): Boolean {
+            val backoffs = intArrayOf(1, 3, 6, 0) // last is not used
+            var e: Exception? = null
+            for (backoff in backoffs) {
+                try {
+                    template.postForObject("auth/token/revoke-self", null, ObjectNode::class.java)
+                    return true
+                } catch (re: RuntimeException) {
+                    e = re
+                    try {
+                        TimeUnit.SECONDS.sleep(backoff.toLong())
+                    } catch (ignored: InterruptedException) {
+                    }
+                }
+            }
+            var message: String? = "Cannot revoke HashiCorp Vault token: "
+            if (e is HttpStatusCodeException) {
+                message += VaultResponses.getError((e as HttpStatusCodeException?)!!)
+            } else {
+                message += e?.message
+            }
+            LOG.warn(message, e)
+            return false
         }
 
         private fun getAppRoleLogin(settings: VaultFeatureSettings): Map<String, String> {

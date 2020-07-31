@@ -94,15 +94,7 @@ public class VaultConnectorTest {
         final VaultTemplate template = VaultTestUtil.createNamespaceAndTemplate(getVault(), factory, vaultNamespace);
 
         // Ensure approle auth enabled
-        template.opsForSys().authMount(authMountPath, VaultMount.create("approle"));
-        then(template.opsForSys().getAuthMounts()).containsKey(authMountPath + "/");
-        template.write("auth/" + authMountPath + "/role/testrole", CollectionsUtil.asMap(
-                "secret_id_ttl", "10m",
-                "token_num_uses", "10",
-                "token_ttl", "20m",
-                "token_max_ttl", "30m",
-                "secret_id_num_uses", "40"
-        ));
+        assertDefaultApproleExists(authMountPath, template);
         Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
 
 
@@ -181,6 +173,90 @@ public class VaultConnectorTest {
 
         then(sessionManager.getSessionToken()).isNotNull();
         then(sessionManager.myRenewResults).isNotEmpty().doesNotContain(false);
+    }
+
+    @Test
+    public void testRevokeTokenTestConnection() {
+        final String authMountPath = "approle";
+        final ClientHttpRequestFactory factory = createClientHttpRequestFactory(SSL_TRUST_STORE_PROVIDER);
+        final VaultTemplate template = VaultTestUtil.createNamespaceAndTemplate(getVault(), factory, vaultNamespace);
+
+        // Ensure approle auth enabled
+        assertDefaultApproleExists(authMountPath, template);
+        Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
+
+        VaultFeatureSettings serverSettings = new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond(), false);
+
+        Pair<String, String> pair = VaultConnector.doRequestToken(serverSettings, SSL_TRUST_STORE_PROVIDER);
+        VaultConnector.revoke(new LeasedTokenInfo(pair.getFirst(), pair.getSecond(), serverSettings), SSL_TRUST_STORE_PROVIDER);
+    }
+
+    @Test
+    public void testTokenRevokedWhenAgentForgotToRevoke() {
+        doTestRevokeTokenAfterBuildFinish(false);
+    }
+
+    @Test
+    public void testNoErrorOnTokenRevocationWhenAgentAlreadyRevokedIt() {
+        doTestRevokeTokenAfterBuildFinish(true);
+    }
+
+    private void doTestRevokeTokenAfterBuildFinish(Boolean revokeFromAgent) {
+        final String authMountPath = "approle";
+        final ClientHttpRequestFactory factory = createClientHttpRequestFactory(SSL_TRUST_STORE_PROVIDER);
+        final VaultTemplate template = VaultTestUtil.createNamespaceAndTemplate(getVault(), factory, vaultNamespace);
+
+        // Ensure approle auth enabled
+        assertDefaultApproleExists(authMountPath, template);
+
+        Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
+
+        VaultFeatureSettings serverSettings = new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond(), false);
+
+        final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(serverSettings, SSL_TRUST_STORE_PROVIDER);
+
+        String wrappedToken = wrapped.getFirst();
+        String accessor = wrapped.getSecond();
+
+        then(wrappedToken).isNotNull();
+        then(accessor).isNotNull();
+
+        final VaultFeatureSettings agentSettings = new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, "", "", false);
+
+        final CubbyholeAuthenticationOptions options = CubbyholeAuthenticationOptions.builder()
+                .wrapped()
+                .initialToken(VaultToken.of(wrappedToken))
+                .build();
+        final RestTemplate simpleTemplate = UtilKt.createRestTemplate(agentSettings, SSL_TRUST_STORE_PROVIDER);
+        final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
+        final TaskScheduler scheduler = new ConcurrentTaskScheduler();
+
+        final MyLifecycleAwareSessionManager sessionManager = new MyLifecycleAwareSessionManager(authentication, scheduler, simpleTemplate, new LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(1L, TimeUnit.SECONDS), new NullBuildProgressLogger());
+        then(sessionManager.getSessionToken()).isNotNull();
+        // Check token is OK
+        sessionManager.renewToken();
+        if (revokeFromAgent) {
+            // Revoke token
+            sessionManager.destroy();
+        }
+
+        // Server side revoke via
+        VaultConnector.revoke(new LeasedWrappedTokenInfo(wrappedToken, accessor, serverSettings), SSL_TRUST_STORE_PROVIDER, false);
+    }
+
+    private void assertDefaultApproleExists(String authMountPath, VaultTemplate template) {
+        if (template.opsForSys().getAuthMounts().containsKey(authMountPath + "/")) {
+            return;
+        }
+        template.opsForSys().authMount(authMountPath, VaultMount.create("approle"));
+        then(template.opsForSys().getAuthMounts()).containsKey(authMountPath + "/");
+        template.write("auth/" + authMountPath + "/role/testrole", CollectionsUtil.asMap(
+                "secret_id_ttl", "10m",
+                "token_num_uses", "10",
+                "token_ttl", "20m",
+                "token_max_ttl", "30m",
+                "secret_id_num_uses", "40"
+        ));
     }
 
     private Pair<String, String> getAppRoleCredentials(VaultTemplate template, String path) {

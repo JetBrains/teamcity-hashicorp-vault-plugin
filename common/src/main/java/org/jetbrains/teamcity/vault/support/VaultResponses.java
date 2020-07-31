@@ -15,9 +15,12 @@
  */
 package org.jetbrains.teamcity.vault.support;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpInputMessage;
@@ -33,8 +36,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * Utility methods to unwrap Vault responses and build {@link VaultException}.
@@ -142,22 +143,31 @@ public abstract class VaultResponses {
 
 		if (MediaType.APPLICATION_JSON.includes(contentType)) {
 			try {
-				Map<String, Object> map = OBJECT_MAPPER.readValue(body.getBytes(),
-						new TypeReference<Map<String, Object>>() {
-						});
-				if (map.containsKey("errors")) {
-					//noinspection unchecked
-					Collection<String> errors = (Collection<String>) map.get("errors");
-					if (errors.size() == 1) {
-						return errors.iterator().next();
-					}
-					return errors.toString();
+				ObjectNode node = OBJECT_MAPPER.readValue(body.getBytes(), ObjectNode.class);
+				String error = getError(node);
+				if (error != null) {
+					return error;
 				}
 			} catch (IOException ignored) {
 				// ignore
 			}
 		}
 		return body;
+	}
+
+	@Nullable
+	public static String getError(@Nullable ObjectNode node) {
+		if (node == null) {
+			return null;
+		}
+		JsonNode errors = node.get("errors");
+		if (errors instanceof ArrayNode) {
+			if (errors.size() == 1) {
+				return errors.iterator().next().asText();
+			}
+			return errors.toString();
+		}
+		return null;
 	}
 
 	/**
