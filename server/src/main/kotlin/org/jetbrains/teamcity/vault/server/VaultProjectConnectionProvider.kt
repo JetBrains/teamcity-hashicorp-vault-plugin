@@ -39,7 +39,8 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
         return mapOf(
                 VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
                 VaultConstants.FeatureSettings.URL to "http://localhost:8200",
-                VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
+                VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+                VaultConstants.FeatureSettings.VAULT_AUTH to VaultConstants.FeatureSettings.DEFAULT_VAULT_AUTH
         )
     }
 
@@ -64,14 +65,24 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.NAMESPACE, "Non-default namespace should match regex '$namespaceRegex'"))
                 }
-                if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
-                }
-                if (it[VaultConstants.FeatureSettings.ROLE_ID].isNullOrBlank()) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.ROLE_ID, "Should not be empty"))
-                }
-                if (it[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
+
+                when (it[VaultConstants.FeatureSettings.VAULT_AUTH]) {
+                    "iam" -> {
+                        it.remove(VaultConstants.FeatureSettings.ENDPOINT)
+                        it.remove(VaultConstants.FeatureSettings.ROLE_ID)
+                        it.remove(VaultConstants.FeatureSettings.SECRET_ID)
+                    }
+                    "approle" -> {
+                        if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
+                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
+                        }
+                        if (it[VaultConstants.FeatureSettings.ROLE_ID].isNullOrBlank()) {
+                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.ROLE_ID, "Should not be empty"))
+                        }
+                        if (it[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
+                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
+                        }
+                    }
                 }
 
                 // Convert slashes if needed of add new fields

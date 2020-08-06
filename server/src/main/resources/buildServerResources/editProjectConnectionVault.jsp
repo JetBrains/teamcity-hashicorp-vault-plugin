@@ -104,7 +104,25 @@
     </td>
 </tr>
 
-<tr class="advancedSetting">
+<tr>
+    <td><label for="${keys.AWS_IAM_AUTH}">AWS IAM Auth method</label></td>
+    <td>
+        <props:radioButtonProperty name="${keys.VAULT_AUTH}" id="${keys.AWS_IAM_AUTH}" value="iam"/>
+        <span class="error" id="error_${keys.AWS_IAM_AUTH}"/>
+        <span class="smallNote">Use AWS IAM Auth method to authenticate to Vault</span>
+    </td>
+</tr>
+
+<tr>
+    <td><label for="${keys.VAULT_APPROLE_AUTH}">Vault approle Auth method</label></td>
+    <td>
+        <props:radioButtonProperty name="${keys.VAULT_AUTH}" id="${keys.VAULT_APPROLE_AUTH}" value="approle" />
+        <span class="error" id="error_${keys.VAULT_APPROLE_AUTH}"/>
+        <span class="smallNote">Use Vault approle to authenticate to Vault</span>
+    </td>
+</tr>
+
+<tr id="approle_auth_endpoint" class="advancedSetting approle">
     <td><label for="${keys.ENDPOINT}">AppRole auth endpoint path:</label></td>
     <td>
         <props:textProperty name="${keys.ENDPOINT}"
@@ -114,7 +132,7 @@
     </td>
 </tr>
 
-<tr>
+<tr id="approle_role_id" class="approle">
     <td><label for="${keys.ROLE_ID}">AppRole Role ID:</label></td>
     <td>
         <props:textProperty name="${keys.ROLE_ID}"
@@ -124,7 +142,7 @@
     </td>
 </tr>
 
-<tr class="noBorder">
+<tr id="approle_secret_id" class="noBorder approle">
     <td><label for="${keys.SECRET_ID}">AppRole Secret ID:</label></td>
     <td>
         <props:passwordProperty name="${keys.SECRET_ID}"
@@ -153,4 +171,18 @@
 <script>
   $j('#OAuthConnectionDialog .popupSaveButtonsBlock .testConnectionButton').remove();
   $j("#testConnectionButton").appendTo($j('#OAuthConnectionDialog .popupSaveButtonsBlock')[0])
+
+  $j(document).ready(function(){
+      let checked = $j('input[name="prop:vault-auth"]:checked').val()
+      let targetBox = $j("." + checked);
+      $j(".approle").not(targetBox).hide();
+      $j(targetBox).show();
+
+      $j('input[name="prop:vault-auth"]').click(function(){
+          var inputValue = $j(this).attr("value");
+          var targetBox = $j("." + inputValue);
+          $j(".approle").not(targetBox).hide();
+          $j(targetBox).show();
+      });
+  })
 </script>
