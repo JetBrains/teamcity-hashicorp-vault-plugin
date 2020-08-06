@@ -84,23 +84,26 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 return@map
             }
 
-            val wrappedToken: String = try {
-                connector.requestWrappedToken(build, settings)
-            } catch (e: Throwable) {
-                val message = "Failed to fetch HashiCorp Vault$ns wrapped token: ${e.message}"
-                LOG.warn(message, e)
-                val msg = message + ": " + e.toString() + ", see teamcity-server.log for details"
-                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.namespace}", "VaultConnection", msg))
-                if (settings.failOnError) {
-                    build.stop(null, msg)
+            if(settings.authMethod == "approle") {
+                val wrappedToken: String = try {
+                    connector.requestWrappedToken(build, settings)
+                } catch (e: Throwable) {
+                    val message = "Failed to fetch HashiCorp Vault$ns wrapped token: ${e.message}"
+                    LOG.warn(message, e)
+                    val msg = message + ": " + e.toString() + ", see teamcity-server.log for details"
+                    build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.namespace}", "VaultConnection", msg))
+                    if (settings.failOnError) {
+                        build.stop(null, msg)
+                    }
+                    return@map
                 }
-                return@map
+                context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), wrappedToken)
             }
 
             context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX), settings.failOnError.toString())
-            context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), wrappedToken)
             context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.URL_PROPERTY_SUFFIX), settings.url)
             context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.VAULT_NAMESPACE_PROPERTY_SUFFIX), settings.vaultNamespace)
+            context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.VAULT_AUTH_PROPERTY_SUFFIX), settings.authMethod)
         }
     }
 }

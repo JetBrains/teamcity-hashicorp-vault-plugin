@@ -15,11 +15,15 @@
  */
 package org.jetbrains.teamcity.vault
 
-data class VaultFeatureSettings(val namespace: String, val url: String, val vaultNamespace: String, val endpoint: String, val roleId: String, val secretId: String, val failOnError: Boolean = true) {
+data class VaultFeatureSettings(val namespace: String, val url: String, val vaultNamespace: String, val endpoint: String, val roleId: String, val secretId: String, val failOnError: Boolean = true, val authMethod: String = VaultConstants.FeatureSettings.DEFAULT_VAULT_AUTH) {
 
     constructor(namespace: String, url: String, vaultNamespace: String, failOnError: Boolean) : this(namespace, url, vaultNamespace, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "", failOnError)
 
+    constructor(namespace: String, url: String, vaultNamespace: String, failOnError: Boolean, authMethod: String) : this(namespace, url, vaultNamespace, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, "", "", failOnError, authMethod)
+
     constructor(url: String, vaultNamespace: String, roleId: String, secretId: String) : this(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, url, vaultNamespace, VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH, roleId, secretId)
+
+    constructor(namespace: String, url: String, vaultNamespace: String, endpoint: String, roleId: String, secretId: String, failOnError: Boolean) : this(namespace, url, vaultNamespace, endpoint, roleId, secretId, failOnError, VaultConstants.FeatureSettings.DEFAULT_VAULT_AUTH)
 
     constructor(map: Map<String, String>) : this(
             map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
@@ -30,7 +34,8 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
             (map[VaultConstants.FeatureSettings.ENDPOINT] ?: VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH).removePrefix("/"),
             map[VaultConstants.FeatureSettings.ROLE_ID] ?: "",
             map[VaultConstants.FeatureSettings.SECRET_ID] ?: "",
-            map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: true
+            map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: true,
+            map[VaultConstants.FeatureSettings.VAULT_AUTH] ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_AUTH
     )
 
     fun toMap(map: MutableMap<String, String>) {
@@ -41,6 +46,7 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
         map[VaultConstants.FeatureSettings.ROLE_ID] = roleId
         map[VaultConstants.FeatureSettings.SECRET_ID] = secretId
         map[VaultConstants.FeatureSettings.FAIL_ON_ERROR] = failOnError.toString()
+        map[VaultConstants.FeatureSettings.VAULT_AUTH] = authMethod
     }
 
     fun getNormalizedEndpoint(): String {

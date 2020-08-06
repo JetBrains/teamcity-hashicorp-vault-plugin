@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault.server
 
+import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.util.concurrent.Striped
 import com.intellij.openapi.diagnostic.Logger
@@ -32,8 +33,11 @@ import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.http.HttpStatus
 import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
+import org.springframework.vault.authentication.AwsIamAuthentication
+import org.springframework.vault.authentication.AwsIamAuthenticationOptions
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
+import org.springframework.vault.support.VaultToken
 import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
@@ -70,7 +74,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             try {
                 val template = createRestTemplate(settings, trustStoreProvider)
                 // Login and retrieve server token
-                val (token, _) = getRealToken(template, settings)
+                val (token, _) = getToken(settings, template)
 
                 template.withVaultToken(token)
                 try {
@@ -105,7 +109,29 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             return false
         }
 
-        private fun getRealToken(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
+        private fun getToken(settings: VaultFeatureSettings, template : RestTemplate): Pair<String, String> {
+            if(settings.authMethod == "approle") {
+                return getTokenFromAppRole(template, settings)
+            }
+            return getTokenFromAwsIamAuth(template)
+        }
+
+        private fun getTokenFromAwsIamAuth(template: RestTemplate): Pair<String, String> {
+            val options = AwsIamAuthenticationOptions.builder()
+                    .credentialsProvider(InstanceProfileCredentialsProvider.getInstance()).build()
+
+            val token: VaultToken
+            val aws = AwsIamAuthentication(options, template)
+            token = aws.login()
+            template.withVaultToken(token.token)
+            val response = template.getForEntity("/auth/token/lookup-self", VaultResponse::class.java)
+            val data = response.body.data
+            val accessor = data["accessor"].toString()
+
+            return token.token to accessor
+        }
+
+        private fun getTokenFromAppRole(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
             val options = AppRoleAuthenticationOptions.builder()
                     .path(settings.getNormalizedEndpoint())
                     .roleId(settings.roleId)
@@ -309,7 +335,12 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
     }
 
     fun tryRequestToken(settings: VaultFeatureSettings): LeasedTokenInfo {
-        val (token, accessor) = doRequestToken(settings, trustStoreProvider)
+        if(settings.authMethod == "approle") {
+            val (token, accessor) = doRequestToken(settings, trustStoreProvider)
+            return LeasedTokenInfo(token, accessor, settings)
+        }
+        val template = createRestTemplate(settings, trustStoreProvider)
+        val (token, accessor) = getTokenFromAwsIamAuth(template)
         return LeasedTokenInfo(token, accessor, settings)
     }
 

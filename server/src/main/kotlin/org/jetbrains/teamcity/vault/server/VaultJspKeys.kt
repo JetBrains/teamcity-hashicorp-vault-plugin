@@ -27,6 +27,10 @@ class VaultJspKeys {
     val ROLE_ID = VaultConstants.FeatureSettings.ROLE_ID
     val SECRET_ID = VaultConstants.FeatureSettings.SECRET_ID
 
+    val AWS_IAM_AUTH = VaultConstants.FeatureSettings.AWS_IAM_AUTH
+    val VAULT_APPROLE_AUTH = VaultConstants.FeatureSettings.VAULT_APPROLE_AUTH
+    val VAULT_AUTH = VaultConstants.FeatureSettings.VAULT_AUTH
+
     val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
 
     val AGENT_REQUIREMENT = VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT

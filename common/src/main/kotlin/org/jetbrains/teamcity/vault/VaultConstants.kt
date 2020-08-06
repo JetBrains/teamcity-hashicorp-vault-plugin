@@ -27,6 +27,7 @@ object VaultConstants {
     val WRAPPED_TOKEN_PROPERTY_SUFFIX = ".wrapped.token"
     val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
     val FAIL_ON_ERROR_PROPERTY_SUFFIX = ".failOnError"
+    val VAULT_AUTH_PROPERTY_SUFFIX = ".authMethod"
 
     @JvmField val VAULT_PARAMETER_PREFIX = "vault:"
 
@@ -52,6 +53,11 @@ object VaultConstants {
 
         @JvmField val ROLE_ID = "role-id"
         @JvmField val SECRET_ID = "secure:secret-id"
+
+        @JvmField val AWS_IAM_AUTH = "aws-iam-auth"
+        @JvmField val DEFAULT_VAULT_AUTH = "approle"
+        @JvmField val VAULT_APPROLE_AUTH = "vault-approle-auth"
+        @JvmField val VAULT_AUTH = "vault-auth"
 
         @JvmField val FAIL_ON_ERROR = "fail-on-error"
 
