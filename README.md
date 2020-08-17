@@ -9,6 +9,11 @@ See [blog post](https://blog.jetbrains.com/teamcity/2017/09/vault/) for details.
 
 Download binaries in [Plugin repository](https://plugins.jetbrains.com/plugin/10011-hashicorp-vault-support).
 
+## Configure with AWS IAM auth method
+If both your TeamCity and Vault installations run on AWS EC2 instances, it is possible to use AWS IAM Auth method to authenticate to Vault. To enable this authentication method, check `AWS IAM Auth method` in the connection parameter screen. 
+  
+![Vault connector](doc/aws_iam_auth.png)
+
 **Notes**
 
 ***Server-side token revoke***
