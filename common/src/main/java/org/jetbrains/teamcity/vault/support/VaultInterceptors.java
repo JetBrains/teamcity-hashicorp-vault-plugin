@@ -40,7 +40,7 @@ public class VaultInterceptors {
                 HttpHeaders headers = request.getHeaders();
 
                 if (!headers.containsKey(VaultInterceptors.VAULT_NAMESPACE_HEADER)) {
-                    headers.add(VaultInterceptors.VAULT_NAMESPACE_HEADER, namespace);
+                    headers.set(VaultInterceptors.VAULT_NAMESPACE_HEADER, namespace);
                 }
 
                 return execution.execute(request, body);

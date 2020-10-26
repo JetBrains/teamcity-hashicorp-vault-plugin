@@ -83,19 +83,6 @@ public class VaultTemplate {
         }
     }
 
-    private VaultTemplate(@NotNull VaultTemplate origin, @NotNull final String wrapTTL) {
-        this(origin.endpoint, origin.namespace, origin.requestFactory, origin.sessionManager);
-        final ClientHttpRequestInterceptor interceptor = new ClientHttpRequestInterceptor() {
-            @Override
-            public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-                request.getHeaders().add("X-Vault-Wrap-TTL", wrapTTL);
-                return execution.execute(request, body);
-            }
-        };
-        plainTemplate.getInterceptors().add(interceptor);
-        sessionTemplate.getInterceptors().add(interceptor);
-    }
-
     private RestTemplate createSessionTemplate(VaultEndpoint endpoint,
                                                ClientHttpRequestFactory requestFactory) {
 
@@ -111,7 +98,7 @@ public class VaultTemplate {
                 if (sessionToken != null) {
                     final String token = sessionToken.getToken();
                     if (token != null) {
-                        request.getHeaders().add(VaultHttpHeaders.VAULT_TOKEN, token);
+                        request.getHeaders().set(VaultHttpHeaders.VAULT_TOKEN, token);
                     }
                 }
 
@@ -122,8 +109,16 @@ public class VaultTemplate {
         return restTemplate;
     }
 
-    public VaultTemplate withWrappedResponses(String wrapTTL) {
-        return new VaultTemplate(this, wrapTTL);
+    public void wrapResponses(@NotNull final String wrapTTL) {
+        final ClientHttpRequestInterceptor interceptor = new ClientHttpRequestInterceptor() {
+            @Override
+            public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+                request.getHeaders().set("X-Vault-Wrap-TTL", wrapTTL);
+                return execution.execute(request, body);
+            }
+        };
+        plainTemplate.getInterceptors().add(interceptor);
+        sessionTemplate.getInterceptors().add(interceptor);
     }
 
     public VaultSysTemplate opsForSys() {

@@ -250,7 +250,8 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
             val factory = createClientHttpRequestFactory(trustStoreProvider)
 
-            val template = VaultTemplate(endpoint, settings.vaultNamespace, factory, DummySessionManager()).withWrappedResponses("10m")
+            val template = VaultTemplate(endpoint, settings.vaultNamespace, factory, DummySessionManager())
+            template.wrapResponses("10m")
 
             val login = getAppRoleLogin(settings)
 
