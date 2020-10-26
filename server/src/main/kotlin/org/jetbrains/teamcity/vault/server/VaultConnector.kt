@@ -110,7 +110,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         }
 
         private fun getToken(settings: VaultFeatureSettings, template : RestTemplate): Pair<String, String> {
-            if(settings.authMethod == "approle") {
+            if(settings.authMethod == VaultConstants.FeatureSettings.VAULT_AUTH_APPROLE) {
                 return getTokenFromAppRole(template, settings)
             }
             return getTokenFromAwsIamAuth(template)
@@ -335,7 +335,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
     }
 
     fun tryRequestToken(settings: VaultFeatureSettings): LeasedTokenInfo {
-        if(settings.authMethod == "approle") {
+        if(settings.authMethod == VaultConstants.FeatureSettings.VAULT_AUTH_APPROLE) {
             val (token, accessor) = doRequestToken(settings, trustStoreProvider)
             return LeasedTokenInfo(token, accessor, settings)
         }

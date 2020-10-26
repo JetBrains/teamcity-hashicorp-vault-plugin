@@ -88,7 +88,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                 val token: String
                 val timeout = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)]
                         ?: "15").toLongOrNull() ?: 15
-                if (settings.authMethod == "approle") {
+                if (settings.authMethod == VaultConstants.FeatureSettings.VAULT_AUTH_APPROLE) {
                     if (wrapped == null || wrapped.isNullOrEmpty()) {
                         logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
                         return@activity

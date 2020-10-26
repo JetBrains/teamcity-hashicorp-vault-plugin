@@ -84,7 +84,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 return@map
             }
 
-            if(settings.authMethod == "approle") {
+            if(settings.authMethod == VaultConstants.FeatureSettings.VAULT_AUTH_APPROLE) {
                 val wrappedToken: String = try {
                     connector.requestWrappedToken(build, settings)
                 } catch (e: Throwable) {

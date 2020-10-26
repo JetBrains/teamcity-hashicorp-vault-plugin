@@ -67,12 +67,12 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 }
 
                 when (it[VaultConstants.FeatureSettings.VAULT_AUTH]) {
-                    "iam" -> {
+                    VaultConstants.FeatureSettings.VAULT_AUTH_IAM -> {
                         it.remove(VaultConstants.FeatureSettings.ENDPOINT)
                         it.remove(VaultConstants.FeatureSettings.ROLE_ID)
                         it.remove(VaultConstants.FeatureSettings.SECRET_ID)
                     }
-                    "approle" -> {
+                    VaultConstants.FeatureSettings.VAULT_AUTH_APPROLE -> {
                         if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
                             errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
                         }
