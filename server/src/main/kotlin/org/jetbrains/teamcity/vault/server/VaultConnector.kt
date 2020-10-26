@@ -132,24 +132,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         }
 
         private fun getTokenFromAppRole(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
-            val options = AppRoleAuthenticationOptions.builder()
-                    .path(settings.getNormalizedEndpoint())
-                    .roleId(settings.roleId)
-                    .secretId(settings.secretId)
-                    .build()
-
-            val login = getAppRoleLogin(settings)
-            try {
-                val uri = template.uriTemplateHandler.expand("auth/{mount}/login", options.path)
-                val response = template.postForObject(uri, login, VaultResponse::class.java)
-                        ?: throw VaultException("HashiCorp Vault hasn't returned anything for '$uri'")
-                val auth = response.auth
-                val token = auth["client_token"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token")
-                val accessor = auth["accessor"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
-                return token to accessor
-            } catch (e: HttpStatusCodeException) {
-                throw getReadableException(e, settings)
-            }
+            return performLogin(template, settings, extractTokenAndAccessor)
         }
 
         /**
@@ -242,17 +225,31 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         }
 
         @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
-            val options = AppRoleAuthenticationOptions.builder()
-                    .path(settings.getNormalizedEndpoint())
-                    .roleId(settings.roleId)
-                    .secretId(settings.secretId)
-                    .build()
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
             val factory = createClientHttpRequestFactory(trustStoreProvider)
 
             val template = VaultTemplate(endpoint, settings.vaultNamespace, factory, null)
             template.wrapResponses("10m")
 
+            return performLogin(template.defaultTemplate, settings, extractWrappedTokenAndAccessor)
+        }
+
+        @JvmStatic
+        fun doRequestToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
+            val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
+            val factory = createClientHttpRequestFactory(trustStoreProvider)
+
+            val template = VaultTemplate(endpoint, settings.vaultNamespace, factory, null)
+
+            return performLogin(template.defaultTemplate, settings, extractTokenAndAccessor)
+        }
+
+        private fun performLogin(template: RestTemplate, settings: VaultFeatureSettings, extractor: (VaultResponse) -> Pair<String, String>): Pair<String, String> {
+            val options = AppRoleAuthenticationOptions.builder()
+                    .path(settings.getNormalizedEndpoint())
+                    .roleId(settings.roleId)
+                    .secretId(settings.secretId)
+                    .build()
             val login = getAppRoleLogin(settings)
 
             try {
@@ -260,12 +257,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                 val vaultResponse = template.write(path, login)
                         ?: throw VaultException("HashiCorp Vault hasn't returned anything from POST to '$path'")
 
-                val wrap = vaultResponse.wrapInfo ?: throw VaultException("HashiCorp Vault hasn't returned 'wrap_info' for POST to '$path'")
-
-                val token = wrap["token"] ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token")
-                val accessor = wrap["wrapped_accessor"] ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token accessor")
-
-                return token to accessor
+                return extractor(vaultResponse)
             } catch (e: VaultException) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
@@ -275,46 +267,38 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             }
         }
 
-        @JvmStatic
-        fun doRequestToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
-            val options = AppRoleAuthenticationOptions.builder()
-                    .path(settings.getNormalizedEndpoint())
-                    .roleId(settings.roleId)
-                    .secretId(settings.secretId)
-                    .build()
-            val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
-            val factory = createClientHttpRequestFactory(trustStoreProvider)
+        private val extractTokenAndAccessor: (VaultResponse) -> Pair<String, String> = { response: VaultResponse ->
+            val auth = response.auth
 
-            val template = VaultTemplate(endpoint, settings.vaultNamespace, factory, null)
+            val token = auth["client_token"] as? String
+                    ?: throw VaultException("HashiCorp Vault hasn't returned token")
+            val accessor = auth["accessor"] as? String
+                    ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
+            token to accessor
+        }
 
-            val login = getAppRoleLogin(settings)
+        private val extractWrappedTokenAndAccessor: (VaultResponse) -> Pair<String, String> = { response: VaultResponse ->
+            val wrap = response.wrapInfo
+                    ?: throw VaultException("HashiCorp Vault hasn't returned 'wrap_info'")
 
-            try {
-                val vaultResponse = template.write("auth/${options.path}/login", login)
-                val auth = vaultResponse.auth
+            val token = wrap["token"]
+                    ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token")
+            val accessor = wrap["wrapped_accessor"]
+                    ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token accessor")
 
-                val token = auth["client_token"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token")
-                val accessor = auth["accessor"] as? String ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
-                return token to accessor
-            } catch (e: VaultException) {
-                val cause = e.cause
-                if (cause is HttpStatusCodeException) {
-                    throw getReadableException(cause, settings)
-                }
-                throw e
-            }
+            token to accessor
         }
     }
 
     // TODO: Support server restart
-    private val myBuildsTokens: MutableMap<Long, MutableMap<String,LeasedWrappedTokenInfo>> = ConcurrentHashMap()
+    private val myBuildsTokens: MutableMap<Long, MutableMap<String, LeasedWrappedTokenInfo>> = ConcurrentHashMap()
     private val myPendingRemoval: MutableSet<LeasedWrappedTokenInfo> = ConcurrentHashSet()
     private val myLocks = Striped.lazyWeakLock(64)
 
     fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String {
-        val infos = myBuildsTokens.getOrDefault(build.buildId,ConcurrentHashMap())
+        val infos = myBuildsTokens.getOrDefault(build.buildId, ConcurrentHashMap())
         val info = infos[settings.namespace]
-        if(info != null) return info.wrapped
+        if (info != null) return info.wrapped
 
         myLocks.get(build.buildId).withLock {
             @Suppress("NAME_SHADOWING")
