@@ -63,6 +63,7 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
                     VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
                     VaultConstants.FeatureSettings.VAULT_NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
                     VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE,
+                    VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,
                     VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
                     VaultConstants.FeatureSettings.URL to "http://localhost:8200"
             )
