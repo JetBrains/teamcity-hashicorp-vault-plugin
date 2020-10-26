@@ -25,11 +25,9 @@ import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.LifecycleAwareSessionManager
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler
-import org.springframework.vault.authentication.AwsIamAuthentication
-import org.springframework.vault.authentication.AwsIamAuthenticationOptions
-import org.springframework.vault.authentication.CubbyholeAuthentication
-import org.springframework.vault.authentication.CubbyholeAuthenticationOptions
+import org.springframework.vault.authentication.*
 import org.springframework.vault.support.VaultToken
+import org.springframework.web.client.RestTemplate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -70,53 +68,48 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
 
         namespaces.forEach { namespace ->
             // namespace is either empty string or something like 'id'
+            val settings = VaultFeatureSettings.fromSharedParameters(parameters, namespace)
             val url = parameters[getVaultParameterName(namespace, VaultConstants.URL_PROPERTY_SUFFIX)]
-            val vaultNamespace = parameters[getVaultParameterName(namespace, VaultConstants.VAULT_NAMESPACE_PROPERTY_SUFFIX)]
-                    ?: ""
-            val wrapped = parameters[getVaultParameterName(namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX)]
-            val failOnError = parameters[getVaultParameterName(namespace, VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX)]
-                    ?.toBoolean() ?: false
-            val vaultAuth = parameters[getVaultParameterName(namespace, VaultConstants.VAULT_AUTH_PROPERTY_SUFFIX)]
-                    ?: VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD
 
-            if (url == null || url.isNullOrBlank()) {
+            if (settings.url.isBlank()) {
                 return@forEach
             }
             val logger = runningBuild.buildLogger
             logger.activity("HashiCorp Vault" + if (isDefault(namespace)) "" else " ('$namespace' namespace)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
-                val settings = VaultFeatureSettings(namespace, url, vaultNamespace, failOnError, vaultAuth)
                 val token: String
-                val timeout = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)]
-                        ?: "15").toLongOrNull() ?: 15
-                if (settings.authMethod == VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE) {
-                    if (wrapped == null || wrapped.isNullOrEmpty()) {
-                        logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
-                        return@activity
+                val timeout = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)])?.toLongOrNull()
+                        ?: 15
+                try {
+                    val template = createRestTemplate(settings, trustStoreProvider)
+                    val authentication: ClientAuthentication = when (settings.auth.method) {
+                        AuthMethod.APPROLE -> {
+                            val wrapped = (settings.auth as Auth.AppRoleAuthAgent).wrappedToken
+                            if (wrapped.isEmpty()) {
+                                logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
+                                return@activity
+                            }
+                            if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
+                                logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token value for url $url is incorrect, seems there was error fetching token on TeamCity server side", null)
+                                return@activity
+                            }
+                            createAppRoleAuthentication(wrapped, template)
+                        }
+                        AuthMethod.AWS_IAM -> {
+                            createAwsIamAuthentication(template)
+                        }
                     }
-                    if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
-                        logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token value for url $url is incorrect, seems there was error fetching token on TeamCity server side", null)
-                        return@activity
+                    val sessionManager = LifecycleAwareSessionManager(authentication, scheduler, template,
+                            LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS), logger)
+                    sessions[runningBuild.buildId] = sessionManager
+                    token = sessionManager.sessionToken.token
+                } catch (e: Exception) {
+                    val errorPrefix = when (settings.auth.method) {
+                        AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token: "
+                        AuthMethod.AWS_IAM -> "Failed to get HashiCorp Vault token using AWS IAM auth: "
                     }
-
-                    try {
-                        val sessionManager = vaultAppRoleAuthentication(wrapped, settings, timeout, logger)
-                        sessions[runningBuild.buildId] = sessionManager
-                        token = sessionManager.sessionToken.token
-                    } catch (e: Exception) {
-                        logger.error("Failed to unwrap HashiCorp Vault token: " + e.message)
-                        logger.exception(e)
-                        return@activity
-                    }
-                } else {
-                    try {
-                        val sessionManager = AwsIAMAuthentication(settings, trustStoreProvider, timeout, logger)
-                        sessions[runningBuild.buildId] = sessionManager
-                        token = sessionManager.sessionToken.token
-                    } catch (e: Exception) {
-                        logger.error("Failed to get HashiCorp Vault token using AWS IAM auth: " + e.message)
-                        logger.exception(e)
-                        return@activity
-                    }
+                    logger.error(errorPrefix + e.message)
+                    logger.exception(e)
+                    return@activity
                 }
 
                 logger.message("HashiCorp Vault token successfully fetched")
@@ -140,28 +133,19 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
         }
     }
 
-    private fun AwsIAMAuthentication(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider, timeout: Long, logger: BuildProgressLogger): LifecycleAwareSessionManager {
+    private fun createAwsIamAuthentication(restTemplate: RestTemplate): AwsIamAuthentication {
         val options = AwsIamAuthenticationOptions.builder()
                 .credentialsProvider(InstanceProfileCredentialsProvider.getInstance()).build()
 
-        val template = createRestTemplate(settings, trustStoreProvider)
-        val aws = AwsIamAuthentication(options, template)
-        val sessionManager = LifecycleAwareSessionManager(aws, scheduler, template,
-                LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS), logger)
-
-        return sessionManager
+        return AwsIamAuthentication(options, restTemplate)
     }
 
-    private fun vaultAppRoleAuthentication(wrapped: String?, settings: VaultFeatureSettings, timeout: Long, logger: BuildProgressLogger): LifecycleAwareSessionManager {
+    private fun createAppRoleAuthentication(wrapped: String, restTemplate: RestTemplate): CubbyholeAuthentication {
         val options = CubbyholeAuthenticationOptions.builder()
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped))
                 .build()
-        val template = createRestTemplate(settings, trustStoreProvider)
-        val authentication = CubbyholeAuthentication(options, template)
-        val sessionManager = LifecycleAwareSessionManager(authentication, scheduler, template,
-                LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeout, TimeUnit.SECONDS), logger)
-        return sessionManager
+        return CubbyholeAuthentication(options, restTemplate)
     }
 
     override fun beforeBuildFinish(build: AgentRunningBuild, buildStatus: BuildFinishedStatus) {

@@ -79,7 +79,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                 template.withVaultToken(token)
                 try {
                     // Revoke agent token
-                    revokeAccessor(template, info.accessor, info.connection.roleId)
+                    revokeAccessor(template, info.accessor, info.connection)
                 } finally {
                     // Revoke server token we just obtained
                     revokeSelf(template)
@@ -110,10 +110,10 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         }
 
         private fun getToken(settings: VaultFeatureSettings, template : RestTemplate): Pair<String, String> {
-            if(settings.authMethod == VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE) {
-                return getTokenFromAppRole(template, settings)
+            return when (settings.auth.method) {
+                AuthMethod.APPROLE -> getTokenFromAppRole(template, settings)
+                AuthMethod.AWS_IAM -> getTokenFromAwsIamAuth(template)
             }
-            return getTokenFromAwsIamAuth(template)
         }
 
         private fun getTokenFromAwsIamAuth(template: RestTemplate): Pair<String, String> {
@@ -138,7 +138,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         /**
          * @return true if operation succeed or it doesn't makes sense to try again later
          */
-        private fun revokeAccessor(template: RestTemplate, accessor: String, approle: String): Boolean {
+        private fun revokeAccessor(template: RestTemplate, accessor: String, settings: VaultFeatureSettings): Boolean {
             template.errorHandler = object : DefaultResponseErrorHandler() {
                 override fun hasError(statusCode: HttpStatus?): Boolean {
                     if (statusCode == HttpStatus.FORBIDDEN || statusCode == HttpStatus.BAD_REQUEST) return false
@@ -153,7 +153,10 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             val error = VaultResponses.getError(entity.body)
             val suffix = error?.replace('\n', ' ')?.let { ". Error message: $it" } ?: ""
             if (entity.statusCode == HttpStatus.FORBIDDEN) {
-                LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give approle '$approle' 'update' access to '/auth/token/revoke-accessor'$suffix")
+                when (settings.auth.method) {
+                    AuthMethod.APPROLE -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give approle '${(settings.auth as Auth.AppRoleAuthServer).roleId}' 'update' access to '/auth/token/revoke-accessor'$suffix")
+                    AuthMethod.AWS_IAM -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give AWS IAM role access to '/auth/token/revoke-accessor'$suffix")
+                }
                 return true
             }
             if (entity.statusCode == HttpStatus.BAD_REQUEST) {
@@ -197,16 +200,16 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             return false
         }
 
-        private fun getAppRoleLogin(settings: VaultFeatureSettings): Map<String, String> {
+        private fun getAppRoleLogin(appRoleAuth: Auth.AppRoleAuthServer): Map<String, String> {
             val login = HashMap<String, String>(2)
-            login["role_id"] = settings.roleId
-            settings.secretId.nullIfEmpty()?.let {
+            login["role_id"] = appRoleAuth.roleId
+            appRoleAuth.secretId.nullIfEmpty()?.let {
                 login["secret_id"] = it
             }
             return login
         }
 
-        private fun getReadableException(cause: HttpStatusCodeException, settings: VaultFeatureSettings): ConnectionException {
+        private fun getReadableException(cause: HttpStatusCodeException, appRoleAuth: Auth.AppRoleAuthServer): ConnectionException {
             val err = VaultResponses.getError(cause)
             val prefix = "Cannot log in to HashiCorp Vault using AppRole credentials"
             val message: String
@@ -221,7 +224,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                         }
                         return@let null
                     } ?: "$prefix: $err"
-            return ConnectionException(message.replace(settings.secretId, "*******"), cause)
+            return ConnectionException(message.replace(appRoleAuth.secretId, "*******"), cause)
         }
 
         @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
@@ -245,12 +248,14 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         }
 
         private fun performLogin(template: RestTemplate, settings: VaultFeatureSettings, extractor: (VaultResponse) -> Pair<String, String>): Pair<String, String> {
+            val appRoleAuth = settings.auth as Auth.AppRoleAuthServer
+
             val options = AppRoleAuthenticationOptions.builder()
-                    .path(settings.getNormalizedEndpoint())
-                    .roleId(settings.roleId)
-                    .secretId(settings.secretId)
+                    .path(appRoleAuth.getNormalizedEndpoint())
+                    .roleId(appRoleAuth.roleId)
+                    .secretId(appRoleAuth.secretId)
                     .build()
-            val login = getAppRoleLogin(settings)
+            val login = getAppRoleLogin(appRoleAuth)
 
             try {
                 val path = "auth/${options.path}/login"
@@ -261,7 +266,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             } catch (e: VaultException) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
-                    throw getReadableException(cause, settings)
+                    throw getReadableException(cause, appRoleAuth)
                 }
                 throw e
             }
@@ -320,13 +325,17 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
     }
 
     fun tryRequestToken(settings: VaultFeatureSettings): LeasedTokenInfo {
-        if(settings.authMethod == VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE) {
-            val (token, accessor) = doRequestToken(settings, trustStoreProvider)
-            return LeasedTokenInfo(token, accessor, settings)
+        return when (settings.auth.method) {
+            AuthMethod.APPROLE -> {
+                val (token, accessor) = doRequestToken(settings, trustStoreProvider)
+                LeasedTokenInfo(token, accessor, settings)
+            }
+            AuthMethod.AWS_IAM -> {
+                val template = createRestTemplate(settings, trustStoreProvider)
+                val (token, accessor) = getTokenFromAwsIamAuth(template)
+                LeasedTokenInfo(token, accessor, settings)
+            }
         }
-        val template = createRestTemplate(settings, trustStoreProvider)
-        val (token, accessor) = getTokenFromAwsIamAuth(template)
-        return LeasedTokenInfo(token, accessor, settings)
     }
 
     class ConnectionException(message: String, cause: Throwable) : Exception(message, cause)

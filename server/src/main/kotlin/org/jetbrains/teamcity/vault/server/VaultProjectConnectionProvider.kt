@@ -81,7 +81,7 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 }
 
                 // Convert slashes if needed of add new fields
-                VaultFeatureSettings(it).toMap(it)
+                VaultFeatureSettings(it).toFeatureProperties(it)
 
                 return@PropertiesProcessor errors
             }
