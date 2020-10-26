@@ -22,15 +22,19 @@ import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.support.ClientHttpRequestFactoryFactory
 import org.jetbrains.teamcity.vault.support.MappingJackson2HttpMessageConverter
 import org.jetbrains.teamcity.vault.support.VaultInterceptors
+import org.jetbrains.teamcity.vault.support.VaultResponses
 import org.springframework.http.client.ClientHttpRequestFactory
 import org.springframework.http.client.ClientHttpRequestInterceptor
 import org.springframework.http.converter.ByteArrayHttpMessageConverter
 import org.springframework.http.converter.HttpMessageConverter
 import org.springframework.http.converter.StringHttpMessageConverter
+import org.springframework.util.Assert
 import org.springframework.vault.client.VaultClients
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.client.VaultHttpHeaders
 import org.springframework.vault.support.ClientOptions
+import org.springframework.vault.support.VaultResponse
+import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.DefaultUriTemplateHandler
 import java.net.URI
@@ -87,6 +91,15 @@ fun RestTemplate.withVaultToken(token: String): RestTemplate {
     return this
 }
 
+
+fun RestTemplate.write(path: String, body: Any?): VaultResponse? {
+    Assert.hasText(path, "Path must not be empty")
+    return try {
+        this.postForObject(path, body, VaultResponse::class.java)
+    } catch (e: HttpStatusCodeException) {
+        throw VaultResponses.buildException(e, path)
+    }
+}
 
 private fun createRestTemplate(): RestTemplate {
     // Like in org.springframework.vault.client.VaultClients.createRestTemplate()

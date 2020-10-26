@@ -16,6 +16,7 @@
 package org.jetbrains.teamcity.vault.support;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.vault.UtilKt;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
@@ -47,14 +48,9 @@ import java.io.IOException;
  */
 public class VaultTemplate {
 
-    private VaultEndpoint endpoint;
-    private String namespace;
-    private ClientHttpRequestFactory requestFactory;
-    private SessionManager sessionManager;
+    private final RestTemplate sessionTemplate;
 
-    private RestTemplate sessionTemplate;
-
-    private RestTemplate plainTemplate;
+    private final RestTemplate plainTemplate;
 
     /**
      * Create a new {@link VaultTemplate} with a {@link VaultEndpoint},
@@ -67,24 +63,27 @@ public class VaultTemplate {
     public VaultTemplate(@NotNull VaultEndpoint vaultEndpoint,
                          @NotNull String vaultNamespace,
                          @NotNull ClientHttpRequestFactory clientHttpRequestFactory,
-                         @NotNull SessionManager sessionManager) {
-        this.endpoint = vaultEndpoint;
-        this.namespace = vaultNamespace;
-        this.requestFactory = clientHttpRequestFactory;
-        this.sessionManager = sessionManager;
-
-        this.sessionTemplate = createSessionTemplate(vaultEndpoint, clientHttpRequestFactory);
+                         @Nullable SessionManager sessionManager) {
         this.plainTemplate = UtilKt.createRestTemplate(vaultEndpoint, clientHttpRequestFactory);
+        if (sessionManager != null) {
+            this.sessionTemplate = createSessionTemplate(vaultEndpoint, clientHttpRequestFactory, sessionManager);
+        } else {
+            this.sessionTemplate = this.plainTemplate;
+        }
 
-        ClientHttpRequestInterceptor namespaceInterceptor = VaultInterceptors.createNamespaceInterceptor(namespace);
+        ClientHttpRequestInterceptor namespaceInterceptor = VaultInterceptors.createNamespaceInterceptor(vaultNamespace);
         if (namespaceInterceptor != null) {
             this.plainTemplate.getInterceptors().add(namespaceInterceptor);
-            this.sessionTemplate.getInterceptors().add(namespaceInterceptor);
+            //noinspection ObjectEquality
+            if (plainTemplate != sessionTemplate) {
+                this.sessionTemplate.getInterceptors().add(namespaceInterceptor);
+            }
         }
     }
 
-    private RestTemplate createSessionTemplate(VaultEndpoint endpoint,
-                                               ClientHttpRequestFactory requestFactory) {
+    private static RestTemplate createSessionTemplate(@NotNull VaultEndpoint endpoint,
+                                                      @NotNull ClientHttpRequestFactory requestFactory,
+                                                      @NotNull final SessionManager sessionManager) {
 
         RestTemplate restTemplate = UtilKt.createRestTemplate(endpoint, requestFactory);
 
@@ -107,6 +106,10 @@ public class VaultTemplate {
         });
 
         return restTemplate;
+    }
+
+    public RestTemplate getDefaultTemplate() {
+        return sessionTemplate;
     }
 
     public void wrapResponses(@NotNull final String wrapTTL) {
