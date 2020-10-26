@@ -54,10 +54,10 @@ object VaultConstants {
         @JvmField val ROLE_ID = "role-id"
         @JvmField val SECRET_ID = "secure:secret-id"
 
-        @JvmField val AWS_IAM_AUTH = "aws-iam-auth"
-        @JvmField val DEFAULT_VAULT_AUTH = "approle"
-        @JvmField val VAULT_APPROLE_AUTH = "vault-approle-auth"
         @JvmField val VAULT_AUTH = "vault-auth"
+        @JvmField val VAULT_AUTH_IAM = "iam"
+        @JvmField val VAULT_AUTH_APPROLE = "approle"
+        @JvmField val DEFAULT_VAULT_AUTH = "approle"
 
         @JvmField val FAIL_ON_ERROR = "fail-on-error"
 

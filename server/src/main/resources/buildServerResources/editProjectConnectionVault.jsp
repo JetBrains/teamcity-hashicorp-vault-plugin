@@ -24,6 +24,11 @@
 <bs:linkScript>
     /js/bs/testConnection.js
 </bs:linkScript>
+<style type="text/css">
+    .auth-container {
+        display: none;
+    }
+</style>
 <script>
   BS.OAuthConnectionDialog.submitTestConnection = function () {
     var that = this;
@@ -105,24 +110,23 @@
 </tr>
 
 <tr>
-    <td><label for="${keys.AWS_IAM_AUTH}">AWS IAM Auth method</label></td>
+    <td>Authentication method</td>
     <td>
-        <props:radioButtonProperty name="${keys.VAULT_AUTH}" id="${keys.AWS_IAM_AUTH}" value="iam"/>
-        <span class="error" id="error_${keys.AWS_IAM_AUTH}"/>
-        <span class="smallNote">Use AWS IAM Auth method to authenticate to Vault</span>
+        <props:radioButtonProperty name="${keys.VAULT_AUTH}" id="${keys.VAULT_AUTH_IAM}" value="${keys.VAULT_AUTH_IAM}"
+                                   onclick="BS.Vault.onAuthChange(this)"/>
+        <label for="${keys.VAULT_AUTH_IAM}">Use AWS IAM Auth method to authenticate to Vault</label>
+
+        <br/>
+
+        <props:radioButtonProperty name="${keys.VAULT_AUTH}" id="${keys.VAULT_AUTH_APPROLE}"
+                                   value="${keys.VAULT_AUTH_APPROLE}" onclick="BS.Vault.onAuthChange(this)"/>
+        <label for="${keys.VAULT_AUTH_APPROLE}">Use Vault approle to authenticate to Vault</label>
+
+        <span class="error" id="error_${keys.VAULT_AUTH}"/>
     </td>
 </tr>
 
-<tr>
-    <td><label for="${keys.VAULT_APPROLE_AUTH}">Vault approle Auth method</label></td>
-    <td>
-        <props:radioButtonProperty name="${keys.VAULT_AUTH}" id="${keys.VAULT_APPROLE_AUTH}" value="approle" />
-        <span class="error" id="error_${keys.VAULT_APPROLE_AUTH}"/>
-        <span class="smallNote">Use Vault approle to authenticate to Vault</span>
-    </td>
-</tr>
-
-<tr id="approle_auth_endpoint" class="advancedSetting approle">
+<tr class="advancedSetting auth-container auth-approle">
     <td><label for="${keys.ENDPOINT}">AppRole auth endpoint path:</label></td>
     <td>
         <props:textProperty name="${keys.ENDPOINT}"
@@ -132,7 +136,7 @@
     </td>
 </tr>
 
-<tr id="approle_role_id" class="approle">
+<tr class="auth-container auth-approle">
     <td><label for="${keys.ROLE_ID}">AppRole Role ID:</label></td>
     <td>
         <props:textProperty name="${keys.ROLE_ID}"
@@ -142,7 +146,7 @@
     </td>
 </tr>
 
-<tr id="approle_secret_id" class="noBorder approle">
+<tr class="noBorder auth-container auth-approle">
     <td><label for="${keys.SECRET_ID}">AppRole Secret ID:</label></td>
     <td>
         <props:passwordProperty name="${keys.SECRET_ID}"
@@ -169,20 +173,18 @@
     <div id="testConnectionDetails" class="mono"></div>
 </bs:dialog>
 <script>
-  $j('#OAuthConnectionDialog .popupSaveButtonsBlock .testConnectionButton').remove();
-  $j("#testConnectionButton").appendTo($j('#OAuthConnectionDialog .popupSaveButtonsBlock')[0])
+    $j('#OAuthConnectionDialog .popupSaveButtonsBlock .testConnectionButton').remove();
+    $j("#testConnectionButton").appendTo($j('#OAuthConnectionDialog .popupSaveButtonsBlock')[0])
+    BS.Vault = {
+        onAuthChange: function (element) {
+            $j('.auth-container').hide();
+            let value = $j(element).val();
+            $j('.auth-' + value).show();
+            BS.VisibilityHandlers.updateVisibility('mainContent');
+        }
+    }
 
-  $j(document).ready(function(){
-      let checked = $j('input[name="prop:vault-auth"]:checked').val()
-      let targetBox = $j("." + checked);
-      $j(".approle").not(targetBox).hide();
-      $j(targetBox).show();
-
-      $j('input[name="prop:vault-auth"]').click(function(){
-          var inputValue = $j(this).attr("value");
-          var targetBox = $j("." + inputValue);
-          $j(".approle").not(targetBox).hide();
-          $j(targetBox).show();
-      });
-  })
+    $j(document).ready(function () {
+        BS.Vault.onAuthChange($j('input[name="prop:${keys.VAULT_AUTH}"]:checked'));
+    })
 </script>
