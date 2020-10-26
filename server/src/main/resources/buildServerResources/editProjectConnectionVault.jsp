@@ -112,17 +112,17 @@
 <tr>
     <td>Authentication method</td>
     <td>
-        <props:radioButtonProperty name="${keys.VAULT_AUTH}" id="${keys.VAULT_AUTH_IAM}" value="${keys.VAULT_AUTH_IAM}"
+        <props:radioButtonProperty name="${keys.AUTH_METHOD}" id="${keys.AUTH_METHOD_IAM}" value="${keys.AUTH_METHOD_IAM}"
                                    onclick="BS.Vault.onAuthChange(this)"/>
-        <label for="${keys.VAULT_AUTH_IAM}">Use AWS IAM Auth method to authenticate to Vault</label>
+        <label for="${keys.AUTH_METHOD_IAM}">Use AWS IAM Auth method to authenticate to Vault</label>
 
         <br/>
 
-        <props:radioButtonProperty name="${keys.VAULT_AUTH}" id="${keys.VAULT_AUTH_APPROLE}"
-                                   value="${keys.VAULT_AUTH_APPROLE}" onclick="BS.Vault.onAuthChange(this)"/>
-        <label for="${keys.VAULT_AUTH_APPROLE}">Use Vault approle to authenticate to Vault</label>
+        <props:radioButtonProperty name="${keys.AUTH_METHOD}" id="${keys.AUTH_METHOD_APPROLE}"
+                                   value="${keys.AUTH_METHOD_APPROLE}" onclick="BS.Vault.onAuthChange(this)"/>
+        <label for="${keys.AUTH_METHOD_APPROLE}">Use Vault approle to authenticate to Vault</label>
 
-        <span class="error" id="error_${keys.VAULT_AUTH}"/>
+        <span class="error" id="error_${keys.AUTH_METHOD}"/>
     </td>
 </tr>
 
@@ -185,6 +185,6 @@
     }
 
     $j(document).ready(function () {
-        BS.Vault.onAuthChange($j('input[name="prop:${keys.VAULT_AUTH}"]:checked'));
+        BS.Vault.onAuthChange($j('input[name="prop:${keys.AUTH_METHOD}"]:checked'));
     })
 </script>

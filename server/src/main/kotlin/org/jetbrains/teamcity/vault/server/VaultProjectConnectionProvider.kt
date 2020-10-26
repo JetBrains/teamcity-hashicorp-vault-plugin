@@ -40,7 +40,7 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
                 VaultConstants.FeatureSettings.URL to "http://localhost:8200",
                 VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
-                VaultConstants.FeatureSettings.VAULT_AUTH to VaultConstants.FeatureSettings.DEFAULT_VAULT_AUTH
+                VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD
         )
     }
 
@@ -66,13 +66,13 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.NAMESPACE, "Non-default namespace should match regex '$namespaceRegex'"))
                 }
 
-                when (it[VaultConstants.FeatureSettings.VAULT_AUTH]) {
-                    VaultConstants.FeatureSettings.VAULT_AUTH_IAM -> {
+                when (it[VaultConstants.FeatureSettings.AUTH_METHOD]) {
+                    VaultConstants.FeatureSettings.AUTH_METHOD_IAM -> {
                         it.remove(VaultConstants.FeatureSettings.ENDPOINT)
                         it.remove(VaultConstants.FeatureSettings.ROLE_ID)
                         it.remove(VaultConstants.FeatureSettings.SECRET_ID)
                     }
-                    VaultConstants.FeatureSettings.VAULT_AUTH_APPROLE -> {
+                    VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE -> {
                         if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
                             errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
                         }

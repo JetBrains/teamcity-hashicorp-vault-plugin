@@ -27,9 +27,9 @@ class VaultJspKeys {
     val ROLE_ID = VaultConstants.FeatureSettings.ROLE_ID
     val SECRET_ID = VaultConstants.FeatureSettings.SECRET_ID
 
-    val VAULT_AUTH = VaultConstants.FeatureSettings.VAULT_AUTH
-    val VAULT_AUTH_IAM = VaultConstants.FeatureSettings.VAULT_AUTH_IAM
-    val VAULT_AUTH_APPROLE = VaultConstants.FeatureSettings.VAULT_AUTH_APPROLE
+    val AUTH_METHOD = VaultConstants.FeatureSettings.AUTH_METHOD
+    val AUTH_METHOD_IAM = VaultConstants.FeatureSettings.AUTH_METHOD_IAM
+    val AUTH_METHOD_APPROLE = VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE
 
     val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
 

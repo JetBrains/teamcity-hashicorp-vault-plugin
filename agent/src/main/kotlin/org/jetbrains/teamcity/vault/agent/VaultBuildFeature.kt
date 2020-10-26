@@ -77,7 +77,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
             val failOnError = parameters[getVaultParameterName(namespace, VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX)]
                     ?.toBoolean() ?: false
             val vaultAuth = parameters[getVaultParameterName(namespace, VaultConstants.VAULT_AUTH_PROPERTY_SUFFIX)]
-                    ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_AUTH
+                    ?: VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD
 
             if (url == null || url.isNullOrBlank()) {
                 return@forEach
@@ -88,7 +88,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                 val token: String
                 val timeout = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)]
                         ?: "15").toLongOrNull() ?: 15
-                if (settings.authMethod == VaultConstants.FeatureSettings.VAULT_AUTH_APPROLE) {
+                if (settings.authMethod == VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE) {
                     if (wrapped == null || wrapped.isNullOrEmpty()) {
                         logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
                         return@activity
