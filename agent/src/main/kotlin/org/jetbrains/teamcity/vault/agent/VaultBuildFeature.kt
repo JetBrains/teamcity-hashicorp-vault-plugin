@@ -17,6 +17,7 @@ package org.jetbrains.teamcity.vault.agent
 
 import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.EventDispatcher
@@ -104,11 +105,17 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                     token = sessionManager.sessionToken.token
                 } catch (e: Exception) {
                     val errorPrefix = when (settings.auth.method) {
-                        AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token: "
-                        AuthMethod.AWS_IAM -> "Failed to get HashiCorp Vault token using AWS IAM auth: "
+                        AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token"
+                        AuthMethod.AWS_IAM -> "Failed to get HashiCorp Vault token using AWS IAM auth"
                     }
-                    logger.error(errorPrefix + e.message)
-                    logger.exception(e)
+                    if (settings.failOnError) {
+                        logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorPrefix + ": " + e.message, e)
+                        logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${runningBuild.buildTypeId}_${settings.namespace}_A", "VaultConnection", errorPrefix))
+                        runningBuild.stopBuild(errorPrefix)
+                    } else {
+                        logger.error(errorPrefix + ": " + e.message)
+                        logger.exception(e)
+                    }
                     return@activity
                 }
 
