@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault.server
 
+import com.amazonaws.SdkBaseException
 import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.util.concurrent.Striped
@@ -122,13 +123,23 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
 
             val token: VaultToken
             val aws = AwsIamAuthentication(options, template)
-            token = aws.login()
-            template.withVaultToken(token.token)
-            val response = template.getForEntity("/auth/token/lookup-self", VaultResponse::class.java)
-            val data = response.body.data
-            val accessor = data["accessor"].toString()
+            try {
+                token = aws.login()
+                template.withVaultToken(token.token)
+                val response = template.getForEntity("/auth/token/lookup-self", VaultResponse::class.java)
+                val data = response.body.data
+                val accessor = data["accessor"].toString()
 
-            return token.token to accessor
+                return token.token to accessor
+            } catch (e: SdkBaseException) {
+                throw ConnectionException("Failed to login to AWS IAM", e)
+            } catch (e: VaultException) {
+                val cause = e.cause
+                if (cause is HttpStatusCodeException) {
+                    throw getReadableException(cause)
+                }
+                throw e
+            }
         }
 
         private fun getTokenFromAppRole(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
@@ -209,7 +220,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             return login
         }
 
-        private fun getReadableException(cause: HttpStatusCodeException, appRoleAuth: Auth.AppRoleAuthServer): ConnectionException {
+        private fun getReadableException(cause: HttpStatusCodeException, replacer: ((String) -> String)? = null): ConnectionException {
             val err = VaultResponses.getError(cause)
             val prefix = "Cannot log in to HashiCorp Vault using AppRole credentials"
             val message: String
@@ -224,7 +235,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                         }
                         return@let null
                     } ?: "$prefix: $err"
-            return ConnectionException(message.replace(appRoleAuth.secretId, "*******"), cause)
+            return ConnectionException(if (replacer != null) replacer(message) else message, cause)
         }
 
         @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
@@ -266,7 +277,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             } catch (e: VaultException) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
-                    throw getReadableException(cause, appRoleAuth)
+                    throw getReadableException(cause) { it.replace(appRoleAuth.secretId, "*******") }
                 }
                 throw e
             }
