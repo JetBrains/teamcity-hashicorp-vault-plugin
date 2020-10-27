@@ -114,13 +114,13 @@
     <td>
         <props:radioButtonProperty name="${keys.AUTH_METHOD}" id="${keys.AUTH_METHOD_IAM}" value="${keys.AUTH_METHOD_IAM}"
                                    onclick="BS.Vault.onAuthChange(this)"/>
-        <label for="${keys.AUTH_METHOD_IAM}">Use AWS IAM Auth method to authenticate to Vault</label>
+        <label for="${keys.AUTH_METHOD_IAM}">Use AWS IAM Auth</label>
 
         <br/>
 
         <props:radioButtonProperty name="${keys.AUTH_METHOD}" id="${keys.AUTH_METHOD_APPROLE}"
                                    value="${keys.AUTH_METHOD_APPROLE}" onclick="BS.Vault.onAuthChange(this)"/>
-        <label for="${keys.AUTH_METHOD_APPROLE}">Use Vault approle to authenticate to Vault</label>
+        <label for="${keys.AUTH_METHOD_APPROLE}">Use Vault AppRole</label>
 
         <span class="error" id="error_${keys.AUTH_METHOD}"/>
     </td>
