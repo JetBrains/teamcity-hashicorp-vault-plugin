@@ -72,10 +72,16 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         @JvmStatic
         fun revoke(info: LeasedWrappedTokenInfo, trustStoreProvider: SSLTrustStoreProvider, catch: Boolean = true): Boolean {
             val settings = info.connection
+            if (settings.auth.method == AuthMethod.AWS_IAM) {
+                // AWS IAM auth uses separate tokens, so we cannot revoke agent token from server
+                // we don't even request wrapped token before build
+                return true
+            }
+            assert(settings.auth.method == AuthMethod.APPROLE)
             try {
                 val template = createRestTemplate(settings, trustStoreProvider)
                 // Login and retrieve server token
-                val (token, _) = getToken(settings, template)
+                val (token, _) = performLogin(template, settings, extractTokenAndAccessor)
 
                 template.withVaultToken(token)
                 try {
@@ -86,7 +92,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                     revokeSelf(template)
                 }
                 return true
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 LOG.warnAndDebugDetails("Failed to revoke token", e)
                 if (!catch) throw e
             }
@@ -108,13 +114,6 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                 LOG.warnAndDebugDetails("Failed to revoke token", e)
             }
             return false
-        }
-
-        private fun getToken(settings: VaultFeatureSettings, template : RestTemplate): Pair<String, String> {
-            return when (settings.auth.method) {
-                AuthMethod.APPROLE -> getTokenFromAppRole(template, settings)
-                AuthMethod.AWS_IAM -> getTokenFromAwsIamAuth(template)
-            }
         }
 
         private fun getTokenFromAwsIamAuth(template: RestTemplate): Pair<String, String> {
@@ -140,10 +139,6 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                 }
                 throw e
             }
-        }
-
-        private fun getTokenFromAppRole(template: RestTemplate, settings: VaultFeatureSettings): Pair<String, String> {
-            return performLogin(template, settings, extractTokenAndAccessor)
         }
 
         /**
@@ -309,6 +304,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
     // TODO: Support server restart
     private val myBuildsTokens: MutableMap<Long, MutableMap<String, LeasedWrappedTokenInfo>> = ConcurrentHashMap()
     private val myPendingRemoval: MutableSet<LeasedWrappedTokenInfo> = ConcurrentHashSet()
+    @Suppress("UnstableApiUsage")
     private val myLocks = Striped.lazyWeakLock(64)
 
     fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String {
@@ -316,6 +312,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         val info = infos[settings.namespace]
         if (info != null) return info.wrapped
 
+        @Suppress("UnstableApiUsage")
         myLocks.get(build.buildId).withLock {
             @Suppress("NAME_SHADOWING")
             val infos = myBuildsTokens.getOrDefault(build.buildId,ConcurrentHashMap())
@@ -324,12 +321,12 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             if(info != null) return info.wrapped
             try {
                 val (token, accessor) = doRequestWrappedToken(settings, trustStoreProvider)
-                infos[settings.namespace] = LeasedWrappedTokenInfo(token, accessor, settings);
-                myBuildsTokens[build.buildId] = infos;
+                infos[settings.namespace] = LeasedWrappedTokenInfo(token, accessor, settings)
+                myBuildsTokens[build.buildId] = infos
                 return token
             } catch (e: Exception) {
                 infos[settings.namespace] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
-                myBuildsTokens[build.buildId] = infos;
+                myBuildsTokens[build.buildId] = infos
                 throw e
             }
         }
