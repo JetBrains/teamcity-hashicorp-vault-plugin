@@ -26,6 +26,11 @@ dependencies {
     compile('com.amazonaws:aws-java-sdk-core:1.11.835') { dep ->
         ['org.apache.httpcomponents', 'commons-logging'].each{ group -> dep.exclude group: group }
     }
+    compile('com.fasterxml.jackson.core:jackson-annotations:2.8.0')
+    compile('com.fasterxml.jackson.core:jackson-core:2.8.0')
+    compile('com.fasterxml.jackson.core:jackson-databind:2.8.0')
+    compile('com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.0')
+    compile('com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.8.0')
     provided "org.springframework:spring-web:$spring_version"
     provided "org.apache.httpcomponents:httpclient:$httpclient_version"
 
