@@ -36,7 +36,7 @@ ext {
     httpclient_version = '4.3.6' // version is relevant to one used inside TeamCity
     // tests
     jetty_version = '9.4.19.v20190610'
-    testcontainers_version = '1.12.5'
+    testcontainers_version = '1.15.2'
     assertj_version = '1.7.1'
 }
 
