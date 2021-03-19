@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault.support;
 
+import jetbrains.buildServer.util.ssl.SSLContextUtil;
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpRequest;
@@ -35,8 +36,6 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.vault.support.ClientOptions;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
 import java.net.ProxySelector;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -72,19 +71,6 @@ public class ClientHttpRequestFactoryFactory {
         }
     }
 
-    static SSLContext getSSLContext(@NotNull KeyStore trustStore)
-            throws GeneralSecurityException {
-
-        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        trustManagerFactory.init(trustStore);
-        TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
-
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(null, trustManagers, null);
-
-        return sslContext;
-    }
-
     /**
      * {@link ClientHttpRequestFactory} for Apache Http Components.
      *
@@ -103,7 +89,10 @@ public class ClientHttpRequestFactoryFactory {
             KeyStore trustStore = trustStoreProvider != null ? trustStoreProvider.getTrustStore() : null;
 
             if (trustStore != null) {
-                SSLContext sslContext = getSSLContext(trustStore);
+                SSLContext sslContext = SSLContextUtil.createUserSSLContext(trustStore);
+                if (sslContext == null) {
+                    throw new GeneralSecurityException("Error creating extended trusted SSL certificates store");
+                }
                 SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext);
                 httpClientBuilder.setSSLSocketFactory(sslSocketFactory);
                 httpClientBuilder.setSslcontext(sslContext);
