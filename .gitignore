@@ -24,6 +24,11 @@
 # User-specific stuff:
 .idea/**/workspace.xml
 .idea/**/tasks.xml
+.idea/dbnavigator.xml
+.idea/jarRepositories.xml
+.idea/runConfigurations.xml
+.idea/codeStyles/codeStyleConfig.xml
+.idea/codeStyles/Project.xml
 
 # Sensitive or high-churn files:
 .idea/**/dataSources/

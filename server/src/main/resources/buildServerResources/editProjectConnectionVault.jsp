@@ -122,7 +122,14 @@
                                    value="${keys.AUTH_METHOD_APPROLE}" onclick="BS.Vault.onAuthChange(this)"/>
         <label for="${keys.AUTH_METHOD_APPROLE}">Use Vault AppRole</label>
 
-        <span class="error" id="error_${keys.AUTH_METHOD}"/>
+        <br/>
+
+        <props:radioButtonProperty name="${keys.AUTH_METHOD}" id="${keys.AUTH_METHOD_LDAP}"
+                                   value="${keys.AUTH_METHOD_LDAP}" onclick="BS.Vault.onAuthChange(this)"/>
+        <label for="${keys.AUTH_METHOD_LDAP}">Use LDAP Auth</label>
+
+        <br/>
+
     </td>
 </tr>
 
@@ -152,6 +159,26 @@
         <props:passwordProperty name="${keys.SECRET_ID}"
                                 className="longField textProperty_max-width js_max-width"/>
         <span class="error" id="error_${keys.SECRET_ID}"/>
+        <%--<span class="smallNote"></span>--%>
+    </td>
+</tr>
+
+<tr class="auth-container auth-ldap">
+    <td><label for="${keys.USERNAME}">Username</label></td>
+    <td>
+        <props:textProperty name="${keys.USERNAME}"
+                            className="longField textProperty_max-width js_max-width"/>
+        <span class="error" id="error_${keys.USERNAME}"/>
+        <%--<span class="smallNote"></span>--%>
+    </td>
+</tr>
+
+<tr class="noBorder auth-container auth-ldap">
+    <td><label for="${keys.PASSWORD}">Password</label></td>
+    <td>
+        <props:passwordProperty name="${keys.PASSWORD}"
+                                className="longField textProperty_max-width js_max-width"/>
+        <span class="error" id="error_${keys.PASSWORD}"/>
         <%--<span class="smallNote"></span>--%>
     </td>
 </tr>

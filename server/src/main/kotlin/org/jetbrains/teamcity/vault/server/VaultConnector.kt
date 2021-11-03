@@ -33,12 +33,9 @@ import org.jetbrains.teamcity.vault.support.VaultResponses
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.http.HttpStatus
 import org.springframework.vault.VaultException
-import org.springframework.vault.authentication.AppRoleAuthenticationOptions
-import org.springframework.vault.authentication.AwsIamAuthentication
-import org.springframework.vault.authentication.AwsIamAuthenticationOptions
+import org.springframework.vault.authentication.*
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
-import org.springframework.vault.support.VaultToken
 import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
@@ -72,31 +69,35 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         @JvmStatic
         fun revoke(info: LeasedWrappedTokenInfo, trustStoreProvider: SSLTrustStoreProvider, catch: Boolean = true): Boolean {
             val settings = info.connection
-            if (settings.auth.method == AuthMethod.AWS_IAM) {
-                // AWS IAM auth uses separate tokens, so we cannot revoke agent token from server
-                // we don't even request wrapped token before build
-                return true
-            }
-            assert(settings.auth.method == AuthMethod.APPROLE)
-            try {
-                val template = createRestTemplate(settings, trustStoreProvider)
-                // Login and retrieve server token
-                val (token, _) = performLogin(template, settings, extractTokenAndAccessor)
-
-                template.withVaultToken(token)
-                try {
-                    // Revoke agent token
-                    revokeAccessor(template, info.accessor, info.connection)
-                } finally {
-                    // Revoke server token we just obtained
-                    revokeSelf(template)
+            when (settings.auth.method) {
+                AuthMethod.AWS_IAM -> {
+                    // AWS IAM auth uses separate tokens, so we cannot revoke agent token from server
+                    // we don't even request wrapped token before build
+                    return true
                 }
-                return true
-            } catch (e: Exception) {
-                LOG.warnAndDebugDetails("Failed to revoke token", e)
-                if (!catch) throw e
+                AuthMethod.APPROLE,
+                AuthMethod.LDAP -> {
+                    try {
+                        val template = createRestTemplate(settings, trustStoreProvider)
+                        // Login and retrieve server token
+                        val (token, _) = performLogin(template, settings, extractTokenAndAccessor)
+
+                        template.withVaultToken(token)
+                        try {
+                            // Revoke agent token
+                            revokeAccessor(template, info.accessor, info.connection)
+                        } finally {
+                            // Revoke server token we just obtained
+                            revokeSelf(template)
+                        }
+                        return true
+                    } catch (e: Exception) {
+                        LOG.warnAndDebugDetails("Failed to revoke token", e)
+                        if (!catch) throw e
+                    }
+                    return false
+                }
             }
-            return false
         }
 
         /**
@@ -118,12 +119,12 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
 
         private fun getTokenFromAwsIamAuth(template: RestTemplate): Pair<String, String> {
             val options = AwsIamAuthenticationOptions.builder()
-                    .credentialsProvider(InstanceProfileCredentialsProvider.getInstance()).build()
+                .credentialsProvider(InstanceProfileCredentialsProvider.getInstance())
+                .build()
 
-            val token: VaultToken
-            val aws = AwsIamAuthentication(options, template)
+            val authentication = AwsIamAuthentication(options, template)
             try {
-                token = aws.login()
+                val token = authentication.login()
                 template.withVaultToken(token.token)
                 val response = template.getForEntity("/auth/token/lookup-self", VaultResponse::class.java)
                 val data = response.body.data
@@ -135,7 +136,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             } catch (e: VaultException) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
-                    throw getReadableException(cause)
+                    throw getReadableException(cause, AuthMethod.AWS_IAM)
                 }
                 throw e
             }
@@ -162,6 +163,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                 when (settings.auth.method) {
                     AuthMethod.APPROLE -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give approle '${(settings.auth as Auth.AppRoleAuthServer).roleId}' 'update' access to '/auth/token/revoke-accessor'$suffix")
                     AuthMethod.AWS_IAM -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give AWS IAM role access to '/auth/token/revoke-accessor'$suffix")
+                    AuthMethod.LDAP -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give LDAP role access to '/auth/token/revoke-accessor'$suffix")
                 }
                 return true
             }
@@ -215,11 +217,10 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             return login
         }
 
-        private fun getReadableException(cause: HttpStatusCodeException, replacer: ((String) -> String)? = null): ConnectionException {
+        private fun getReadableException(cause: HttpStatusCodeException, method: AuthMethod, replacer: ((String) -> String)? = null): ConnectionException {
             val err = VaultResponses.getError(cause)
-            val prefix = "Cannot log in to HashiCorp Vault using AppRole credentials"
-            val message: String
-            message = setOf("failed to validate credentials: ", "failed to validate SecretID: ")
+            val prefix = "Cannot log in to HashiCorp Vault using ${method.name} method"
+            val message: String = setOf("failed to validate credentials: ", "failed to validate SecretID: ")
                     .find { err.startsWith(it) }
                     ?.let {
                         val suberror = err.removePrefix(it)
@@ -254,25 +255,51 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         }
 
         private fun performLogin(template: RestTemplate, settings: VaultFeatureSettings, extractor: (VaultResponse) -> Pair<String, String>): Pair<String, String> {
-            val appRoleAuth = settings.auth as Auth.AppRoleAuthServer
+            when (val auth = settings.auth) {
+                is Auth.AppRoleAuthServer -> {
+                    val options = AppRoleAuthenticationOptions.builder()
+                        .path(auth.getNormalizedEndpoint())
+                        .roleId(auth.roleId)
+                        .secretId(auth.secretId)
+                        .build()
 
-            val options = AppRoleAuthenticationOptions.builder()
-                    .path(appRoleAuth.getNormalizedEndpoint())
-                    .roleId(appRoleAuth.roleId)
-                    .secretId(appRoleAuth.secretId)
-                    .build()
-            val login = getAppRoleLogin(appRoleAuth)
+                    val body = getAppRoleLogin(auth)
+                    val path = "auth/${options.path}/login"
 
+                    return performLoginRequest(template, auth.method, path, body, auth.secretId, extractor)
+                }
+                is Auth.LdapServer -> {
+                    val options = LdapAuthenticationOptions.builder()
+                        .username(auth.username)
+                        .password(auth.password)
+                        .build()
+
+                    val path = options.path
+                    val body = mapOf("password" to auth.password)
+
+                    return performLoginRequest(template, auth.method, path, body, auth.password, extractor)
+                }
+                else -> error("Unsupported auth method: ${settings.auth.method}, class: ${settings.auth::class.qualifiedName}")
+            }
+        }
+
+        private fun performLoginRequest(
+            template: RestTemplate,
+            method: AuthMethod,
+            path: String,
+            body: Map<String, String>,
+            maskingValue: String,
+            extractor: (VaultResponse) -> Pair<String, String>
+        ): Pair<String, String> {
             try {
-                val path = "auth/${options.path}/login"
-                val vaultResponse = template.write(path, login)
-                        ?: throw VaultException("HashiCorp Vault hasn't returned anything from POST to '$path'")
+                val vaultResponse = template.write(path, body)
+                    ?: throw VaultException("HashiCorp Vault hasn't returned anything from POST to '$path'")
 
                 return extractor(vaultResponse)
             } catch (e: VaultException) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
-                    throw getReadableException(cause) { it.replace(appRoleAuth.secretId, "*******") }
+                    throw getReadableException(cause, method) { it.replace(maskingValue, "*******") }
                 }
                 throw e
             }
@@ -334,7 +361,8 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
 
     fun tryRequestToken(settings: VaultFeatureSettings): LeasedTokenInfo {
         return when (settings.auth.method) {
-            AuthMethod.APPROLE -> {
+            AuthMethod.APPROLE,
+            AuthMethod.LDAP -> {
                 val (token, accessor) = doRequestToken(settings, trustStoreProvider)
                 LeasedTokenInfo(token, accessor, settings)
             }

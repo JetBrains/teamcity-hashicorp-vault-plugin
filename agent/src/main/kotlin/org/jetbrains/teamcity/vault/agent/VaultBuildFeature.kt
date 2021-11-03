@@ -42,7 +42,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
     init {
         if (isJava8OrNewer()) {
             dispatcher.addListener(this)
-            LOG.info("HashiCorp Vault intergration enabled")
+            LOG.info("HashiCorp Vault integration enabled")
         } else {
             dispatcher.addListener(FailBuildListener())
             LOG.warn("HashiCorp Vault integration disabled: agent should be running under Java 1.8 or newer")
@@ -83,8 +83,13 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                 try {
                     val template = createRestTemplate(settings, trustStoreProvider)
                     val authentication: ClientAuthentication = when (settings.auth.method) {
-                        AuthMethod.APPROLE -> {
-                            val wrapped = (settings.auth as Auth.AppRoleAuthAgent).wrappedToken
+                        AuthMethod.APPROLE,
+                        AuthMethod.LDAP -> {
+                            val wrapped = when (val auth = settings.auth) {
+                                is Auth.AppRoleAuthAgent -> auth.wrappedToken
+                                is Auth.LdapAgent -> auth.wrappedToken
+                                else -> error("Unsupported auth method: ${settings.auth.method}, class: ${settings.auth::class.qualifiedName}")
+                            }
                             if (wrapped.isEmpty()) {
                                 logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
                                 return@activity
@@ -93,7 +98,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                                 logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token value for url $url is incorrect, seems there was error fetching token on TeamCity server side", null)
                                 return@activity
                             }
-                            createAppRoleAuthentication(wrapped, template)
+                            createCubbyholeAuthentication(wrapped, template)
                         }
                         AuthMethod.AWS_IAM -> {
                             createAwsIamAuthentication(template)
@@ -107,6 +112,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                     val errorPrefix = when (settings.auth.method) {
                         AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token"
                         AuthMethod.AWS_IAM -> "Failed to get HashiCorp Vault token using AWS IAM auth"
+                        AuthMethod.LDAP -> "Failed to get HashiCorp Vault token using LDAP"
                     }
                     if (settings.failOnError) {
                         logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorPrefix + ": " + e.message, e)
@@ -147,7 +153,7 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
         return AwsIamAuthentication(options, restTemplate)
     }
 
-    private fun createAppRoleAuthentication(wrapped: String, restTemplate: RestTemplate): CubbyholeAuthentication {
+    private fun createCubbyholeAuthentication(wrapped: String, restTemplate: RestTemplate): CubbyholeAuthentication {
         val options = CubbyholeAuthenticationOptions.builder()
                 .wrapped()
                 .initialToken(VaultToken.of(wrapped))

@@ -43,10 +43,10 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             }
 
             if (reportProblems) {
-                projectToFeaturePairs.groupBy({ it.first }, { it.second }).forEach { pid, features ->
+                projectToFeaturePairs.groupBy({ it.first }, { it.second }).forEach { (pid, features) ->
                     features.groupBy { it.namespace }
                             .filterValues { it.size > 1 }
-                            .forEach { namespace, clashing ->
+                            .forEach { (namespace, clashing) ->
                                 val nsDescripption = if (isDefault(namespace)) "default namespace" else "'$namespace' namespace"
                                 val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project '$pid'"
                                 build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection", message))
@@ -84,13 +84,13 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 return@map
             }
 
-            if (settings.auth is Auth.AppRoleAuthServer) {
+            if (settings.auth is Auth.AppRoleAuthServer || settings.auth is Auth.LdapServer) {
                 val wrappedToken: String = try {
                     connector.requestWrappedToken(build, settings)
                 } catch (e: Throwable) {
                     val message = "Failed to fetch HashiCorp Vault$ns wrapped token: ${e.message}"
                     LOG.warn(message, e)
-                    val msg = message + ": " + e.toString() + ", see teamcity-server.log for details"
+                    val msg = "$message: $e, see teamcity-server.log for details"
                     build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.namespace}", "VaultConnection", msg))
                     if (settings.failOnError) {
                         build.stop(null, msg)

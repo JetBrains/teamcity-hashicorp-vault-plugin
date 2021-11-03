@@ -52,30 +52,42 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
             return PropertiesProcessor {
                 val errors = ArrayList<InvalidProperty>()
                 if (it[VaultConstants.FeatureSettings.URL].isNullOrBlank()) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
+                    errors += InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty")
                 }
                 // NAMESPACE can be empty, means default one
                 val namespace = it[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
                 val namespaceRegex = "[a-zA-Z0-9_-]+"
                 if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.NAMESPACE, "Non-default namespace should match regex '$namespaceRegex'"))
+                    errors += InvalidProperty(VaultConstants.FeatureSettings.NAMESPACE, "Non-default namespace should match regex '$namespaceRegex'")
                 }
 
                 when (it[VaultConstants.FeatureSettings.AUTH_METHOD]) {
                     VaultConstants.FeatureSettings.AUTH_METHOD_IAM -> {
-                        it.remove(VaultConstants.FeatureSettings.ENDPOINT)
-                        it.remove(VaultConstants.FeatureSettings.ROLE_ID)
-                        it.remove(VaultConstants.FeatureSettings.SECRET_ID)
+                        it -= VaultConstants.FeatureSettings.ENDPOINT
+                        it -= VaultConstants.FeatureSettings.ROLE_ID
+                        it -= VaultConstants.FeatureSettings.SECRET_ID
                     }
                     VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE -> {
                         if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
-                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
+                            errors += InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty")
                         }
                         if (it[VaultConstants.FeatureSettings.ROLE_ID].isNullOrBlank()) {
-                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.ROLE_ID, "Should not be empty"))
+                            errors += InvalidProperty(VaultConstants.FeatureSettings.ROLE_ID, "Should not be empty")
                         }
                         if (it[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
-                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
+                            errors += InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty")
+                        }
+                    }
+                    VaultConstants.FeatureSettings.AUTH_METHOD_LDAP -> {
+                        it -= VaultConstants.FeatureSettings.ENDPOINT
+                        it -= VaultConstants.FeatureSettings.ROLE_ID
+                        it -= VaultConstants.FeatureSettings.SECRET_ID
+
+                        if (it[VaultConstants.FeatureSettings.USERNAME].isNullOrBlank()) {
+                            errors += InvalidProperty(VaultConstants.FeatureSettings.USERNAME, "Should not be empty")
+                        }
+                        if (it[VaultConstants.FeatureSettings.PASSWORD].isNullOrBlank()) {
+                            errors += InvalidProperty(VaultConstants.FeatureSettings.PASSWORD, "Should not be empty")
                         }
                     }
                 }

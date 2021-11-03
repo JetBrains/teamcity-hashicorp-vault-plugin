@@ -54,9 +54,13 @@ object VaultConstants {
         @JvmField val ROLE_ID = "role-id"
         @JvmField val SECRET_ID = "secure:secret-id"
 
+        @JvmField val USERNAME = "username"
+        @JvmField val PASSWORD = "secure:password"
+
         @JvmField val AUTH_METHOD = "auth-method"
         @JvmField val AUTH_METHOD_IAM = AuthMethod.AWS_IAM.id
         @JvmField val AUTH_METHOD_APPROLE = AuthMethod.APPROLE.id
+        @JvmField val AUTH_METHOD_LDAP = AuthMethod.LDAP.id
         @JvmField val DEFAULT_AUTH_METHOD = AuthMethod.APPROLE.id
 
         @JvmField val FAIL_ON_ERROR = "fail-on-error"

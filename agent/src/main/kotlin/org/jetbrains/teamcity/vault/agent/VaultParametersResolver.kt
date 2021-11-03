@@ -65,7 +65,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
     fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>, logger: BuildProgressLogger): ResolvingResult {
         val endpoint = VaultEndpoint.from(URI.create(settings.url))
         val factory = createClientHttpRequestFactory(trustStoreProvider)
-        val client = VaultTemplate(endpoint, settings.vaultNamespace, factory, SimpleSessionManager({ VaultToken.of(token) }))
+        val client = VaultTemplate(endpoint, settings.vaultNamespace, factory, SimpleSessionManager { VaultToken.of(token) })
 
         return doFetchAndPrepareReplacements(client, parameters, logger)
     }

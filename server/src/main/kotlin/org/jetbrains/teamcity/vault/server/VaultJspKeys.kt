@@ -17,6 +17,7 @@ package org.jetbrains.teamcity.vault.server
 
 import org.jetbrains.teamcity.vault.VaultConstants
 
+@Suppress("PropertyName")
 class VaultJspKeys {
     val NAMESPACE = VaultConstants.FeatureSettings.NAMESPACE
     val URL = VaultConstants.FeatureSettings.URL
@@ -27,9 +28,13 @@ class VaultJspKeys {
     val ROLE_ID = VaultConstants.FeatureSettings.ROLE_ID
     val SECRET_ID = VaultConstants.FeatureSettings.SECRET_ID
 
+    val USERNAME = VaultConstants.FeatureSettings.USERNAME
+    val PASSWORD = VaultConstants.FeatureSettings.PASSWORD
+
     val AUTH_METHOD = VaultConstants.FeatureSettings.AUTH_METHOD
     val AUTH_METHOD_IAM = VaultConstants.FeatureSettings.AUTH_METHOD_IAM
     val AUTH_METHOD_APPROLE = VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE
+    val AUTH_METHOD_LDAP = VaultConstants.FeatureSettings.AUTH_METHOD_LDAP
 
     val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
 
