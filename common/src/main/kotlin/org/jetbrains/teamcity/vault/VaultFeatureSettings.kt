@@ -16,11 +16,13 @@
 package org.jetbrains.teamcity.vault
 
 enum class AuthMethod(val id: String) {
-    APPROLE("approle"), AWS_IAM("iam")
+    APPROLE("approle"),
+    AWS_IAM("iam"),
+    LDAP("ldap"),
 }
 
 sealed class Auth(val method: AuthMethod) {
-    class AppRoleAuthServer(val endpoint: String, val roleId: String, val secretId: String) : Auth(AuthMethod.APPROLE) {
+    data class AppRoleAuthServer(val endpoint: String, val roleId: String, val secretId: String) : Auth(AuthMethod.APPROLE) {
         fun getNormalizedEndpoint(): String {
             var x = endpoint
             while (x.startsWith("/")) {
@@ -35,62 +37,31 @@ sealed class Auth(val method: AuthMethod) {
             map[VaultConstants.FeatureSettings.ROLE_ID] = roleId
             map[VaultConstants.FeatureSettings.SECRET_ID] = secretId
         }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as AppRoleAuthServer
-
-            if (endpoint != other.endpoint) return false
-            if (roleId != other.roleId) return false
-            if (secretId != other.secretId) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = endpoint.hashCode()
-            result = 31 * result + roleId.hashCode()
-            result = 31 * result + secretId.hashCode()
-            return result
-        }
     }
 
-    class AppRoleAuthAgent(val wrappedToken: String) : Auth(AuthMethod.APPROLE) {
+    data class AppRoleAuthAgent(val wrappedToken: String) : Auth(AuthMethod.APPROLE) {
         override fun toMap(map: MutableMap<String, String>) {
             map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
         }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as AppRoleAuthAgent
-
-            if (wrappedToken != other.wrappedToken) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return wrappedToken.hashCode()
-        }
     }
 
-    class AwsIam : Auth(AuthMethod.AWS_IAM) {
+    object AwsIam : Auth(AuthMethod.AWS_IAM) {
         override fun toMap(map: MutableMap<String, String>) {
             map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
         }
+    }
 
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-            return true
+    data class LdapServer(val username: String, val password: String) : Auth(AuthMethod.LDAP) {
+        override fun toMap(map: MutableMap<String, String>) {
+            map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
+            map[VaultConstants.FeatureSettings.USERNAME] = username
+            map[VaultConstants.FeatureSettings.PASSWORD] = password
         }
+    }
 
-        override fun hashCode(): Int {
-            return javaClass.hashCode()
+    data class LdapAgent(val wrappedToken: String) : Auth(AuthMethod.LDAP) {
+        override fun toMap(map: MutableMap<String, String>) {
+            map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
         }
     }
 
@@ -110,7 +81,11 @@ sealed class Auth(val method: AuthMethod) {
                             map[VaultConstants.FeatureSettings.SECRET_ID] ?: ""
                     )
                 }
-                AuthMethod.AWS_IAM.id -> AwsIam()
+                AuthMethod.AWS_IAM.id -> AwsIam
+                AuthMethod.LDAP.id -> LdapServer(
+                        map[VaultConstants.FeatureSettings.USERNAME] ?: "",
+                        map[VaultConstants.FeatureSettings.PASSWORD] ?: ""
+                )
                 else -> error("Unexpected auth method '$kind'")
             }
         }
@@ -120,7 +95,8 @@ sealed class Auth(val method: AuthMethod) {
                     ?: VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD
             return when (kind) {
                 AuthMethod.APPROLE.id -> AppRoleAuthAgent(parameters.getOrDefault(getVaultParameterName(namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), ""))
-                AuthMethod.AWS_IAM.id -> AwsIam()
+                AuthMethod.AWS_IAM.id -> AwsIam
+                AuthMethod.LDAP.id -> LdapAgent(parameters.getOrDefault(getVaultParameterName(namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), ""))
 
                 // default
                 else -> error("Unexpected auth method '$kind'")

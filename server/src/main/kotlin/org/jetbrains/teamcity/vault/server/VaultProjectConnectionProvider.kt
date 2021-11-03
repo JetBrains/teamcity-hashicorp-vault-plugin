@@ -66,8 +66,13 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                         it.remove(VaultConstants.FeatureSettings.ENDPOINT)
                         it.remove(VaultConstants.FeatureSettings.ROLE_ID)
                         it.remove(VaultConstants.FeatureSettings.SECRET_ID)
+                        it.remove(VaultConstants.FeatureSettings.USERNAME)
+                        it.remove(VaultConstants.FeatureSettings.PASSWORD)
                     }
                     VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE -> {
+                        it.remove(VaultConstants.FeatureSettings.USERNAME)
+                        it.remove(VaultConstants.FeatureSettings.PASSWORD)
+
                         if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
                             errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
                         }
@@ -76,6 +81,18 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                         }
                         if (it[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
                             errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
+                        }
+                    }
+                    VaultConstants.FeatureSettings.AUTH_METHOD_LDAP -> {
+                        it.remove(VaultConstants.FeatureSettings.ENDPOINT)
+                        it.remove(VaultConstants.FeatureSettings.ROLE_ID)
+                        it.remove(VaultConstants.FeatureSettings.SECRET_ID)
+
+                        if (it[VaultConstants.FeatureSettings.USERNAME].isNullOrBlank()) {
+                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.USERNAME, "Should not be empty"))
+                        }
+                        if (it[VaultConstants.FeatureSettings.PASSWORD].isNullOrBlank()) {
+                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.PASSWORD, "Should not be empty"))
                         }
                     }
                 }

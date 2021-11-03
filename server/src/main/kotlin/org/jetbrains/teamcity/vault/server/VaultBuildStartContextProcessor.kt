@@ -84,7 +84,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 return@map
             }
 
-            if (settings.auth is Auth.AppRoleAuthServer) {
+            if (settings.auth is Auth.AppRoleAuthServer || settings.auth is Auth.LdapServer) {
                 val wrappedToken: String = try {
                     connector.requestWrappedToken(build, settings)
                 } catch (e: Throwable) {
