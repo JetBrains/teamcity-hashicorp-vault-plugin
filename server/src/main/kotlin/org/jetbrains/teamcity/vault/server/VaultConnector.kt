@@ -22,10 +22,7 @@ import com.google.common.util.concurrent.Striped
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.containers.ConcurrentHashSet
 import jetbrains.buildServer.log.Loggers
-import jetbrains.buildServer.serverSide.BuildServerAdapter
-import jetbrains.buildServer.serverSide.BuildServerListener
-import jetbrains.buildServer.serverSide.SBuild
-import jetbrains.buildServer.serverSide.SRunningBuild
+import jetbrains.buildServer.serverSide.*
 import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
@@ -238,7 +235,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             val factory = createClientHttpRequestFactory(trustStoreProvider)
 
             val template = VaultTemplate(endpoint, settings.vaultNamespace, factory, null)
-            template.wrapResponses("10m")
+            template.wrapResponses(TeamCityProperties.getProperty("teamcity.vault.xVaultWrapTTL", "10m"))
 
             return performLogin(template.defaultTemplate, settings, extractWrappedTokenAndAccessor)
         }
