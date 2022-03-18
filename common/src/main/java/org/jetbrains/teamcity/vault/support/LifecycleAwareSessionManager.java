@@ -34,6 +34,7 @@ import org.springframework.web.client.RestOperations;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -56,6 +57,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
     protected final Object lock = new Object();
 
     private volatile VaultToken token;
+    private volatile ScheduledFuture<?> scheduled;
 
     public LifecycleAwareSessionManager(@NotNull ClientAuthentication clientAuthentication,
                                         @NotNull TaskScheduler taskScheduler,
@@ -76,6 +78,12 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 
         if (token instanceof LoginToken) {
             revoke(token);
+        }
+
+        ScheduledFuture<?> scheduled = this.scheduled;
+        this.scheduled = null;
+        if (scheduled != null) {
+            scheduled.cancel(true);
         }
     }
 
@@ -202,6 +210,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
             final Runnable task = new Runnable() {
                 @Override
                 public void run() {
+                    scheduled = null;
                     try {
                         if (isTokenRenewable()) {
                             boolean mayRenewAgainLater = renewToken();
@@ -217,7 +226,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
             };
             Date startTime = refreshTrigger.nextExecutionTime((LoginToken) token);
             LOG.info("Scheduling HashiCorp Vault token refresh to " + startTime);
-            taskScheduler.schedule(task, startTime);
+            scheduled = taskScheduler.schedule(task, startTime);
         }
     }
 
