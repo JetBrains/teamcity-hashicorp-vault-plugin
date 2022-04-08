@@ -32,6 +32,7 @@ dependencies {
     compile('com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.0')
     compile('com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.8.0')
     provided "org.springframework:spring-web:$spring_version"
+    provided "org.springframework:spring-context:$spring_version"
     provided "org.apache.httpcomponents:httpclient:$httpclient_version"
 
     testFixturesApi "org.testcontainers:testcontainers:$testcontainers_version"
