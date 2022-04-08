@@ -137,7 +137,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
                     new HttpEntity<Object>(VaultHttpHeaders.from(token)),
                     VaultResponse.class);
             LoginToken renewed = from(vaultResponse.getAuth());
-            LOG.info(String.format("Received token: LoginToken(renewable=%b, lease_duration=%d):", renewed.isRenewable(), renewed.getLeaseDuration()));
+            LOG.info(String.format("Received token: LoginToken(renewable=%b, lease_duration=%d):", renewed.isRenewable(), renewed.getLeaseDuration().getSeconds()));
 
             long validTtlThreshold = TimeUnit.MILLISECONDS.toSeconds(refreshTrigger.getValidTtlThreshold());
             if (renewed.getLeaseDuration().getSeconds() <= validTtlThreshold) {
@@ -159,7 +159,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
             return false;
         } catch (RuntimeException e) {
             logger.warning("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getMessage());
-            LOG.warn("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getMessage());
+            LOG.warn("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getMessage(), e);
             this.token = null;
             return false;
         }
