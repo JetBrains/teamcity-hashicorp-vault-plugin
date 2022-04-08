@@ -99,8 +99,8 @@ public class ClientHttpRequestFactoryFactory {
             }
 
             RequestConfig requestConfig = RequestConfig.custom()
-                    .setConnectTimeout(options.getConnectionTimeout())
-                    .setSocketTimeout(options.getReadTimeout())
+                    .setConnectTimeout((int) options.getConnectionTimeout().toMillis())
+                    .setSocketTimeout((int) options.getReadTimeout().toMillis())
                     .setAuthenticationEnabled(true)
                     .build();
 

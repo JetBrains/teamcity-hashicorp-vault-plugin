@@ -140,7 +140,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
             LOG.info(String.format("Received token: LoginToken(renewable=%b, lease_duration=%d):", renewed.isRenewable(), renewed.getLeaseDuration()));
 
             long validTtlThreshold = TimeUnit.MILLISECONDS.toSeconds(refreshTrigger.getValidTtlThreshold());
-            if (renewed.getLeaseDuration() <= validTtlThreshold) {
+            if (renewed.getLeaseDuration().getSeconds() <= validTtlThreshold) {
                 LOG.warn(String.format("Token TTL (%s) exceeded validity TTL threshold (%s). Dropping token.",
                         renewed.getLeaseDuration(), validTtlThreshold));
                 logger.warning("HashiCorp Vault token exceed validity TTL threshold and would be dropped.");
@@ -186,7 +186,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
     protected VaultToken login() {
         VaultToken token = clientAuthentication.login();
         if (token instanceof LoginToken) {
-            LOG.info(String.format("Logged in with token: LoginToken(renewable=%b, lease_duration=%d):", ((LoginToken) token).isRenewable(), ((LoginToken) token).getLeaseDuration()));
+            LOG.info(String.format("Logged in with token: LoginToken(renewable=%b, lease_duration=%d):", ((LoginToken) token).isRenewable(), ((LoginToken) token).getLeaseDuration().getSeconds()));
         } else if (token != null) {
             LOG.info("Logged in with token: regular VaultToken");
         } else {
@@ -199,7 +199,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
         VaultToken token = this.token;
         if (token instanceof LoginToken) {
             LoginToken loginToken = (LoginToken) token;
-            return loginToken.getLeaseDuration() > 0L && loginToken.isRenewable();
+            return loginToken.getLeaseDuration().getSeconds() > 0L && loginToken.isRenewable();
         }
         return false;
     }
@@ -249,7 +249,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
         public Date nextExecutionTime(LoginToken loginToken) {
             long milliseconds = Math.max(
                     TimeUnit.SECONDS.toMillis(1L),
-                    TimeUnit.SECONDS.toMillis(loginToken.getLeaseDuration())
+                    TimeUnit.SECONDS.toMillis(loginToken.getLeaseDuration().getSeconds())
                             - timeUnit.toMillis(duration));
 
             return new Date(System.currentTimeMillis() + milliseconds);

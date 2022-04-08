@@ -27,6 +27,8 @@ class VaultHealthImpl implements VaultHealth {
 	private final boolean sealed;
 	private final boolean standby;
 	private final int serverTimeUtc;
+	private final boolean performanceStandby;
+	private final boolean recoveryReplicationSecondary;
 
 	@Nullable
 	private final String version;
@@ -35,13 +37,18 @@ class VaultHealthImpl implements VaultHealth {
 							@JsonProperty("sealed") boolean sealed,
 							@JsonProperty("standby") boolean standby,
 							@JsonProperty("server_time_utc") int serverTimeUtc,
-							@Nullable @JsonProperty("version") String version) {
+							@Nullable @JsonProperty("version") String version,
+							@JsonProperty("performance_standby") boolean performanceStandby,
+							@JsonProperty("recovery_replication_secondary") boolean recoveryReplicationSecondary
+							) {
 
 		this.initialized = initialized;
 		this.sealed = sealed;
 		this.standby = standby;
 		this.serverTimeUtc = serverTimeUtc;
 		this.version = version;
+		this.performanceStandby = performanceStandby;
+		this.recoveryReplicationSecondary = recoveryReplicationSecondary;
 	}
 
 	@Override
@@ -57,6 +64,16 @@ class VaultHealthImpl implements VaultHealth {
 	@Override
 	public boolean isStandby() {
 		return standby;
+	}
+
+	@Override
+	public boolean isPerformanceStandby() {
+		return performanceStandby;
+	}
+
+	@Override
+	public boolean isRecoveryReplicationSecondary() {
+		return recoveryReplicationSecondary;
 	}
 
 	@Override
