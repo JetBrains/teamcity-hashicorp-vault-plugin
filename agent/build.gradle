@@ -29,7 +29,9 @@ dependencies {
     compile("org.springframework.vault:spring-vault-core:$sprint_vault_version") {
         exclude group: 'org.springframework'
     }
-    compile "org.apache.httpcomponents:httpclient:$httpclient_version"
+    compile("org.apache.httpcomponents:httpclient:$httpclient_version") {
+        exclude group: 'commons-logging'
+    }
 
     testImplementation(testFixtures(project(':common')))
     testCompile "org.jetbrains.teamcity:tests-support:$teamcity_version"
