@@ -16,6 +16,7 @@
 package org.jetbrains.teamcity.vault
 
 import jetbrains.buildServer.agent.BuildProgressLogger
+import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.VersionComparatorUtil
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
@@ -113,8 +114,13 @@ private fun createRestTemplate(): RestTemplate {
 }
 
 fun isShouldSetEnvParameters(parameters: MutableMap<String, String>, namespace: String): Boolean {
-    return parameters[getVaultParameterName(namespace, VaultConstants.BehaviourParameters.ExposeEnvSuffix)]
-            ?.toBoolean() ?: false
+    val vaultParameterName = getVaultParameterName(namespace, VaultConstants.BehaviourParameters.ExposeEnvSuffix)
+    val vaultParameterValue: String? = parameters[vaultParameterName]
+    if (vaultParameterValue == null || !vaultParameterValue.toBoolean()) {
+        Loggers.SERVER.debug("$vaultParameterName is set to false, skipping environment variables population")
+        return false
+    }
+    return true
 }
 
 private fun createUriTemplateHandler(endpoint: VaultEndpoint): DefaultUriTemplateHandler {

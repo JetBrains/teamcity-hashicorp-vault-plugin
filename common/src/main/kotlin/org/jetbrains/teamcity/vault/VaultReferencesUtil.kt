@@ -15,18 +15,25 @@
  */
 package org.jetbrains.teamcity.vault
 
+import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.parameters.ReferencesResolverUtil
 
 object VaultReferencesUtil {
+    val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultReferencesUtil::class.java.name)!!
 
     @JvmStatic
     fun hasReferences(parameters: Map<String, String>, namespaces: Collection<String>): Boolean {
-        for ((_, value) in parameters) {
-            if (!ReferencesResolverUtil.mayContainReference(value)) continue
+        for ((name, value) in parameters) {
+            if (!ReferencesResolverUtil.mayContainReference(value)) {
+                LOG.debug("$name does not contain Vault references")
+                continue
+            }
             val refs = getVaultReferences(value, namespaces)
             if (refs.isNotEmpty()) {
                 return true
             }
+            LOG.debug("$name has reference markers but does not contain Vault references")
         }
         return false
     }
