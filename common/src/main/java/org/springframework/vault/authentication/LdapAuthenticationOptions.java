@@ -22,8 +22,6 @@ import org.springframework.util.Assert;
  */
 public class LdapAuthenticationOptions {
 
-    public static final String DEFAULT_LDAP_AUTHENTICATION_PATH = "ldap";
-
     /**
      * Path of the ldap authentication backend mount.
      */
@@ -67,7 +65,7 @@ public class LdapAuthenticationOptions {
 
         private CharSequence password;
 
-        private String path = DEFAULT_LDAP_AUTHENTICATION_PATH;
+        private String path;
 
         LdapAuthenticationOptionsBuilder() {
         }
@@ -90,6 +88,7 @@ public class LdapAuthenticationOptions {
         public LdapAuthenticationOptions build() {
             Assert.notNull(this.username, "Username must not be null");
             Assert.notNull(this.password, "Password must not be null");
+            Assert.notNull(this.path, "Path must not be null");
 
             return new LdapAuthenticationOptions(username, password, path);
         }

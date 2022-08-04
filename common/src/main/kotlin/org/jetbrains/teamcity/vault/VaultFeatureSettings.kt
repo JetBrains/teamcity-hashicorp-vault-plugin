@@ -51,11 +51,12 @@ sealed class Auth(val method: AuthMethod) {
         }
     }
 
-    data class LdapServer(val username: String, val password: String) : Auth(AuthMethod.LDAP) {
+    data class LdapServer(val username: String, val password: String, val path: String) : Auth(AuthMethod.LDAP) {
         override fun toMap(map: MutableMap<String, String>) {
             map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
             map[VaultConstants.FeatureSettings.USERNAME] = username
             map[VaultConstants.FeatureSettings.PASSWORD] = password
+            map[VaultConstants.FeatureSettings.PATH] = path
         }
     }
 
@@ -84,7 +85,8 @@ sealed class Auth(val method: AuthMethod) {
                 AuthMethod.AWS_IAM.id -> AwsIam
                 AuthMethod.LDAP.id -> LdapServer(
                         map[VaultConstants.FeatureSettings.USERNAME] ?: "",
-                        map[VaultConstants.FeatureSettings.PASSWORD] ?: ""
+                        map[VaultConstants.FeatureSettings.PASSWORD] ?: "",
+                        map[VaultConstants.FeatureSettings.PATH] ?: ""
                 )
                 else -> error("Unexpected auth method '$kind'")
             }
@@ -146,7 +148,8 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
                     VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,
                     VaultConstants.FeatureSettings.FAIL_ON_ERROR to "true",
                     VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
-                    VaultConstants.FeatureSettings.URL to "http://localhost:8200"
+                    VaultConstants.FeatureSettings.URL to "http://localhost:8200",
+                    VaultConstants.FeatureSettings.PATH to "ldap"
             )
         }
 

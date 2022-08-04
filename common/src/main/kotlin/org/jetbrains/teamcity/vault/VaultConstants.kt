@@ -56,6 +56,7 @@ object VaultConstants {
 
         @JvmField val USERNAME = "username"
         @JvmField val PASSWORD = "secure:password"
+        @JvmField val PATH = "path"
 
         @JvmField val AUTH_METHOD = "auth-method"
         @JvmField val AUTH_METHOD_IAM = AuthMethod.AWS_IAM.id

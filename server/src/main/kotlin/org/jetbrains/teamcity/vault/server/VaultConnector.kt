@@ -270,6 +270,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                     val options = LdapAuthenticationOptions.builder()
                         .username(auth.username)
                         .password(auth.password)
+                        .path(auth.path)
                         .build()
 
                     val path = "auth/${options.path}/login/${options.username}"
