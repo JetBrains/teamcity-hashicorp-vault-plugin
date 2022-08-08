@@ -148,8 +148,7 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
                     VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,
                     VaultConstants.FeatureSettings.FAIL_ON_ERROR to "true",
                     VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
-                    VaultConstants.FeatureSettings.URL to "http://localhost:8200",
-                    VaultConstants.FeatureSettings.PATH to "ldap"
+                    VaultConstants.FeatureSettings.URL to "http://localhost:8200"
             )
         }
 
