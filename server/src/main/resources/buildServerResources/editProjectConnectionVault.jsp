@@ -179,7 +179,7 @@
     <td>
         <props:textProperty name="${keys.PATH}" className="longField textProperty_max-width js_max-width" />
         <span class="error" id="error_${keys.PATH}" />
-        <span class="smallNote">Path of the ldap authentication backend mount.</span>
+        <span class="smallNote">Path of the ldap authentication backend mount, if left blank defaults to ldap.</span>
     </td>
 </tr>
 
