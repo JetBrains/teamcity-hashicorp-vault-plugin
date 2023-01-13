@@ -22,14 +22,14 @@ buildscript {
         }
     }
     dependencies {
-        classpath group: 'com.github.rodm', name: 'gradle-teamcity-plugin', version: '1.2.2'
+        classpath group: 'com.github.rodm', name: 'gradle-teamcity-plugin', version: '1.4.1'
         classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: kotlin_version
     }
 }
 
 ext {
     version_prefix = '0.1'
-    teamcity_version = '2018.1'
+    teamcity_version = '2020.1'
     // compile
     spring_version = '5.3.18'
     sprint_vault_version = '2.3.2'
@@ -56,13 +56,13 @@ subprojects {
     apply plugin: 'java-test-fixtures'
     apply plugin: 'kotlin'
 
-    sourceCompatibility = "1.6"
-    targetCompatibility = "1.6"
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
-        kotlinOptions { jvmTarget = '1.6' }
-        sourceCompatibility = '1.6'
-        targetCompatibility = '1.6'
+        kotlinOptions { jvmTarget = '1.8' }
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
     }
 
     dependencies {
@@ -74,6 +74,6 @@ subprojects {
 }
 
 wrapper {
-    gradleVersion = '5.6.4'
+    gradleVersion = '6.9.3'
     distributionUrl = "https://cache-redirector.jetbrains.com/services.gradle.org/distributions/gradle-${gradleVersion}-bin.zip"
 }

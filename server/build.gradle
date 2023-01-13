@@ -51,6 +51,7 @@ teamcity {
             vendorUrl = 'https://www.jetbrains.com'
 
             useSeparateClassloader = true
+            nodeResponsibilitiesAware = true
         }
         archiveName = "${project.rootProject.name}.zip"
     }
