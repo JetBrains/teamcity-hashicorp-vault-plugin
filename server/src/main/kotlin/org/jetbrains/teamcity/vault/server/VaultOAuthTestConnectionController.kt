@@ -18,6 +18,7 @@ package org.jetbrains.teamcity.vault.server
 import jetbrains.buildServer.controllers.*
 import jetbrains.buildServer.controllers.admin.projects.EditVcsRootsController
 import jetbrains.buildServer.controllers.admin.projects.PluginPropertiesUtil
+import jetbrains.buildServer.serverSide.IOGuard
 import jetbrains.buildServer.serverSide.SBuildServer
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import jetbrains.buildServer.web.openapi.WebControllerManager
@@ -26,9 +27,11 @@ import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-class VaultOAuthTestConnectionController(server: SBuildServer, wcm: WebControllerManager,
-                                         private val trustStoreProvider: SSLTrustStoreProvider,
-                                         private val connector: VaultConnector) : BaseFormXmlController(server) {
+class VaultOAuthTestConnectionController(
+    server: SBuildServer, wcm: WebControllerManager,
+    private val trustStoreProvider: SSLTrustStoreProvider,
+    private val connector: VaultConnector
+) : BaseFormXmlController(server) {
     init {
         wcm.registerController("/admin/hashicorp-vault-test-connection.html", this)
     }
@@ -58,8 +61,10 @@ class VaultOAuthTestConnectionController(server: SBuildServer, wcm: WebControlle
 
         try {
             val settings = VaultFeatureSettings(properties)
-            val token = connector.tryRequestToken(settings)
-            VaultConnector.revoke(token, trustStoreProvider)
+            IOGuard.allowNetworkCall<Exception> {
+                val token = connector.tryRequestToken(settings)
+                VaultConnector.revoke(token, trustStoreProvider)
+            }
             XmlResponseUtil.writeTestResult(xmlResponse, "")
             return
         } catch (e: Exception) {
