@@ -18,12 +18,9 @@ package org.jetbrains.teamcity.vault.server
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.log.Loggers
-import jetbrains.buildServer.serverSide.BuildStartContext
-import jetbrains.buildServer.serverSide.BuildStartContextProcessor
-import jetbrains.buildServer.serverSide.SBuild
-import jetbrains.buildServer.serverSide.SRunningBuild
-import jetbrains.buildServer.serverSide.oauth.OAuthConstants
+import jetbrains.buildServer.serverSide.*
 import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.VaultReferencesUtil.makeVaultReference
 
 class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor {
     companion object {
@@ -32,33 +29,28 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
         private fun getFeatures(build: SRunningBuild, reportProblems: Boolean): List<VaultFeatureSettings> {
             val buildType = build.buildType ?: return emptyList()
 
-            val connectionFeatures = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
-                VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
-            }
-
-            // Two features with same prefix cannot coexist in same project
-            // Though it's possible to override feature with same prefix in subproject
-            val projectToFeaturePairs = connectionFeatures.map {
-                it.projectId to VaultFeatureSettings(it.parameters)
-            }
+            val projectToFeaturePairs = VaultConnectionUtils.getFeaturePairs(buildType.project)
 
             if (reportProblems) {
                 projectToFeaturePairs.groupBy({ it.first }, { it.second }).forEach { pid, features ->
                     features.groupBy { it.namespace }
-                            .filterValues { it.size > 1 }
-                            .forEach { namespace, clashing ->
-                                val nsDescripption = if (isDefault(namespace)) "default namespace" else "'$namespace' namespace"
-                                val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project '$pid'"
-                                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection", message))
-                                if (clashing.any { it.failOnError }) {
-                                    build.stop(null, message)
-                                }
+                        .filterValues { it.size > 1 }
+                        .forEach { namespace, clashing ->
+                            val nsDescripption = if (isDefault(namespace)) "default namespace" else "'$namespace' namespace"
+                            val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project '$pid'"
+                            build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection", message))
+                            if (clashing.any { it.failOnError }) {
+                                build.stop(null, message)
                             }
+                        }
                 }
             }
-            val vaultFeatures = projectToFeaturePairs.map { it.second }
 
-            return vaultFeatures.groupBy { it.namespace }.map { (_, v) -> v.first() }
+            return VaultConnectionUtils.groupFeatures(projectToFeaturePairs)
+        }
+
+        internal fun getVaultParameters(buildType: SBuildType) = buildType.buildParametersCollection.filter {
+            it.controlDescription?.parameterType == HashiCorpVaultParameter.PARAMETER_TYPE
         }
 
         internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings): Boolean {
@@ -77,9 +69,12 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
         if (settingsList.isEmpty())
             return
 
+        val buildType = build.buildType ?: return
+        val vaultParameters = getVaultParameters(buildType)
+
         settingsList.map { settings ->
             val ns = if (isDefault(settings.namespace)) "" else " ('${settings.namespace}' namespace)"
-            if (!isShouldEnableVaultIntegration(build, settings)) {
+            if (!isShouldEnableVaultIntegration(build, settings) && vaultParameters.isEmpty()) {
                 LOG.debug("There's no need to fetch HashiCorp Vault$ns parameter for build $build")
                 return@map
             }
@@ -103,5 +98,31 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
                 context.addSharedParameter(key, value)
             }
         }
+
+        addVaultParameters(settingsList, vaultParameters, context)
     }
+
+    internal fun addVaultParameters(
+        settingsList: List<VaultFeatureSettings>,
+        vaultParameters: List<Parameter>,
+        context: BuildStartContext
+    ) {
+        val namespaces = settingsList.map { it.namespace }
+        vaultParameters.forEach { parameter: Parameter ->
+            val parameterSettings = try {
+                VaultParameterSettings(parameter.controlDescription!!.parameterTypeArguments)
+            } catch (e: IllegalArgumentException) {
+                return@forEach
+            }
+
+            if (!namespaces.contains(parameterSettings.getNamespace())) {
+                return@forEach
+            }
+
+            val referenceableVaultParameter =
+                makeVaultReference(parameterSettings)
+            context.addSharedParameter(parameter.name, referenceableVaultParameter)
+        }
+    }
+
 }

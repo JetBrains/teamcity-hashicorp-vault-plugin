@@ -9,4 +9,5 @@
 
     <bean id="vaultProjectConnection" class="org.jetbrains.teamcity.vault.server.VaultProjectConnectionProvider"/>
     <bean id="vaultOAuthTestConnectionController" class="org.jetbrains.teamcity.vault.server.VaultOAuthTestConnectionController"/>
+    <bean class="org.jetbrains.teamcity.vault.server.HashiCorpVaultParameter"/>
 </beans>
