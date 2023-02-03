@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault.server
 
+import jetbrains.buildServer.controllers.BasePropertiesBean
 import jetbrains.buildServer.controllers.SimpleView
 import jetbrains.buildServer.controllers.parameters.InvalidParametersException
 import jetbrains.buildServer.controllers.parameters.ParameterContext
@@ -36,6 +37,8 @@ class HashiCorpVaultParameter(private val descriptor: PluginDescriptor) : Parame
     //TODO: TW-79366
     override fun renderControl(request: HttpServletRequest, context: ParameterRenderContext): ModelAndView {
         val modelAndView = fillModelWithVault(context) ?: return getErrorModel()
+        modelAndView.viewName = descriptor.getPluginResourcesPath("editCustomParameter.jsp")
+        modelAndView.model["propertiesBean"] = BasePropertiesBean(context.description.parameterTypeArguments)
 
         return modelAndView
     }
