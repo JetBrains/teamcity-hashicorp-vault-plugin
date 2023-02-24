@@ -19,10 +19,12 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.*
+import jetbrains.buildServer.util.positioning.PositionAware
+import jetbrains.buildServer.util.positioning.PositionConstraint
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.VaultReferencesUtil.makeVaultReference
 
-class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor {
+class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor, PositionAware {
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)!!
 
@@ -125,4 +127,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
         }
     }
 
+    override fun getOrderId() = "HashiCorpVaultPluginBuildStartContextProcessor"
+
+    override fun getConstraint() = PositionConstraint.last()
 }
