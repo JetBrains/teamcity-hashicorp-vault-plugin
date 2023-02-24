@@ -55,11 +55,13 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             it.controlDescription?.parameterType == HashiCorpVaultParameter.PARAMETER_TYPE
         }
 
-        internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings): Boolean {
+        internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings, sharedParameters: Map<String, String>): Boolean {
             val parameters = build.buildOwnParameters
             return isShouldSetEnvParameters(parameters, settings.namespace)
                     // Slowest part:
                     || VaultReferencesUtil.hasReferences(build.parametersProvider.all, listOf(settings.namespace))
+                    // Some parameters may be set by TeamCity (for example, docker registry username and password)
+                    || VaultReferencesUtil.hasReferences(sharedParameters, listOf(settings.namespace))
         }
 
     }
@@ -76,7 +78,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
         settingsList.map { settings ->
             val ns = if (isDefault(settings.namespace)) "" else " ('${settings.namespace}' namespace)"
-            if (!isShouldEnableVaultIntegration(build, settings) && vaultParameters.isEmpty()) {
+            if (!isShouldEnableVaultIntegration(build, settings, context.sharedParameters) && vaultParameters.isEmpty()) {
                 LOG.debug("There's no need to fetch HashiCorp Vault$ns parameter for build $build")
                 return@map
             }
