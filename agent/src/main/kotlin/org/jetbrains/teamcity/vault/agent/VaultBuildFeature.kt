@@ -21,6 +21,8 @@ import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.EventDispatcher
+import jetbrains.buildServer.util.positioning.PositionAware
+import jetbrains.buildServer.util.positioning.PositionConstraint
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.LifecycleAwareSessionManager
@@ -34,7 +36,7 @@ import java.util.concurrent.TimeUnit
 
 class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
                         private val trustStoreProvider: SSLTrustStoreProvider,
-                        private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter() {
+                        private val myVaultParametersResolver: VaultParametersResolver) : AgentLifeCycleAdapter(), PositionAware {
     companion object {
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultBuildFeature::class.java.name)!!
     }
@@ -170,4 +172,8 @@ class VaultBuildFeature(dispatcher: EventDispatcher<AgentLifeCycleListener>,
     override fun buildFinished(build: AgentRunningBuild, buildStatus: BuildFinishedStatus) {
         sessions.remove(build.buildId)
     }
+
+    override fun getOrderId() = "HashiCorpVaultPluginParamsResolvedBuildFeature"
+
+    override fun getConstraint() = PositionConstraint.first()
 }

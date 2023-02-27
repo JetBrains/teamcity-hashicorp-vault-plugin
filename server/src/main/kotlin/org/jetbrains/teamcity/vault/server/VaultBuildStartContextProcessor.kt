@@ -19,10 +19,12 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.*
+import jetbrains.buildServer.util.positioning.PositionAware
+import jetbrains.buildServer.util.positioning.PositionConstraint
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.VaultReferencesUtil.makeVaultReference
 
-class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor {
+class VaultBuildStartContextProcessor(private val connector: VaultConnector) : BuildStartContextProcessor, PositionAware {
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)!!
 
@@ -53,11 +55,13 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
             it.controlDescription?.parameterType == HashiCorpVaultParameter.PARAMETER_TYPE
         }
 
-        internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings): Boolean {
+        internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings, sharedParameters: Map<String, String>): Boolean {
             val parameters = build.buildOwnParameters
             return isShouldSetEnvParameters(parameters, settings.namespace)
                     // Slowest part:
                     || VaultReferencesUtil.hasReferences(build.parametersProvider.all, listOf(settings.namespace))
+                    // Some parameters may be set by TeamCity (for example, docker registry username and password)
+                    || VaultReferencesUtil.hasReferences(sharedParameters, listOf(settings.namespace))
         }
 
     }
@@ -74,7 +78,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
 
         settingsList.map { settings ->
             val ns = if (isDefault(settings.namespace)) "" else " ('${settings.namespace}' namespace)"
-            if (!isShouldEnableVaultIntegration(build, settings) && vaultParameters.isEmpty()) {
+            if (!isShouldEnableVaultIntegration(build, settings, context.sharedParameters) && vaultParameters.isEmpty()) {
                 LOG.debug("There's no need to fetch HashiCorp Vault$ns parameter for build $build")
                 return@map
             }
@@ -125,4 +129,7 @@ class VaultBuildStartContextProcessor(private val connector: VaultConnector) : B
         }
     }
 
+    override fun getOrderId() = "HashiCorpVaultPluginBuildStartContextProcessor"
+
+    override fun getConstraint() = PositionConstraint.last()
 }
