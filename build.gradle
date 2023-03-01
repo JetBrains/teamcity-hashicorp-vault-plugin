@@ -13,14 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.7.0'
-    id "io.github.rodm.teamcity-server" version "1.5"
+buildscript {
+    ext.kotlin_version = '1.3.72'
+    repositories {
+        mavenLocal()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath group: 'com.github.rodm', name: 'gradle-teamcity-plugin', version: '1.4.1'
+        classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: kotlin_version
+    }
 }
 
 ext {
-    ext.kotlin_version = '1.7.0'
     version_prefix = '0.1'
     teamcity_version = '2020.1'
     // compile
@@ -31,7 +38,6 @@ ext {
     jetty_version = '9.4.19.v20190610'
     testcontainers_version = '1.15.2'
     assertj_version = '1.7.1'
-    mockito_version = '4.1.0'
 }
 
 group = 'org.jetbrains.teamcity.vault'
@@ -59,33 +65,15 @@ subprojects {
         targetCompatibility = '1.8'
     }
 
-    tasks.withType(org.gradle.jvm.tasks.Jar) { duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
-
     dependencies {
-        implementation('com.amazonaws:aws-java-sdk-core:1.12.122') { dep ->
-            ['org.apache.httpcomponents', 'commons-logging'].each{ group -> dep.exclude group: group }
-        }
+        compile("org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}")
     }
-
-    repositories {
-        mavenLocal()
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-        mavenCentral()
-        google()
-    }
-
     if (System.getenv('TEAMCITY_VERSION') != null) {
         test.ignoreFailures = true
     }
 }
 
-repositories {
-    mavenLocal()
-    maven {
-        url "https://plugins.gradle.org/m2/"
-    }
-    mavenCentral()
-    google()
+wrapper {
+    gradleVersion = '6.9.3'
+    distributionUrl = "https://cache-redirector.jetbrains.com/services.gradle.org/distributions/gradle-${gradleVersion}-bin.zip"
 }

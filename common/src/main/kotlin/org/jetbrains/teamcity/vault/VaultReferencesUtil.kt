@@ -31,7 +31,6 @@ object VaultReferencesUtil {
         return false
     }
 
-
     @JvmStatic
     fun collect(parameters: Map<String, String>, references: MutableCollection<String>, namespace: String, keys: MutableCollection<String>? = null) {
         collect(parameters, references, arrayListOf(namespace), keys)
@@ -64,15 +63,6 @@ object VaultReferencesUtil {
         val slash = value.indexOf('/')
         if (colon < 0 || (slash in 0..(colon - 1))) return ""
         return value.substring(0, colon)
-    }
-
-    @JvmStatic
-    fun makeVaultReference(parameterSettings: VaultParameterSettings): String {
-        val vaultNamespacePrefix =
-            if (isDefault(parameterSettings.getNamespace())) "" else "${parameterSettings.getNamespace()}:"
-        val referenceableVaultParameter =
-            ReferencesResolverUtil.makeReference("${VaultConstants.VAULT_PARAMETER_PREFIX}$vaultNamespacePrefix${parameterSettings.vaultQuery}")
-        return referenceableVaultParameter
     }
 
     private fun getVaultReferences(value: String, namespaces: Collection<String>): Collection<String> {

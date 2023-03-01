@@ -20,7 +20,6 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import jetbrains.buildServer.serverSide.parameters.AbstractBuildParametersProvider
 import org.jetbrains.teamcity.vault.*
-import org.jetbrains.teamcity.vault.VaultConstants.FeatureSettings
 
 class VaultParametersProvider : AbstractBuildParametersProvider() {
     companion object {
@@ -30,8 +29,8 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
 
             // It's faster than asking OAuthConectionsManager
             if (project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).any {
-                    FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
-                }) return true
+                        VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
+                    }) return true
 
             return false
         }
@@ -46,7 +45,7 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
 
         val exposed = HashSet<String>()
         val connectionFeatures = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
-            FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
+            VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
         }
         val vaultFeatures = connectionFeatures.map {
             VaultFeatureSettings(it.parameters)

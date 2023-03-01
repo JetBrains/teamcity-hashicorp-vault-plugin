@@ -128,12 +128,6 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
         auth.toMap(map)
     }
 
-    fun toFeatureProperties(): Map<String, String>{
-        val map = mutableMapOf<String, String>()
-        toFeatureProperties(map)
-        return map
-    }
-
     fun toSharedParameters(): Map<String, String> {
         return mapOf(
                 VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX to failOnError.toString(),

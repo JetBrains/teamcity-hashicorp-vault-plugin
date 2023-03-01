@@ -14,27 +14,27 @@
  * limitations under the License.
  */
 apply plugin: 'java'
-apply plugin: 'io.github.rodm.teamcity-agent'
+apply plugin: 'com.github.rodm.teamcity-agent'
 
 dependencies {
-    implementation(project(':common')) {
+    compile(project(':common')) {
         exclude group: 'org.apache.httpcomponents'
     }
-    implementation("org.springframework:spring-web:$spring_version") {
+    compile("org.springframework:spring-web:$spring_version") {
         exclude group: 'org.springframework'
     }
-    implementation('com.jayway.jsonpath:json-path:2.4.0') {
+    compile('com.jayway.jsonpath:json-path:2.4.0') {
         exclude group: 'org.slf4j'
     }
-    implementation("org.springframework.vault:spring-vault-core:$sprint_vault_version") {
+    compile("org.springframework.vault:spring-vault-core:$sprint_vault_version") {
         exclude group: 'org.springframework'
     }
-    implementation("org.apache.httpcomponents:httpclient:$httpclient_version") {
+    compile("org.apache.httpcomponents:httpclient:$httpclient_version") {
         exclude group: 'commons-logging'
     }
 
     testImplementation(testFixtures(project(':common')))
-    testImplementation "org.jetbrains.teamcity:tests-support:$teamcity_version"
+    testCompile "org.jetbrains.teamcity:tests-support:$teamcity_version"
 }
 
 teamcity {
