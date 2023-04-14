@@ -30,6 +30,7 @@ class VaultJspKeys {
 
     val USERNAME = VaultConstants.FeatureSettings.USERNAME
     val PASSWORD = VaultConstants.FeatureSettings.PASSWORD
+    val PATH = VaultConstants.FeatureSettings.PATH
 
     val AUTH_METHOD = VaultConstants.FeatureSettings.AUTH_METHOD
     val AUTH_METHOD_IAM = VaultConstants.FeatureSettings.AUTH_METHOD_IAM

@@ -21,7 +21,7 @@ import org.springframework.util.Assert;
  * @author Mikhael Sokolov
  */
 public class LdapAuthenticationOptions {
-
+    
     public static final String DEFAULT_LDAP_AUTHENTICATION_PATH = "ldap";
 
     /**
@@ -67,7 +67,7 @@ public class LdapAuthenticationOptions {
 
         private CharSequence password;
 
-        private String path = DEFAULT_LDAP_AUTHENTICATION_PATH;
+        private String path;
 
         LdapAuthenticationOptionsBuilder() {
         }
@@ -83,7 +83,11 @@ public class LdapAuthenticationOptions {
         }
 
         public LdapAuthenticationOptionsBuilder path(String path) {
-            this.path = path;
+            if (path.isEmpty()){
+                this.path = DEFAULT_LDAP_AUTHENTICATION_PATH;
+            } else {
+                this.path = path;
+            }
             return this;
         }
 
