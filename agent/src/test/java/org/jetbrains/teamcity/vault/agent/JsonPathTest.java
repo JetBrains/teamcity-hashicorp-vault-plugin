@@ -16,8 +16,8 @@
 package org.jetbrains.teamcity.vault.agent;
 
 import com.jayway.jsonpath.JsonPath;
-import org.junit.Test;
 import org.slf4j.LoggerFactory;
+import org.testng.annotations.Test;
 
 import static org.assertj.core.api.BDDAssertions.then;
 

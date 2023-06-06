@@ -13,11 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'kotlin'
-
-apply plugin: 'com.github.rodm.teamcity-server'
-apply plugin: 'com.github.rodm.teamcity-environments'
+apply plugin: 'io.github.rodm.teamcity-server'
+apply plugin: 'io.github.rodm.teamcity-environments'
 
 ext {
     downloadsDir = project.findProperty('downloads.dir') ?: "$rootDir/downloads"
@@ -25,20 +22,29 @@ ext {
 }
 
 dependencies {
-    compile(project(':common')) {
+    implementation(project(':common')) {
         exclude group: 'org.apache.httpcomponents'
     }
 
-    provided "org.jetbrains.teamcity.internal:web:$teamcity_version"
-    provided "org.jetbrains.teamcity:oauth:$teamcity_version"
+    implementation("org.springframework.vault:spring-vault-core:$sprint_vault_version") {
+        exclude group: 'org.springframework'
+    }
+
+    compileOnly "org.jetbrains.teamcity.internal:web:$teamcity_version"
+    compileOnly "org.jetbrains.teamcity.internal:server:$teamcity_version"
+    compileOnly "org.jetbrains.teamcity:oauth:$teamcity_version"
 
     agent project(path: ':agent', configuration: 'plugin')
 
     testImplementation(testFixtures(project(':common')))
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_version"
+    testImplementation "org.mockito:mockito-inline:$mockito_version"
+    testImplementation "org.jetbrains.teamcity:oauth:$teamcity_version"
 }
 
 teamcity {
     version = teamcity_version
+    allowSnapshotVersions = true
 
     server {
         descriptor {

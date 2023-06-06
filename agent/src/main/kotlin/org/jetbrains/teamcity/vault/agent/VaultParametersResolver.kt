@@ -19,6 +19,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.AgentRunningBuild
+import jetbrains.buildServer.agent.AgentRunningBuildEx
 import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
@@ -30,7 +31,6 @@ import org.springframework.vault.support.VaultResponse
 import org.springframework.vault.support.VaultToken
 import java.net.URI
 import java.util.*
-import kotlin.collections.HashSet
 
 class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvider) {
     companion object {
@@ -38,7 +38,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
     }
 
     fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {
-        val references = getReleatedParameterReferences(build, settings.namespace)
+        val references = getRelatedParameterReferences(build, settings.namespace)
         if (references.isEmpty()) {
             LOG.info("There's nothing to resolve")
             return
@@ -48,7 +48,38 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
 
         val parameters = references.map { VaultParameter.extract(VaultReferencesUtil.getPath(it, settings.namespace)) }
 
-        val replacements = doFetchAndPrepareReplacements(settings, token, parameters, logger)
+        val replacements = resolveReplacements(build, settings, parameters, token)
+
+        replaceParametersReferences(build, replacements.replacements, references, settings.namespace)
+    }
+
+    fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, keys: List<String>, token: String) {
+        val runningBuild = build as AgentRunningBuildEx
+        val keyToQuery = keys.mapNotNull { key ->
+            val query = runningBuild.getParameterControlDescription(key)?.parameterTypeArguments?.get(VaultConstants.ParameterSettings.VAULT_QUERY)
+            if (query == null) {
+                null
+            } else {
+                key to VaultParameter.extract(query)
+            }
+        }.toMap()
+
+        val replacements = resolveReplacements(build, settings, keyToQuery.values, token).replacements
+        keyToQuery.forEach { key, value ->
+            val replacement = replacements[value.full]
+            if (replacement != null) {
+                build.addSharedConfigParameter(key, replacement)
+            }
+        }
+    }
+
+    private fun resolveReplacements(
+        build: AgentRunningBuild,
+        settings: VaultFeatureSettings,
+        parameters: Collection<VaultParameter>,
+        token: String
+    ): ResolvingResult {
+        val replacements = doFetchAndPrepareReplacements(settings, token, parameters, build.buildLogger)
 
         if (settings.failOnError && replacements.errors.isNotEmpty()) {
             val ns = if (isDefault(settings.namespace)) "" else "('${settings.namespace}' namespace)"
@@ -57,12 +88,12 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
             build.stopBuild(message)
         }
 
-        replaceParametersReferences(build, replacements.replacements, references, settings.namespace)
 
         replacements.replacements.values.forEach { build.passwordReplacer.addPassword(it) }
+        return replacements
     }
 
-    fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: List<VaultParameter>, logger: BuildProgressLogger): ResolvingResult {
+    fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: Collection<VaultParameter>, logger: BuildProgressLogger): ResolvingResult {
         val endpoint = VaultEndpoint.from(URI.create(settings.url))
         val factory = createClientHttpRequestFactory(trustStoreProvider)
         val client = VaultTemplate(endpoint, settings.vaultNamespace, factory, SimpleSessionManager({ VaultToken.of(token) }))
@@ -70,15 +101,17 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
         return doFetchAndPrepareReplacements(client, parameters, logger)
     }
 
-    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: List<VaultParameter>, logger: BuildProgressLogger): ResolvingResult {
+    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: Collection<VaultParameter>, logger: BuildProgressLogger): ResolvingResult {
         return VaultParametersFetcher(client, logger).doFetchAndPrepareReplacements(parameters)
     }
 
     data class ResolvingResult(val replacements: Map<String, String>, val errors: Map<String, String>)
 
-    class VaultParametersFetcher(private val client: VaultTemplate,
-                                 private val logger: BuildProgressLogger) {
-        fun doFetchAndPrepareReplacements(parameters: List<VaultParameter>): ResolvingResult {
+    class VaultParametersFetcher(
+        private val client: VaultTemplate,
+        private val logger: BuildProgressLogger
+    ) {
+        fun doFetchAndPrepareReplacements(parameters: Collection<VaultParameter>): ResolvingResult {
             val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath })
 
             return getReplacements(parameters, responses)
@@ -102,7 +135,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
             return responses
         }
 
-        private fun getReplacements(parameters: List<VaultParameter>, responses: Map<String, VaultResponse?>): ResolvingResult {
+        private fun getReplacements(parameters: Collection<VaultParameter>, responses: Map<String, VaultResponse?>): ResolvingResult {
             val replacements = HashMap<String, String>()
             val errors = HashMap<String, String>()
 
@@ -110,8 +143,9 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
                 try {
                     val response = responses[parameter.vaultPath]
                     if (response == null) {
-                        logger.warning("Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault")
-                        LOG.warn("Cannot resolve '${parameter.full}': data wasn't received from HashiCorp Vault")
+                        val message = "Cannot resolve '${parameter.full}': secret was not found in your HashiCorp Vault"
+                        logger.warning(message)
+                        LOG.warn(message)
                         throw ResolvingError("Data wasn't received from HashiCorp Vault")
                     }
                     val value = extract(response, parameter)
@@ -200,7 +234,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
     }
 
 
-    private fun getReleatedParameterReferences(build: AgentRunningBuild, namespace: String): Collection<String> {
+    private fun getRelatedParameterReferences(build: AgentRunningBuild, namespace: String): Collection<String> {
         val references = HashSet<String>()
         VaultReferencesUtil.collect(build.sharedConfigParameters, references, namespace)
         VaultReferencesUtil.collect(build.sharedBuildParameters.allParameters, references, namespace)

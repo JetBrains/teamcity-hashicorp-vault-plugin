@@ -19,14 +19,11 @@ import org.eclipse.jetty.http.HttpHeader
 import org.eclipse.jetty.server.Request
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.handler.AbstractHandler
-import org.junit.runner.Description
 import org.springframework.util.SocketUtils
-import org.testcontainers.containers.FailureDetectingExternalResource
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-open class VaultSemiClusterDevContainer(val vault: VaultDevEnvironment)
-    : FailureDetectingExternalResource(), AutoCloseable, VaultDevEnvironment {
+open class VaultSemiClusterDevContainer(val vault: VaultDevEnvironment) : AutoCloseable, VaultDevEnvironment {
 
     override val token: String
         get() = vault.token
@@ -45,21 +42,11 @@ open class VaultSemiClusterDevContainer(val vault: VaultDevEnvironment)
 
     private var jetty_server: Server? = null
 
-    override fun starting(description: Description?) {
-        super.starting(description)
-        start()
-    }
-
-    override fun finished(description: Description?) {
-        super.finished(description)
-        stop()
-    }
-
     override fun close() {
         stop()
     }
 
-    private fun start() {
+    fun start() {
         val server = Server(jetty_port)
         jetty_server = server
         server.handler = object : AbstractHandler() {
@@ -85,7 +72,7 @@ open class VaultSemiClusterDevContainer(val vault: VaultDevEnvironment)
         server.start()
     }
 
-    private fun stop() {
+    fun stop() {
         jetty_server?.stop()
     }
 }

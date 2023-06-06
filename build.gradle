@@ -13,23 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-buildscript {
-    ext.kotlin_version = '1.3.72'
-    repositories {
-        mavenLocal()
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-    }
-    dependencies {
-        classpath group: 'com.github.rodm', name: 'gradle-teamcity-plugin', version: '1.4.1'
-        classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: kotlin_version
-    }
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.7.0'
+    id "io.github.rodm.teamcity-server" version "1.5"
 }
 
 ext {
+    ext.kotlin_version = '1.7.0'
     version_prefix = '0.1'
-    teamcity_version = '2020.1'
+    teamcity_version = '2023.05'
     // compile
     spring_version = '5.3.18'
     sprint_vault_version = '2.3.2'
@@ -38,6 +31,12 @@ ext {
     jetty_version = '9.4.19.v20190610'
     testcontainers_version = '1.15.2'
     assertj_version = '1.7.1'
+    mockito_version = '4.1.0'
+    jackson_version = '2.14.1'
+    spacePackagesUrl = "https://packages.jetbrains.team/maven/p/tc/maven"
+    mavenRepositoryUser = findProperty('maven.repository.user')
+    mavenRepositoryPassword = findProperty('maven.repository.password')
+    caffeine_version = "2.4.0"
 }
 
 group = 'org.jetbrains.teamcity.vault'
@@ -65,15 +64,59 @@ subprojects {
         targetCompatibility = '1.8'
     }
 
+    tasks.withType(org.gradle.jvm.tasks.Jar) { duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
+
     dependencies {
-        compile("org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}")
+        implementation('com.amazonaws:aws-java-sdk-core:1.12.122') { dep ->
+            ['org.apache.httpcomponents', 'commons-logging'].each{ group -> dep.exclude group: group }
+        }
+        implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
+        implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jackson_version"
+        implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+        testImplementation("org.jetbrains.teamcity.internal:integration-tests:${teamcity_version}")
+        testImplementation "com.github.ben-manes.caffeine:caffeine:${caffeine_version}"
+        testImplementation "org.jetbrains.teamcity:tests-support:${teamcity_version}"
+        testImplementation("javax.servlet:javax.servlet-api:3.1.0")
+        testImplementation "org.mockito:mockito-testng:0.4.23"
+        testImplementation "org.mockito.kotlin:mockito-kotlin:4.0.0"
     }
+    test {
+        useTestNG()
+        testLogging.showStandardStreams = true
+    }
+
+
+    repositories {
+        mavenLocal()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+        mavenCentral()
+        google()
+        maven {
+            url = 'https://packages.jetbrains.team/maven/p/tc/maven'
+            credentials {
+                username = mavenRepositoryUser
+                password = mavenRepositoryPassword
+            }
+        }
+    }
+
     if (System.getenv('TEAMCITY_VERSION') != null) {
         test.ignoreFailures = true
     }
 }
+repositories {
+    mavenLocal()
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
+    mavenCentral()
+    google()
+}
 
-wrapper {
-    gradleVersion = '6.9.3'
-    distributionUrl = "https://cache-redirector.jetbrains.com/services.gradle.org/distributions/gradle-${gradleVersion}-bin.zip"
+configurations.testImplementation {
+    exclude group: "org.jetbrains.teamcity", module: "server-api"
+    exclude group: "org.jetbrains.teamcity", module: "server-web-api"
+    exclude group: "org.jetbrains.teamcity.internal", module: "plugins"
 }

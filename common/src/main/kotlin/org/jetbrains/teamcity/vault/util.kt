@@ -15,6 +15,7 @@
  */
 package org.jetbrains.teamcity.vault
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.VersionComparatorUtil
@@ -95,7 +96,7 @@ fun RestTemplate.withVaultToken(token: String): RestTemplate {
 fun RestTemplate.write(path: String, body: Any?): VaultResponse? {
     Assert.hasText(path, "Path must not be empty")
     return try {
-        this.postForObject(path, body, VaultResponse::class.java)
+        this.postForObject(path, jacksonObjectMapper().writeValueAsString(body), VaultResponse::class.java)
     } catch (e: HttpStatusCodeException) {
         throw VaultResponses.buildException(e, path)
     }

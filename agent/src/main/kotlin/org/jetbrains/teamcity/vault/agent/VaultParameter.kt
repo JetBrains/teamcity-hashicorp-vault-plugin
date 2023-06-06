@@ -17,7 +17,7 @@ package org.jetbrains.teamcity.vault.agent
 
 import org.jetbrains.teamcity.vault.ensureHasPrefix
 
-data class VaultParameter constructor(val vaultPath: String, val jsonPath: String? = null) {
+data class VaultParameter(val vaultPath: String, val jsonPath: String? = null) {
     companion object {
         @JvmStatic fun extract(path: String): VaultParameter {
             val split = path.split("!/", limit = 2)

@@ -28,6 +28,8 @@ object VaultConstants {
     val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
     val FAIL_ON_ERROR_PROPERTY_SUFFIX = ".failOnError"
     val VAULT_AUTH_PROPERTY_SUFFIX = ".authMethod"
+    const val PARAMETER_TYPE = "hashicorp-vault"
+
 
     @JvmField val VAULT_PARAMETER_PREFIX = "vault:"
 
@@ -63,15 +65,24 @@ object VaultConstants {
         @JvmField val AUTH_METHOD_APPROLE = AuthMethod.APPROLE.id
         @JvmField val AUTH_METHOD_LDAP = AuthMethod.LDAP.id
         @JvmField val DEFAULT_AUTH_METHOD = AuthMethod.APPROLE.id
+        @JvmField val WRAPPED_TOKEN = "wrapped-token"
 
         @JvmField val FAIL_ON_ERROR = "fail-on-error"
 
         @JvmField val AGENT_SUPPORT_REQUIREMENT = "teamcity.vault.requirement"
         @JvmField val AGENT_SUPPORT_REQUIREMENT_VALUE = "%$FEATURE_SUPPORTED_AGENT_PARAMETER%"
+
+        @JvmField val CONNECTIONS_DETAIL = "teamcity.vault.connection"
     }
 
     object BehaviourParameters {
         val ExposeEnvSuffix = ".set.env"
+    }
+
+    object ParameterSettings{
+        const val DEFAULT_UI_PARAMETER_NAMESPACE = "teamcity-default-hashicorp-default-value"
+        const val NAMESPACE = "teamcity_hashicorp_namespace"
+        const val VAULT_QUERY = "teamcity_hashicorp_vaultQuery"
     }
 
 

@@ -15,8 +15,9 @@
  */
 package org.jetbrains.teamcity.vault
 
+import jetbrains.buildServer.parameters.ReferencesResolverUtil
 import org.assertj.core.api.BDDAssertions.then
-import org.junit.Test
+import org.testng.annotations.Test
 import java.util.*
 
 class VaultReferencesUtilTest {
@@ -105,6 +106,21 @@ class VaultReferencesUtilTest {
         doNamespaceTest("vault:/path:with:colons", "")
         doNamespaceTest("vault:ns:path:with:colons", "ns")
     }
+
+    @Test
+    fun testMakeVaultReference(){
+        doVaultPathTest(
+            "ns",
+            getReference("ns", "path"),
+            "/path")
+        doVaultPathTest(
+            "",
+            getReference(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, "path"),
+            "/path")
+    }
+
+    private fun getReference(namespace: String, query: String): String =
+        ReferencesResolverUtil.getReferences(VaultReferencesUtil.makeVaultReference(namespace, query), emptyArray(), true).first()
 
     private fun doNamespaceTest(string: String, expected: String) {
         then(VaultReferencesUtil.getNamespace(string)).isEqualTo(expected)

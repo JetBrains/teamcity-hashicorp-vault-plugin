@@ -65,6 +65,15 @@ object VaultReferencesUtil {
         return value.substring(0, colon)
     }
 
+    @JvmStatic
+    fun makeVaultReference(namespace: String, query: String): String {
+        val vaultNamespacePrefix =
+            if (isDefault(namespace)) "" else "${namespace}:"
+        val referenceableVaultParameter =
+            ReferencesResolverUtil.makeReference("${VaultConstants.VAULT_PARAMETER_PREFIX}$vaultNamespacePrefix${query}")
+        return referenceableVaultParameter
+    }
+
     private fun getVaultReferences(value: String, namespaces: Collection<String>): Collection<String> {
         val prefixes = namespaces.map { VaultConstants.VAULT_PARAMETER_PREFIX + if (isDefault(it)) "" else "$it:" }
         if (!prefixes.any { prefix -> value.contains(prefix) }) return emptyList()

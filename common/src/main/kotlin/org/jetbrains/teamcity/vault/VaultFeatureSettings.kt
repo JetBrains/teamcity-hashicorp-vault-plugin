@@ -42,6 +42,7 @@ sealed class Auth(val method: AuthMethod) {
     data class AppRoleAuthAgent(val wrappedToken: String) : Auth(AuthMethod.APPROLE) {
         override fun toMap(map: MutableMap<String, String>) {
             map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
+            map[VaultConstants.FeatureSettings.WRAPPED_TOKEN] = wrappedToken
         }
     }
 
@@ -63,38 +64,58 @@ sealed class Auth(val method: AuthMethod) {
     data class LdapAgent(val wrappedToken: String) : Auth(AuthMethod.LDAP) {
         override fun toMap(map: MutableMap<String, String>) {
             map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
+            map[VaultConstants.FeatureSettings.WRAPPED_TOKEN] = wrappedToken
         }
     }
 
     abstract fun toMap(map: MutableMap<String, String>)
 
     companion object {
-        fun fromProperties(map: Map<String, String>): Auth {
+        fun getServerAuthFromProperties(map: Map<String, String>): Auth {
             val kind = (map[VaultConstants.FeatureSettings.AUTH_METHOD]
-                    ?: VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD)
+                ?: VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD)
             return when (kind) {
                 AuthMethod.APPROLE.id -> {
                     AppRoleAuthServer(
-                            // Default value to convert from previous config versions
-                            (map[VaultConstants.FeatureSettings.ENDPOINT]
-                                    ?: VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH).removePrefix("/"),
-                            map[VaultConstants.FeatureSettings.ROLE_ID] ?: "",
-                            map[VaultConstants.FeatureSettings.SECRET_ID] ?: ""
+                        // Default value to convert from previous config versions
+                        (map[VaultConstants.FeatureSettings.ENDPOINT]
+                            ?: VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH).removePrefix("/"),
+                        map[VaultConstants.FeatureSettings.ROLE_ID] ?: "",
+                        map[VaultConstants.FeatureSettings.SECRET_ID] ?: ""
                     )
                 }
+
                 AuthMethod.AWS_IAM.id -> AwsIam
                 AuthMethod.LDAP.id -> LdapServer(
                         map[VaultConstants.FeatureSettings.USERNAME] ?: "",
                         map[VaultConstants.FeatureSettings.PASSWORD] ?: "",
                         map[VaultConstants.FeatureSettings.PATH] ?: ""
                 )
+
                 else -> error("Unexpected auth method '$kind'")
             }
         }
 
-        fun fromSharedParameters(parameters: Map<String, String>, namespace: String): Auth {
+        fun getAgentAuthFromProperties(map: Map<String, String>): Auth {
+            val kind = (map[VaultConstants.FeatureSettings.AUTH_METHOD]
+                ?: VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD)
+            return when (kind) {
+                AuthMethod.APPROLE.id -> {
+                    AppRoleAuthAgent(map[VaultConstants.FeatureSettings.WRAPPED_TOKEN] ?: "")
+                }
+
+                AuthMethod.AWS_IAM.id -> AwsIam
+                AuthMethod.LDAP.id -> LdapAgent(
+                    map[VaultConstants.FeatureSettings.WRAPPED_TOKEN] ?: ""
+                )
+
+                else -> error("Unexpected auth method '$kind'")
+            }
+        }
+
+        fun getAgentAuthFromSharedParameters(parameters: Map<String, String>, namespace: String): Auth {
             val kind = parameters[getVaultParameterName(namespace, VaultConstants.VAULT_AUTH_PROPERTY_SUFFIX)]
-                    ?: VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD
+                ?: VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD
             return when (kind) {
                 AuthMethod.APPROLE.id -> AppRoleAuthAgent(parameters.getOrDefault(getVaultParameterName(namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), ""))
                 AuthMethod.AWS_IAM.id -> AwsIam
@@ -109,17 +130,31 @@ sealed class Auth(val method: AuthMethod) {
 
 data class VaultFeatureSettings(val namespace: String, val url: String, val vaultNamespace: String, val failOnError: Boolean = true, val auth: Auth) {
 
-    constructor(url: String, vaultNamespace: String) : this(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, url, vaultNamespace, true, Auth.fromProperties(emptyMap()))
 
-    constructor(namespace: String, url: String, vaultNamespace: String, endpoint: String, roleId: String, secretId: String, failOnError: Boolean) : this(namespace, url, vaultNamespace, failOnError, Auth.AppRoleAuthServer(endpoint, roleId, secretId))
+
+    constructor(url: String, vaultNamespace: String) : this(
+        VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+        url,
+        vaultNamespace,
+        true,
+        Auth.getServerAuthFromProperties(emptyMap())
+    )
+
+    constructor(namespace: String, url: String, vaultNamespace: String, endpoint: String, roleId: String, secretId: String, failOnError: Boolean) : this(
+        namespace,
+        url,
+        vaultNamespace,
+        failOnError,
+        Auth.AppRoleAuthServer(endpoint, roleId, secretId)
+    )
 
     constructor(map: Map<String, String>) : this(
-            map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
-            map[VaultConstants.FeatureSettings.URL] ?: "",
-            map[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
-                    ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
-            map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false,
-            Auth.fromProperties(map)
+        map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+        map[VaultConstants.FeatureSettings.URL] ?: "",
+        map[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
+            ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
+        map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false,
+        Auth.getServerAuthFromProperties(map)
     )
 
     fun toFeatureProperties(map: MutableMap<String, String>) {
@@ -130,36 +165,52 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
         auth.toMap(map)
     }
 
+    fun toFeatureProperties(): Map<String, String> {
+        val map = mutableMapOf<String, String>()
+        toFeatureProperties(map)
+        return map
+    }
+
     fun toSharedParameters(): Map<String, String> {
         return mapOf(
-                VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX to failOnError.toString(),
-                VaultConstants.URL_PROPERTY_SUFFIX to url,
-                VaultConstants.VAULT_NAMESPACE_PROPERTY_SUFFIX to vaultNamespace,
-                VaultConstants.VAULT_AUTH_PROPERTY_SUFFIX to auth.method.id
+            VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX to failOnError.toString(),
+            VaultConstants.URL_PROPERTY_SUFFIX to url,
+            VaultConstants.VAULT_NAMESPACE_PROPERTY_SUFFIX to vaultNamespace,
+            VaultConstants.VAULT_AUTH_PROPERTY_SUFFIX to auth.method.id
         ).mapKeys { getVaultParameterName(namespace, it.key) }
     }
 
     companion object {
         fun getDefaultParameters(): Map<String, String> {
             return mapOf(
-                    VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
-                    VaultConstants.FeatureSettings.VAULT_NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
-                    VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE,
-                    VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,
-                    VaultConstants.FeatureSettings.FAIL_ON_ERROR to "true",
-                    VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
-                    VaultConstants.FeatureSettings.URL to "http://localhost:8200"
+                VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+                VaultConstants.FeatureSettings.VAULT_NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
+                VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE,
+                VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,
+                VaultConstants.FeatureSettings.FAIL_ON_ERROR to "true",
+                VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
+                VaultConstants.FeatureSettings.URL to "http://localhost:8200"
             )
         }
 
-        fun fromSharedParameters(parameters: Map<String, String>, namespace: String): VaultFeatureSettings {
+        fun getAgentFeatureFromProperties(map: Map<String, String>): VaultFeatureSettings =
+            VaultFeatureSettings(
+                map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+                map[VaultConstants.FeatureSettings.URL] ?: "",
+                map[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
+                    ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
+                map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false,
+                Auth.getAgentAuthFromProperties(map)
+            )
+
+        fun getAgentFeatureFromSharedParameters(parameters: Map<String, String>, namespace: String): VaultFeatureSettings {
             val url = parameters[getVaultParameterName(namespace, VaultConstants.URL_PROPERTY_SUFFIX)] ?: ""
             val vaultNamespace = parameters[getVaultParameterName(namespace, VaultConstants.VAULT_NAMESPACE_PROPERTY_SUFFIX)]
-                    ?: ""
+                ?: ""
             val failOnError = parameters[getVaultParameterName(namespace, VaultConstants.FAIL_ON_ERROR_PROPERTY_SUFFIX)]?.toBoolean()
-                    ?: false
+                ?: false
 
-            return VaultFeatureSettings(namespace, url, vaultNamespace, failOnError, Auth.fromSharedParameters(parameters, namespace))
+            return VaultFeatureSettings(namespace, url, vaultNamespace, failOnError, Auth.getAgentAuthFromSharedParameters(parameters, namespace))
         }
     }
 }
