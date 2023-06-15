@@ -85,6 +85,11 @@ object VaultConstants {
         const val VAULT_QUERY = "teamcity_hashicorp_vaultQuery"
     }
 
+    object ControllerSettings {
+        const val URL = "hashicorp-vault/connection"
+        const val WRAP_TOKEN_PATH = "/token/v1"
+    }
+
 
     // Special values
     val SPECIAL_FAILED_TO_FETCH = "FAILED_TO_FETCH"

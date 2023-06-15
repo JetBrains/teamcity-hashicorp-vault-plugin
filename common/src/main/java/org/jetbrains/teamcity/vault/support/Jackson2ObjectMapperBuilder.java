@@ -19,11 +19,8 @@ package org.jetbrains.teamcity.vault.support;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.Module;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 
 /**
  * A builder used to create {@link ObjectMapper} instances with a fluent API.
@@ -55,8 +52,6 @@ import org.springframework.util.ClassUtils;
  */
 public class Jackson2ObjectMapperBuilder {
 
-	private ClassLoader moduleClassLoader = getClass().getClassLoader();
-
 
 	/**
 	 * Build a new {@link ObjectMapper} instance.
@@ -69,6 +64,7 @@ public class Jackson2ObjectMapperBuilder {
 	public <T extends ObjectMapper> T build() {
 		ObjectMapper mapper;
 		mapper = new ObjectMapper();
+		mapper.findAndRegisterModules();
 		configure(mapper);
 		return (T) mapper;
 	}
@@ -82,11 +78,7 @@ public class Jackson2ObjectMapperBuilder {
 	public void configure(ObjectMapper objectMapper) {
 		Assert.notNull(objectMapper, "ObjectMapper must not be null");
 
-		registerWellKnownModulesIfAvailable(objectMapper);
-
-
 		customizeDefaultFeatures(objectMapper);
-
 	}
 
 
@@ -115,65 +107,6 @@ public class Jackson2ObjectMapperBuilder {
 		}
 		else {
 			throw new FatalBeanException("Unknown feature class: " + feature.getClass().getName());
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private void registerWellKnownModulesIfAvailable(ObjectMapper objectMapper) {
-		// Java 7 java.nio.file.Path class present?
-		if (ClassUtils.isPresent("java.nio.file.Path", this.moduleClassLoader)) {
-			try {
-				Class<? extends Module> jdk7Module = (Class<? extends Module>)
-						ClassUtils.forName("com.fasterxml.jackson.datatype.jdk7.Jdk7Module", this.moduleClassLoader);
-				objectMapper.registerModule(BeanUtils.instantiate(jdk7Module));
-			}
-			catch (ClassNotFoundException ignored) {
-				// jackson-datatype-jdk7 not available
-			}
-		}
-
-		// Java 8 java.util.Optional class present?
-		if (ClassUtils.isPresent("java.util.Optional", this.moduleClassLoader)) {
-			try {
-				Class<? extends Module> jdk8Module = (Class<? extends Module>)
-						ClassUtils.forName("com.fasterxml.jackson.datatype.jdk8.Jdk8Module", this.moduleClassLoader);
-				objectMapper.registerModule(BeanUtils.instantiate(jdk8Module));
-			}
-			catch (ClassNotFoundException ignored) {
-				// jackson-datatype-jdk8 not available
-			}
-		}
-
-		// Java 8 java.time package present?
-		if (ClassUtils.isPresent("java.time.LocalDate", this.moduleClassLoader)) {
-			try {
-				Class<? extends Module> javaTimeModule = (Class<? extends Module>)
-						ClassUtils.forName("com.fasterxml.jackson.datatype.jsr310.JavaTimeModule", this.moduleClassLoader);
-				objectMapper.registerModule(BeanUtils.instantiate(javaTimeModule));
-			}
-			catch (ClassNotFoundException ignored) {
-				// jackson-datatype-jsr310 not available or older than 2.6
-				try {
-					Class<? extends Module> jsr310Module = (Class<? extends Module>)
-							ClassUtils.forName("com.fasterxml.jackson.datatype.jsr310.JSR310Module", this.moduleClassLoader);
-					objectMapper.registerModule(BeanUtils.instantiate(jsr310Module));
-				}
-				catch (ClassNotFoundException ignored2) {
-					// OK, jackson-datatype-jsr310 not available at all...
-				}
-			}
-		}
-
-		// Joda-Time present?
-		if (ClassUtils.isPresent("org.joda.time.LocalDate", this.moduleClassLoader)) {
-			try {
-				Class<? extends Module> jodaModule = (Class<? extends Module>)
-						ClassUtils.forName("com.fasterxml.jackson.datatype.joda.JodaModule", this.moduleClassLoader);
-				objectMapper.registerModule(BeanUtils.instantiate(jodaModule));
-			}
-			catch (ClassNotFoundException ignored) {
-				// jackson-datatype-joda not available
-			}
 		}
 	}
 

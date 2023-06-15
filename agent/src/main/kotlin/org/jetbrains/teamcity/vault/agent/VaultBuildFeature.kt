@@ -19,13 +19,19 @@ import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.util.Pair
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.*
+import jetbrains.buildServer.http.SimpleCredentials
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.EventDispatcher
+import jetbrains.buildServer.util.HTTPRequestBuilder
+import jetbrains.buildServer.util.HTTPRequestBuilder.DelegatingRequestHandler
+import jetbrains.buildServer.util.http.HttpMethod
 import jetbrains.buildServer.util.positioning.PositionAware
 import jetbrains.buildServer.util.positioning.PositionConstraint
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
+import org.apache.http.client.utils.URIBuilder
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.LifecycleAwareSessionManager
 import org.springframework.scheduling.TaskScheduler
@@ -39,7 +45,8 @@ import java.util.concurrent.TimeUnit
 class VaultBuildFeature(
     dispatcher: EventDispatcher<AgentLifeCycleListener>,
     private val trustStoreProvider: SSLTrustStoreProvider,
-    private val myVaultParametersResolver: VaultParametersResolver
+    private val myVaultParametersResolver: VaultParametersResolver,
+    private val sslTrustStoreProvider: SSLTrustStoreProvider
 ) : AgentLifeCycleAdapter(), PositionAware {
     companion object {
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultBuildFeature::class.java.name)
@@ -73,31 +80,95 @@ class VaultBuildFeature(
     private fun fetchParameters(runningBuild: AgentRunningBuild) {
         val runningBuildImpl = runningBuild as AgentRunningBuildEx
         val parameters = runningBuild.sharedConfigParameters
-        parameters.filter {
-            runningBuildImpl.getParameterControlDescription(it.key)?.parameterTypeArguments?.get("remoteType") == VaultConstants.PARAMETER_TYPE
-        }
-            .mapNotNull {
+        parameters
+            .map {
+                it.key to runningBuildImpl.getParameterControlDescription(it.key)
+            }
+            .filter { (_, controlDescription) ->
+                controlDescription?.parameterTypeArguments?.get("remoteType") == VaultConstants.PARAMETER_TYPE
+            }
+            .mapNotNull { (parameterKey, controlDescription) ->
                 try {
-                    it.key to objectMapper.readValue<Map<String, String>>(it.value)
+                    VaultParameter(parameterKey, VaultParameterSettings(controlDescription!!.parameterTypeArguments))
                 } catch (e: Throwable) {
-                    LOG.warnAndDebugDetails("Failed to parse parameter ${it.key} secret object", e)
+                    LOG.warnAndDebugDetails("Failed to parse parameter ${parameterKey} secret object", e)
                     null
                 }
             }
-            // Groups parameters by their remote parameter definition and then maps remote parameter definitions to their parameter keys
+            // Group parameters by their namespace, as those will have the same associated connection
             .groupBy {
-                it.second
-            }.map {
-                it.key to it.value.map { it.first }
-            }
-            .forEach {
-                val vaultFeatureSettings = VaultFeatureSettings.getAgentFeatureFromProperties(it.first)
+                it.vaultParameterSettings.getNamespace()
+            }.mapNotNull {
+                val vaultFeatureSettings = resolveParam(it.key, runningBuild)
+                if (vaultFeatureSettings == null) {
+                    null
+                } else {
+                    vaultFeatureSettings to it.value
+                }
+            }.forEach { (vaultFeatureSettings, vaultParameters) ->
                 val token = resolveToken(parameters, vaultFeatureSettings, runningBuild)
 
                 if (token != null) {
-                    myVaultParametersResolver.resolve(runningBuild, vaultFeatureSettings, it.second, token)
+                    myVaultParametersResolver.resolve(runningBuild, vaultFeatureSettings, vaultParameters, token)
                 }
             }
+    }
+
+    private fun resolveParam(namespace: String, build: AgentRunningBuildEx): VaultFeatureSettings? {
+        return try {
+            val configuration = build.agentConfiguration as BuildAgentConfigurationEx
+            val requestBuilder = HTTPRequestBuilder("${configuration.serverUrl}/app/${VaultConstants.ControllerSettings.URL}/${VaultConstants.ControllerSettings.WRAP_TOKEN_PATH}")
+                .withMethod(HttpMethod.GET)
+                .addParameters(
+                    Pair("buildId", build.buildId.toString()),
+                    Pair("namespace", namespace)
+                )
+                .withCredentials(SimpleCredentials(build.accessUser, build.accessCode))
+                .withTimeout(configuration.serverConnectionTimeout * 1000)
+                .allowNonSecureConnection(true)
+                .withTrustStore(sslTrustStoreProvider.trustStore)
+
+            if (configuration.serverProxyHost != null) {
+                requestBuilder
+                    .withProxyHost(URIBuilder(configuration.getServerProxyHost()).setPort(configuration.getServerProxyPort()).build());
+                if (configuration.serverProxyCredentials != null) {
+                    requestBuilder
+                        .withProxyCredentials(configuration.serverProxyCredentials!!);
+                }
+            }
+
+            val response = DelegatingRequestHandler()
+                .doSyncRequest(requestBuilder.build())
+            val contentStream = response.contentStream
+
+            if (response.statusCode != 200){
+                val errorMessage =
+                    "Got a ${response.statusCode} status code while fetching the token for hashicorp vault's namespace $namespace. With the error message: ${response.bodyAsString}"
+                LOG.error(errorMessage)
+                failBuild(build, namespace, errorMessage)
+                return null
+            }
+
+            if (contentStream == null) {
+                val errorMessage = "Got an empty response while fetching the token for hashicorp vault's namespace $namespace"
+                LOG.error(errorMessage)
+                failBuild(build, namespace, errorMessage)
+                return null
+            }
+
+            val featureSettingsParams = objectMapper.readValue<Map<String, String>>(contentStream)
+
+            VaultFeatureSettings.getAgentFeatureFromProperties(featureSettingsParams)
+        } catch (e: Throwable) {
+            val errorMessage = "Failed to fetch token for hashicorp vault's namesapce $namespace"
+            LOG.error(errorMessage, e)
+            failBuild(build, namespace, errorMessage)
+            null
+        }
+    }
+
+    private fun failBuild(build: AgentRunningBuildEx, namespace: String, errorMessage: String) {
+        build.buildLogger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
     }
 
     private fun fetchLegacyParameters(runningBuild: AgentRunningBuild) {

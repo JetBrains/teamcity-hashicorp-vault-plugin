@@ -22,12 +22,10 @@ import java.util.*;
 import jetbrains.buildServer.agent.AgentRunningBuildEx;
 import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.agent.NullBuildProgressLogger;
-import jetbrains.buildServer.serverSide.ControlDescription;
 import jetbrains.buildServer.util.CollectionsUtil;
 import jetbrains.buildServer.util.PasswordReplacer;
 import jetbrains.buildServer.util.VersionComparatorUtil;
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.vault.*;
 import org.jetbrains.teamcity.vault.support.VaultTemplate;
 import org.mockito.Mockito;
@@ -93,22 +91,10 @@ public class VaultParametersResolverTest {
     final PasswordReplacer passwordReplacer = Mockito.mock(PasswordReplacer.class);
 
     Mockito.when(runningBuild.getBuildLogger()).thenReturn(logger);
-    Mockito.when(runningBuild.getParameterControlDescription(key)).thenReturn(new ControlDescription() {
-      @NotNull
-      @Override
-      public String getParameterType() {
-        return VaultConstants.PARAMETER_TYPE;
-      }
-
-      @NotNull
-      @Override
-      public Map<String, String> getParameterTypeArguments() {
-        return new VaultParameterSettings(VaultConstants.ParameterSettings.DEFAULT_UI_PARAMETER_NAMESPACE, path).toMap();
-      }
-    });
     Mockito.when(runningBuild.getPasswordReplacer()).thenReturn(passwordReplacer);
+    final VaultParameter parameter = new VaultParameter(key, new VaultParameterSettings(VaultConstants.ParameterSettings.DEFAULT_UI_PARAMETER_NAMESPACE, path));
 
-    resolver.resolve(runningBuild, feature, Collections.singletonList(key), vault.getToken());
+    resolver.resolve(runningBuild, feature, Collections.singletonList(parameter), vault.getToken());
     Mockito.verify(passwordReplacer).addPassword(expectedValue);
     Mockito.verify(runningBuild).addSharedConfigParameter(key, expectedValue);
   }
@@ -126,7 +112,7 @@ public class VaultParametersResolverTest {
     final String path = getKVPath("test");
 
     final Map<String, String> replacements =
-      resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger())
+      resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultQuery("/" + path, null)), new NullBuildProgressLogger())
               .getReplacements();
     then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
   }
@@ -137,7 +123,7 @@ public class VaultParametersResolverTest {
     writeSecret(path, Collections.singletonMap("data", "TestValue"));
 
     final Map<String, String> replacements =
-      resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultParameter("/" + path, null)), new NullBuildProgressLogger())
+      resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultQuery("/" + path, null)), new NullBuildProgressLogger())
               .getReplacements();
     then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
   }
@@ -148,9 +134,9 @@ public class VaultParametersResolverTest {
     writeSecret(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
     then(readSecret(path)).contains(entry("first", "TestValueA"));
 
-    final List<VaultParameter> parameters = Arrays.asList(
-      new VaultParameter("/" + path, "first"),
-      new VaultParameter("/" + path, "second")
+    final List<VaultQuery> parameters = Arrays.asList(
+      new VaultQuery("/" + path, "first"),
+      new VaultQuery("/" + path, "second")
     );
 
     final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), parameters, new NullBuildProgressLogger()).getReplacements();
@@ -162,9 +148,9 @@ public class VaultParametersResolverTest {
     final String path = getKVPath("test-read-once");
     writeSecret(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
 
-    final List<VaultParameter> parameters = Arrays.asList(
-      VaultParameter.extract("/" + path + "!/first"),
-      VaultParameter.extract("/" + path + "!/second")
+    final List<VaultQuery> parameters = Arrays.asList(
+      VaultQuery.extract("/" + path + "!/first"),
+      VaultQuery.extract("/" + path + "!/second")
     );
 
     myRequestedURIs.clear();

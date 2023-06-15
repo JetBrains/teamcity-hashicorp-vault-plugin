@@ -1,7 +1,6 @@
 package org.jetbrains.teamcity.vault.server
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import jetbrains.buildServer.serverSide.ControlDescription
 import jetbrains.buildServer.serverSide.impl.BaseServerTestCase
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
@@ -21,15 +20,13 @@ import org.testng.annotations.Test
 @Listeners(MockitoTestNGListener::class)
 class HashiCorpVaultParameterTest : BaseServerTestCase() {
 
-    @Mock
-    private lateinit var connector: VaultConnector
     private lateinit var client: HashiCorpVaultParameter
     private val objectMapper = jacksonObjectMapper()
 
     @BeforeMethod
     override fun setUp() {
         super.setUp()
-        client = HashiCorpVaultParameter(Mockito.mock(PluginDescriptor::class.java), HashiCorpVaultConnectionResolver(connector))
+        client = HashiCorpVaultParameter(Mockito.mock(PluginDescriptor::class.java))
     }
 
     @Test
@@ -64,19 +61,10 @@ class HashiCorpVaultParameterTest : BaseServerTestCase() {
         )
         val build = createRunningBuild(myBuildType, emptyArray(), emptyArray())
 
-        Mockito.`when`(connector.requestWrappedToken(build, settings)).thenReturn(TOKEN)
-
         val remoteParameter = client.createRemoteParameter(build, vaultParameter)
-        val serializedSettings = objectMapper.readValue<Map<String, String>>(remoteParameter.value)
-        val featureSettings = VaultFeatureSettings.getAgentFeatureFromProperties(serializedSettings)
-
-        Assert.assertEquals(featureSettings.url, URL)
-        Assert.assertEquals(featureSettings.namespace, expectedNamespace)
-        Assert.assertEquals(featureSettings.vaultNamespace, VAULT_NAMESPACE)
-        Assert.assertEquals(featureSettings.failOnError, true)
-        Assert.assertEquals(featureSettings.auth.method, AuthMethod.APPROLE)
-        val auth = featureSettings.auth as Auth.AppRoleAuthAgent
-        Assert.assertEquals(auth.wrappedToken, TOKEN)
+        Assert.assertEquals(remoteParameter.value, "")
+        Assert.assertEquals(remoteParameter.name, PARAMETER_NAME)
+        Assert.assertTrue(remoteParameter.isSecret)
     }
 
     companion object {

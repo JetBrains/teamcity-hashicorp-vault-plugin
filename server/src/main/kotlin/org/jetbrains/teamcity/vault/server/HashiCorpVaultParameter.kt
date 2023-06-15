@@ -38,7 +38,7 @@ import org.jetbrains.teamcity.vault.VaultParameterSettings
 import org.springframework.web.servlet.ModelAndView
 import javax.servlet.http.HttpServletRequest
 
-class HashiCorpVaultParameter(private val descriptor: PluginDescriptor, private val hashiCorpVaultConnectionResolver: HashiCorpVaultConnectionResolver) : RemoteParameterProvider,
+class HashiCorpVaultParameter(private val descriptor: PluginDescriptor) : RemoteParameterProvider,
     RemoteParameterControlProvider {
 
     private val objectMapper = jacksonObjectMapper()
@@ -92,40 +92,8 @@ class HashiCorpVaultParameter(private val descriptor: PluginDescriptor, private 
 
     override fun getRemoteParameterType(): String = PARAMETER_TYPE
 
-    private fun getVaultConnection(build: SBuild, vaultParameterSettings: VaultParameterSettings): VaultFeatureSettings? {
-        if (build.buildType == null) {
-            return null
-        }
-
-        return hashiCorpVaultConnectionResolver
-            .getProjectToConnectionPairs(build.buildType!!)
-            .filter { it.second.namespace == vaultParameterSettings.getNamespace() }
-            .firstOrNull()?.second
-    }
-
     override fun createRemoteParameter(build: SBuild, parameter: Parameter): RemoteParameter = object : RemoteParameter {
-        override fun getValue(): String {
-            val parameterControl = parameter.controlDescription
-            if (parameterControl == null) {
-                throw IllegalStateException("Parameter ${parameter.name} does not have a control description, making it impossible for it to be a remote parameter.")
-            }
-            val parameterSettings = VaultParameterSettings(parameterControl.parameterTypeArguments)
-            val featureSettings = getVaultConnection(build, parameterSettings)
-
-            if (featureSettings == null) {
-                throw IllegalStateException("Parameter ${parameter.name} does not have an associated vault connection.")
-            }
-
-            try {
-                val agentFeatureSettings = hashiCorpVaultConnectionResolver
-                    .serverFeatureSettingsToAgentSettings(build, featureSettings, parameterSettings.getNamespace())
-
-                return objectMapper.writeValueAsString(agentFeatureSettings.toFeatureProperties())
-            } catch (e: Throwable) {
-                throw e
-            }
-        }
-
+        override fun getValue(): String = ""
 
         override fun isSecret(): Boolean = true
 

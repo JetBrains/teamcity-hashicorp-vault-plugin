@@ -34,7 +34,7 @@ import java.util.*
 
 class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvider) {
     companion object {
-        val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultParametersResolver::class.java.name)!!
+        val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultParametersResolver::class.java.name)
     }
 
     fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {
@@ -46,22 +46,16 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
         val logger = build.buildLogger
         logger.message("${references.size} Vault ${"reference".pluralize(references)} to resolve: $references")
 
-        val parameters = references.map { VaultParameter.extract(VaultReferencesUtil.getPath(it, settings.namespace)) }
+        val parameters = references.map { VaultQuery.extract(VaultReferencesUtil.getPath(it, settings.namespace)) }
 
         val replacements = resolveReplacements(build, settings, parameters, token)
 
         replaceParametersReferences(build, replacements.replacements, references, settings.namespace)
     }
 
-    fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, keys: List<String>, token: String) {
-        val runningBuild = build as AgentRunningBuildEx
-        val keyToQuery = keys.mapNotNull { key ->
-            val query = runningBuild.getParameterControlDescription(key)?.parameterTypeArguments?.get(VaultConstants.ParameterSettings.VAULT_QUERY)
-            if (query == null) {
-                null
-            } else {
-                key to VaultParameter.extract(query)
-            }
+    fun resolve(build: AgentRunningBuild, settings: VaultFeatureSettings, vaultParameters: List<VaultParameter>, token: String) {
+        val keyToQuery = vaultParameters.mapNotNull { parameter ->
+            parameter.parameterKey to VaultQuery.extract(parameter.vaultParameterSettings.vaultQuery)
         }.toMap()
 
         val replacements = resolveReplacements(build, settings, keyToQuery.values, token).replacements
@@ -76,7 +70,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
     private fun resolveReplacements(
         build: AgentRunningBuild,
         settings: VaultFeatureSettings,
-        parameters: Collection<VaultParameter>,
+        parameters: Collection<VaultQuery>,
         token: String
     ): ResolvingResult {
         val replacements = doFetchAndPrepareReplacements(settings, token, parameters, build.buildLogger)
@@ -93,7 +87,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
         return replacements
     }
 
-    fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: Collection<VaultParameter>, logger: BuildProgressLogger): ResolvingResult {
+    fun doFetchAndPrepareReplacements(settings: VaultFeatureSettings, token: String, parameters: Collection<VaultQuery>, logger: BuildProgressLogger): ResolvingResult {
         val endpoint = VaultEndpoint.from(URI.create(settings.url))
         val factory = createClientHttpRequestFactory(trustStoreProvider)
         val client = VaultTemplate(endpoint, settings.vaultNamespace, factory, SimpleSessionManager({ VaultToken.of(token) }))
@@ -101,7 +95,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
         return doFetchAndPrepareReplacements(client, parameters, logger)
     }
 
-    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: Collection<VaultParameter>, logger: BuildProgressLogger): ResolvingResult {
+    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: Collection<VaultQuery>, logger: BuildProgressLogger): ResolvingResult {
         return VaultParametersFetcher(client, logger).doFetchAndPrepareReplacements(parameters)
     }
 
@@ -111,7 +105,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
         private val client: VaultTemplate,
         private val logger: BuildProgressLogger
     ) {
-        fun doFetchAndPrepareReplacements(parameters: Collection<VaultParameter>): ResolvingResult {
+        fun doFetchAndPrepareReplacements(parameters: Collection<VaultQuery>): ResolvingResult {
             val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath })
 
             return getReplacements(parameters, responses)
@@ -135,7 +129,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
             return responses
         }
 
-        private fun getReplacements(parameters: Collection<VaultParameter>, responses: Map<String, VaultResponse?>): ResolvingResult {
+        private fun getReplacements(parameters: Collection<VaultQuery>, responses: Map<String, VaultResponse?>): ResolvingResult {
             val replacements = HashMap<String, String>()
             val errors = HashMap<String, String>()
 
@@ -158,7 +152,7 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
         }
 
         @Throws(ResolvingError::class)
-        private fun extract(response: VaultResponse, parameter: VaultParameter): String {
+        private fun extract(response: VaultResponse, parameter: VaultQuery): String {
             val jsonPath = parameter.jsonPath
             val data = unwrapKV2IfNeeded(response.data)
             if (jsonPath == null) {

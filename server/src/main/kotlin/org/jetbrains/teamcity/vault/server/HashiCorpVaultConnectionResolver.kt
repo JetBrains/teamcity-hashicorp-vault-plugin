@@ -5,6 +5,7 @@ import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SBuildType
+import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import org.jetbrains.teamcity.vault.Auth
 import org.jetbrains.teamcity.vault.VaultConstants
@@ -14,7 +15,11 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
     val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + HashiCorpVaultConnectionResolver::class.java.name)
 
     fun getProjectToConnectionPairs(buildType: SBuildType): List<Pair<String, VaultFeatureSettings>> {
-        val connectionFeatures = buildType.project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
+        return getProjectToConnectionPairs(buildType.project)
+    }
+
+    fun getProjectToConnectionPairs(project: SProject): List<Pair<String, VaultFeatureSettings>> {
+        val connectionFeatures = project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
             VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
         }
 
