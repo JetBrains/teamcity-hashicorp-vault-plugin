@@ -24,10 +24,7 @@ import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.positioning.PositionAware
 import jetbrains.buildServer.util.positioning.PositionConstraint
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import org.jetbrains.teamcity.vault.VaultReferencesUtil
-import org.jetbrains.teamcity.vault.isDefault
-import org.jetbrains.teamcity.vault.isShouldSetEnvParameters
+import org.jetbrains.teamcity.vault.*
 
 class VaultBuildStartContextProcessor(
     private val connector: VaultConnector,
@@ -84,10 +81,22 @@ class VaultBuildStartContextProcessor(
             }
 
             try {
-                hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(build, settings, ns)
+                val agentSettings = hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(build, settings, ns)
+                agentSettings
                     .toSharedParameters().forEach {
                         context.addSharedParameter(it.key, it.value)
                     }
+                val auth = agentSettings.auth
+                val wrappedToken = when (auth) {
+                    is Auth.AppRoleAuthAgent -> auth.wrappedToken
+                    is Auth.LdapAgent -> auth.wrappedToken
+                    else -> null
+                }
+
+                if (wrappedToken != null) {
+                    context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), wrappedToken)
+
+                }
             } catch (e: Throwable) {
                 build.stop(null, e.localizedMessage)
             }
