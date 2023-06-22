@@ -21,6 +21,7 @@ import java.net.URI;
 import java.util.*;
 import jetbrains.buildServer.agent.AgentRunningBuildEx;
 import jetbrains.buildServer.agent.BuildProgressLogger;
+import jetbrains.buildServer.agent.Constants;
 import jetbrains.buildServer.agent.NullBuildProgressLogger;
 import jetbrains.buildServer.util.CollectionsUtil;
 import jetbrains.buildServer.util.PasswordReplacer;
@@ -78,13 +79,32 @@ public class VaultParametersResolverTest {
     resolver = new VaultParametersResolver(emptyTrustStoreProvider);
     feature = new VaultFeatureSettings(vault.getUrl(), vaultNamespace);
   }
+  private static final String EXPECTED_VALUE = "TestValue";
 
   @Test(dataProvider = "namespaces")
   public void testSimpleParameterResolvedFromRemoteParameter(String namespace) {
+    String key = "key";
+    AgentRunningBuildEx runningBuild = testParameterWithKey(key);
+    Mockito.verify(runningBuild).addSharedConfigParameter(key, EXPECTED_VALUE);
+  }
+
+  @Test(dataProvider = "namespaces")
+  public void testSimpleSystemParameterResolvedFromRemoteParameter(String namespace) {
+    String key = Constants.SYSTEM_PREFIX +  "key";
+    AgentRunningBuildEx runningBuild = testParameterWithKey(key);
+    Mockito.verify(runningBuild).addSharedSystemProperty("key", EXPECTED_VALUE);
+  }
+
+  @Test(dataProvider = "namespaces")
+  public void testSimpleEnvParameterResolvedFromRemoteParameter(String namespace) {
+    String key = Constants.ENV_PREFIX +  "key";
+    AgentRunningBuildEx runningBuild = testParameterWithKey(key);
+    Mockito.verify(runningBuild).addSharedEnvironmentVariable("key", EXPECTED_VALUE);
+  }
+
+  private AgentRunningBuildEx testParameterWithKey(String key) {
     final String path = getKVPath("test");
-    final String key = "key";
-    final String expectedValue = "TestValue";
-    writeSecret(path, Collections.singletonMap("data", expectedValue));
+    writeSecret(path, Collections.singletonMap("data", EXPECTED_VALUE));
 
     final AgentRunningBuildEx runningBuild = Mockito.mock(AgentRunningBuildEx.class);
     final BuildProgressLogger logger = Mockito.mock(BuildProgressLogger.class);
@@ -95,8 +115,8 @@ public class VaultParametersResolverTest {
     final VaultParameter parameter = new VaultParameter(key, new VaultParameterSettings(VaultConstants.ParameterSettings.DEFAULT_UI_PARAMETER_NAMESPACE, path));
 
     resolver.resolve(runningBuild, feature, Collections.singletonList(parameter), vault.getToken());
-    Mockito.verify(passwordReplacer).addPassword(expectedValue);
-    Mockito.verify(runningBuild).addSharedConfigParameter(key, expectedValue);
+    Mockito.verify(passwordReplacer).addPassword(EXPECTED_VALUE);
+    return runningBuild;
   }
 
   @Test(dataProvider = "namespaces")

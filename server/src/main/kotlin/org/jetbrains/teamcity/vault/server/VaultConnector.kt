@@ -18,7 +18,6 @@ package org.jetbrains.teamcity.vault.server
 import com.amazonaws.SdkBaseException
 import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.util.concurrent.Striped
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.containers.ConcurrentHashSet
 import jetbrains.buildServer.log.Loggers
@@ -38,25 +37,9 @@ import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import kotlin.concurrent.withLock
 
 class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private val trustStoreProvider: SSLTrustStoreProvider) {
-    init {
-        dispatcher.addListener(object : BuildServerAdapter() {
-            override fun buildFinished(build: SRunningBuild) {
-                val infos = myBuildsTokens.remove(build.buildId) ?: return
-                infos.values.forEach { info ->
-                    if (info == LeasedWrappedTokenInfo.FAILED_TO_FETCH) return
-                    myPendingRemoval.add(info)
-                    if (revoke(info, trustStoreProvider)) {
-                        myPendingRemoval.remove(info)
-                    }
-                }
-            }
-        })
-    }
 
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultConnector::class.java.name)!!
@@ -73,6 +56,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                     // we don't even request wrapped token before build
                     return true
                 }
+
                 AuthMethod.APPROLE,
                 AuthMethod.LDAP -> {
                     try {
@@ -117,7 +101,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
 
         private fun getTokenFromAwsIamAuth(template: RestTemplate): Pair<String, String> {
             val options = AwsIamAuthenticationOptions.builder()
-                    .credentialsProvider(InstanceProfileCredentialsProvider.getInstance()).build()
+                .credentialsProvider(InstanceProfileCredentialsProvider.getInstance()).build()
 
             val token: VaultToken
             val aws = AwsIamAuthentication(options, template)
@@ -219,20 +203,21 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             val err = VaultResponses.getError(cause)
             val prefix = "Cannot log in to HashiCorp Vault using ${method.name} method"
             val message: String = setOf("failed to validate credentials: ", "failed to validate SecretID: ")
-                    .find { err.startsWith(it) }
-                    ?.let {
-                        val suberror = err.removePrefix(it)
-                        if (suberror.contains("invalid secret_id")) {
-                            return@let "$prefix, SecretID is incorrect or expired"
-                        } else if (suberror.contains("failed to find secondary index for role_id")) {
-                            return@let "$prefix, RoleID is incorrect or there's no such role"
-                        }
-                        return@let null
-                    } ?: "$prefix: $err"
+                .find { err.startsWith(it) }
+                ?.let {
+                    val suberror = err.removePrefix(it)
+                    if (suberror.contains("invalid secret_id")) {
+                        return@let "$prefix, SecretID is incorrect or expired"
+                    } else if (suberror.contains("failed to find secondary index for role_id")) {
+                        return@let "$prefix, RoleID is incorrect or there's no such role"
+                    }
+                    return@let null
+                } ?: "$prefix: $err"
             return ConnectionException(if (replacer != null) replacer(message) else message, cause)
         }
 
-        @JvmStatic fun doRequestWrappedToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
+        @JvmStatic
+        fun doRequestWrappedToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
             val factory = createClientHttpRequestFactory(trustStoreProvider)
 
@@ -266,6 +251,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
 
                     return performLoginRequest(template, auth.method, path, body, auth.secretId, extractor)
                 }
+
                 is Auth.LdapServer -> {
                     val options = LdapAuthenticationOptions.builder()
                         .username(auth.username)
@@ -278,6 +264,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
 
                     return performLoginRequest(template, auth.method, path, body, auth.password, extractor)
                 }
+
                 else -> error("Unsupported auth method: ${settings.auth.method}, class: ${settings.auth::class.qualifiedName}")
             }
         }
@@ -308,53 +295,32 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             val auth = response.auth
 
             val token = auth["client_token"] as? String
-                    ?: throw VaultException("HashiCorp Vault hasn't returned token")
+                ?: throw VaultException("HashiCorp Vault hasn't returned token")
             val accessor = auth["accessor"] as? String
-                    ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
+                ?: throw VaultException("HashiCorp Vault hasn't returned token accessor")
             token to accessor
         }
 
         private val extractWrappedTokenAndAccessor: (VaultResponse) -> Pair<String, String> = { response: VaultResponse ->
             val wrap = response.wrapInfo
-                    ?: throw VaultException("HashiCorp Vault hasn't returned 'wrap_info'")
+                ?: throw VaultException("HashiCorp Vault hasn't returned 'wrap_info'")
 
             val token = wrap["token"]
-                    ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token")
+                ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token")
             val accessor = wrap["wrapped_accessor"]
-                    ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token accessor")
+                ?: throw VaultException("HashiCorp Vault hasn't returned wrapped token accessor")
 
             token to accessor
         }
     }
 
-    // TODO: Support server restart
-    private val myBuildsTokens: MutableMap<Long, MutableMap<String, LeasedWrappedTokenInfo>> = ConcurrentHashMap()
-    private val myPendingRemoval: MutableSet<LeasedWrappedTokenInfo> = ConcurrentHashSet()
     @Suppress("UnstableApiUsage")
-    private val myLocks = Striped.lazyWeakLock(64)
-
-    fun requestWrappedToken(build: SBuild, settings: VaultFeatureSettings): String {
-        val infos = myBuildsTokens.getOrDefault(build.buildId, ConcurrentHashMap())
-        val info = infos[settings.namespace]
-        if (info != null) return info.wrapped
-
-        @Suppress("UnstableApiUsage")
-        myLocks.get(build.buildId).withLock {
-            @Suppress("NAME_SHADOWING")
-            val infos = myBuildsTokens.getOrDefault(build.buildId,ConcurrentHashMap())
-            @Suppress("NAME_SHADOWING")
-            val info = infos[settings.namespace]
-            if(info != null) return info.wrapped
-            try {
-                val (token, accessor) = doRequestWrappedToken(settings, trustStoreProvider)
-                infos[settings.namespace] = LeasedWrappedTokenInfo(token, accessor, settings)
-                myBuildsTokens[build.buildId] = infos
-                return token
-            } catch (e: Exception) {
-                infos[settings.namespace] = LeasedWrappedTokenInfo.FAILED_TO_FETCH
-                myBuildsTokens[build.buildId] = infos
-                throw e
-            }
+    fun requestWrappedToken(settings: VaultFeatureSettings): String {
+        try {
+            val (token, _) = doRequestWrappedToken(settings, trustStoreProvider)
+            return token
+        } catch (e: Exception) {
+            throw e
         }
     }
 
@@ -365,6 +331,7 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
                 val (token, accessor) = doRequestToken(settings, trustStoreProvider)
                 LeasedTokenInfo(token, accessor, settings)
             }
+
             AuthMethod.AWS_IAM -> {
                 val template = createRestTemplate(settings, trustStoreProvider)
                 val (token, accessor) = getTokenFromAwsIamAuth(template)

@@ -34,7 +34,7 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
     fun serverFeatureSettingsToAgentSettings(build: SBuild, settings: VaultFeatureSettings, namespace: String): VaultFeatureSettings =
         if (settings.auth is Auth.AppRoleAuthServer || settings.auth is Auth.LdapServer) {
             val wrappedToken: String = try {
-                connector.requestWrappedToken(build, settings)
+                connector.requestWrappedToken(settings)
             } catch (e: Throwable) {
                 val message = "Failed to fetch HashiCorp Vault$namespace wrapped token: ${e.message}"
                 LOG.warn(message, e)

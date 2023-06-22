@@ -19,8 +19,8 @@ import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.AgentRunningBuild
-import jetbrains.buildServer.agent.AgentRunningBuildEx
 import jetbrains.buildServer.agent.BuildProgressLogger
+import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
@@ -62,7 +62,11 @@ class VaultParametersResolver(private val trustStoreProvider: SSLTrustStoreProvi
         keyToQuery.forEach { key, value ->
             val replacement = replacements[value.full]
             if (replacement != null) {
-                build.addSharedConfigParameter(key, replacement)
+                when {
+                    key.startsWith(Constants.SYSTEM_PREFIX) -> build.addSharedSystemProperty(key.removePrefix(Constants.SYSTEM_PREFIX), replacement)
+                    key.startsWith(Constants.ENV_PREFIX) -> build.addSharedEnvironmentVariable(key.removePrefix(Constants.ENV_PREFIX), replacement)
+                    else -> build.addSharedConfigParameter(key, replacement)
+                }
             }
         }
     }

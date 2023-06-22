@@ -113,7 +113,7 @@ private fun createRestTemplate(): RestTemplate {
     return RestTemplate(converters)
 }
 
-fun isShouldSetEnvParameters(parameters: MutableMap<String, String>, namespace: String): Boolean {
+fun isShouldSetEnvParameters(parameters: Map<String, String>, namespace: String): Boolean {
     return parameters[getVaultParameterName(namespace, VaultConstants.BehaviourParameters.ExposeEnvSuffix)]
             ?.toBoolean() ?: false
 }

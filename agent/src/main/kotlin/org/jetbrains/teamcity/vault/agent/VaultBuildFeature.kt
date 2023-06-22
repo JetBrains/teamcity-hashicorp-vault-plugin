@@ -73,13 +73,15 @@ class VaultBuildFeature(
     }
 
     override fun buildStarted(runningBuild: AgentRunningBuild) {
-        fetchLegacyParameters(runningBuild)
-        fetchParameters(runningBuild)
+        runningBuild.buildLogger.activity("HashiCorp Vault", VaultConstants.FeatureSettings.FEATURE_TYPE) {
+            fetchLegacyParameters(runningBuild)
+            fetchParameters(runningBuild)
+        }
     }
 
     private fun fetchParameters(runningBuild: AgentRunningBuild) {
         val runningBuildImpl = runningBuild as AgentRunningBuildEx
-        val parameters = runningBuild.sharedConfigParameters
+        val parameters = runningBuild.sharedConfigParameters + runningBuild.sharedBuildParameters.allParameters
         parameters
             .map {
                 it.key to runningBuildImpl.getParameterControlDescription(it.key)
@@ -106,6 +108,7 @@ class VaultBuildFeature(
                     vaultFeatureSettings to it.value
                 }
             }.forEach { (vaultFeatureSettings, vaultParameters) ->
+                runningBuild.buildLogger.message("Resolving parameters $vaultParameters" + if (isDefault(vaultFeatureSettings.namespace)) "" else "for namespace ${vaultFeatureSettings.namespace}")
                 val token = resolveToken(parameters, vaultFeatureSettings, runningBuild)
 
                 if (token != null) {
@@ -141,7 +144,7 @@ class VaultBuildFeature(
                 .doSyncRequest(requestBuilder.build())
             val contentStream = response.contentStream
 
-            if (response.statusCode != 200){
+            if (response.statusCode != 200) {
                 val errorMessage =
                     "Got a ${response.statusCode} status code while fetching the token for hashicorp vault's namespace $namespace. With the error message: ${response.bodyAsString}"
                 LOG.error(errorMessage)
@@ -194,7 +197,7 @@ class VaultBuildFeature(
     }
 
     private fun resolveToken(
-        parameters: MutableMap<String, String>,
+        parameters: Map<String, String>,
         settings: VaultFeatureSettings,
         runningBuild: AgentRunningBuild
     ): String? {
@@ -203,83 +206,79 @@ class VaultBuildFeature(
         }
         val namespace = settings.namespace
         val logger = runningBuild.buildLogger
-        var sessionToken: String? = null
         val url = settings.url
-        logger.activity("HashiCorp Vault" + if (isDefault(namespace)) "" else " ('$namespace' namespace)", VaultConstants.FeatureSettings.FEATURE_TYPE) {
-            val token: String
-            val timeoutSeconds = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)])?.toLongOrNull()
-                ?: 15
-            try {
-                val template = createRestTemplate(settings, trustStoreProvider)
-                val authentication: ClientAuthentication = when (settings.auth.method) {
-                    AuthMethod.APPROLE,
-                    AuthMethod.LDAP -> {
-                        val wrapped = when (val auth = settings.auth) {
-                            is Auth.AppRoleAuthAgent -> auth.wrappedToken
-                            is Auth.LdapAgent -> auth.wrappedToken
-                            else -> error("Unsupported auth method: ${settings.auth.method}, class: ${settings.auth::class.qualifiedName}")
-                        }
-                        if (wrapped.isBlank()) {
-                            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
-                            return@activity
-                        }
-                        if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
-                            logger.internalError(
-                                VaultConstants.FeatureSettings.FEATURE_TYPE,
-                                "Wrapped HashiCorp Vault token value for url $url is incorrect, seems there was error fetching token on TeamCity server side",
-                                null
-                            )
-                            return@activity
-                        }
-                        createCubbyholeAuthentication(wrapped, template)
+        val token: String
+        val timeoutSeconds = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)])?.toLongOrNull()
+            ?: 15
+        try {
+            val template = createRestTemplate(settings, trustStoreProvider)
+            val authentication: ClientAuthentication = when (settings.auth.method) {
+                AuthMethod.APPROLE,
+                AuthMethod.LDAP -> {
+                    val wrapped = when (val auth = settings.auth) {
+                        is Auth.AppRoleAuthAgent -> auth.wrappedToken
+                        is Auth.LdapAgent -> auth.wrappedToken
+                        else -> error("Unsupported auth method: ${settings.auth.method}, class: ${settings.auth::class.qualifiedName}")
                     }
-
-                    AuthMethod.AWS_IAM -> {
-                        createAwsIamAuthentication(template)
+                    if (wrapped.isBlank()) {
+                        logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
+                        return null
                     }
+                    if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
+                        logger.internalError(
+                            VaultConstants.FeatureSettings.FEATURE_TYPE,
+                            "Wrapped HashiCorp Vault token value for url $url is incorrect, seems there was error fetching token on TeamCity server side",
+                            null
+                        )
+                        return null
+                    }
+                    createCubbyholeAuthentication(wrapped, template)
                 }
-                val sessionManager = LifecycleAwareSessionManager(
-                    authentication, scheduler, template,
-                    LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeoutSeconds, TimeUnit.SECONDS), logger
-                )
-                sessions[runningBuild.buildId] = sessionManager
-                token = sessionManager.sessionToken.token
-            } catch (e: Exception) {
-                val errorPrefix = when (settings.auth.method) {
-                    AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token"
-                    AuthMethod.AWS_IAM -> "Failed to get HashiCorp Vault token using AWS IAM auth"
-                    AuthMethod.LDAP -> "Failed to get HashiCorp Vault token using LDAP"
+
+                AuthMethod.AWS_IAM -> {
+                    createAwsIamAuthentication(template)
                 }
-                if (settings.failOnError) {
-                    logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorPrefix + ": " + e.message, e)
-                    logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${runningBuild.buildTypeId}_${settings.namespace}_A", "VaultConnection", errorPrefix))
-                    runningBuild.stopBuild(errorPrefix)
-                } else {
-                    logger.error(errorPrefix + ": " + e.message)
-                    logger.exception(e)
-                }
-                return@activity
             }
-
-            logger.message("HashiCorp Vault token successfully fetched")
-
-            runningBuild.passwordReplacer.addPassword(token)
-
-            if (isShouldSetEnvParameters(parameters, namespace)) {
-                val envPrefix = getEnvPrefix(namespace)
-
-                val tokenParameter = envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN
-                val addrParameter = envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR
-
-                runningBuild.addSharedEnvironmentVariable(tokenParameter, token)
-                runningBuild.addSharedEnvironmentVariable(addrParameter, settings.url)
-
-                logger.message("$addrParameter and $tokenParameter environment variables were added")
+            val sessionManager = LifecycleAwareSessionManager(
+                authentication, scheduler, template,
+                LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeoutSeconds, TimeUnit.SECONDS), logger
+            )
+            sessions[runningBuild.buildId] = sessionManager
+            token = sessionManager.sessionToken.token
+        } catch (e: Exception) {
+            val errorPrefix = when (settings.auth.method) {
+                AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token"
+                AuthMethod.AWS_IAM -> "Failed to get HashiCorp Vault token using AWS IAM auth"
+                AuthMethod.LDAP -> "Failed to get HashiCorp Vault token using LDAP"
             }
-
-            sessionToken = token
+            if (settings.failOnError) {
+                logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorPrefix + ": " + e.message, e)
+                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${runningBuild.buildTypeId}_${settings.namespace}_A", "VaultConnection", errorPrefix))
+                runningBuild.stopBuild(errorPrefix)
+            } else {
+                logger.error(errorPrefix + ": " + e.message)
+                logger.exception(e)
+            }
+            return null
         }
-        return sessionToken
+
+        logger.message("HashiCorp Vault token successfully fetched")
+
+        runningBuild.passwordReplacer.addPassword(token)
+
+        if (isShouldSetEnvParameters(parameters, namespace)) {
+            val envPrefix = getEnvPrefix(namespace)
+
+            val tokenParameter = envPrefix + VaultConstants.AgentEnvironment.VAULT_TOKEN
+            val addrParameter = envPrefix + VaultConstants.AgentEnvironment.VAULT_ADDR
+
+            runningBuild.addSharedEnvironmentVariable(tokenParameter, token)
+            runningBuild.addSharedEnvironmentVariable(addrParameter, settings.url)
+
+            logger.message("$addrParameter and $tokenParameter environment variables were added")
+        }
+
+        return token
     }
 
     private fun createAwsIamAuthentication(restTemplate: RestTemplate): AwsIamAuthentication {
