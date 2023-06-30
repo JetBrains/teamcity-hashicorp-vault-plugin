@@ -1,45 +1,48 @@
 package org.jetbrains.teamcity.vault
 
+import org.jetbrains.teamcity.vault.VaultConstants.FeatureSettings
 import org.jetbrains.teamcity.vault.VaultConstants.ParameterSettings
-import org.jetbrains.teamcity.vault.VaultConstants.ParameterSettings.VAULT_QUERY
 import org.testng.Assert
 import org.testng.annotations.Test
-import java.lang.RuntimeException
 
 class VaultParameterSettingsTest {
     @Test
     fun testCreatePojo() {
-        val settings = VaultParameterSettings(getVaultParametersMap(VAULT_QUERY, NAMESPACE))
-        Assert.assertEquals(VAULT_QUERY, settings.vaultQuery)
-        Assert.assertEquals(NAMESPACE, settings.getNamespace())
+        val settings = VaultParameterSettings(getVaultParametersMap(TEST_VAULT_QUERY, TEST_NAMESPACE))
+        Assert.assertEquals(TEST_VAULT_QUERY, settings.vaultQuery)
+        Assert.assertEquals(TEST_NAMESPACE, settings.namespace)
     }
 
-    @Test(expectedExceptions = arrayOf(IllegalArgumentException::class))
-    fun testCreatePojo_MissingVaultQuery() {
-        VaultParameterSettings(getVaultParametersMap("", NAMESPACE))
+    @Test(expectedExceptions = [IllegalArgumentException::class])
+    fun testCreatePojo_NullVaultQuery() {
+        VaultParameterSettings(getVaultParametersMap(null, TEST_NAMESPACE))
     }
 
-    @Test(expectedExceptions = arrayOf(IllegalArgumentException::class))
+    @Test(expectedExceptions = [IllegalArgumentException::class])
+    fun testCreatePojo_EmptyVaultQuery() {
+        VaultParameterSettings(getVaultParametersMap("", TEST_NAMESPACE))
+    }
+
+    @Test(expectedExceptions = [IllegalArgumentException::class])
     fun testCreatePojo_MissingNamespace() {
-        VaultParameterSettings(getVaultParametersMap(VAULT_QUERY, ""))
+        VaultParameterSettings(getVaultParametersMap(TEST_VAULT_QUERY, ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE))
     }
 
-    @Test(expectedExceptions = arrayOf(IllegalArgumentException::class))
+    @Test
     fun testCreatePojo_DefaultNamespace() {
-        VaultParameterSettings(getVaultParametersMap(VAULT_QUERY, ""))
-        val settings = VaultParameterSettings(getVaultParametersMap(VAULT_QUERY, ParameterSettings.DEFAULT_UI_PARAMETER_NAMESPACE))
-        Assert.assertEquals(VAULT_QUERY, settings.vaultQuery)
-        Assert.assertEquals(NAMESPACE, settings.getNamespace())
+        val settings = VaultParameterSettings(getVaultParametersMap(TEST_VAULT_QUERY, FeatureSettings.DEFAULT_PARAMETER_NAMESPACE))
+        Assert.assertEquals(TEST_VAULT_QUERY, settings.vaultQuery)
+        Assert.assertEquals(FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, settings.namespace)
     }
 
-    private fun getVaultParametersMap(vaultQuery: String, namespace: String) = mapOf(
-        ParameterSettings.VAULT_QUERY to vaultQuery,
-        ParameterSettings.NAMESPACE to namespace
-    )
+    private fun getVaultParametersMap(vaultQuery: String?, namespace: String?) = buildMap {
+        if (vaultQuery != null) put(ParameterSettings.VAULT_QUERY, vaultQuery)
+        if (namespace != null) put(ParameterSettings.NAMESPACE, namespace)
+    }
 
 
     companion object {
-        const val VAULT_QUERY = "vault/query!/value"
-        const val NAMESPACE = "namespace"
+        const val TEST_VAULT_QUERY = "vault/query!/value"
+        const val TEST_NAMESPACE = "namespace"
     }
 }

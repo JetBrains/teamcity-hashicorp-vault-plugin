@@ -116,7 +116,7 @@ class VaultBuildFeature(
                 build.stopBuild(errorMessage)
                 null
             }
-        }.groupBy { vaultParameter -> vaultParameter.vaultParameterSettings.getNamespace() }
+        }.groupBy { vaultParameter -> vaultParameter.vaultParameterSettings.namespace }
     }
 
     private fun extractLegacyVaultNamespaces(build: AgentRunningBuild): Set<String> {

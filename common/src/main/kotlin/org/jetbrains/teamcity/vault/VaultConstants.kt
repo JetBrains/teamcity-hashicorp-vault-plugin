@@ -77,7 +77,7 @@ object VaultConstants {
     }
 
     object ParameterSettings {
-        const val DEFAULT_UI_PARAMETER_NAMESPACE = "teamcity-default-hashicorp-default-value"
+        const val NAMESPACE_NOT_SELECTED_VALUE = "parameter-namespace-not-selected-please-select"
         const val NAMESPACE = "teamcity_hashicorp_vault_namespace"
         const val VAULT_QUERY = "teamcity_hashicorp_vault_query"
     }

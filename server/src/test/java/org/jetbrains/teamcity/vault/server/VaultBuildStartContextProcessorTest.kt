@@ -36,7 +36,7 @@ class HashiCorpVaultParameterTest : BaseServerTestCase() {
 
     @Test
     fun testCreateVaultParameter_DefaultNamespace() {
-        testVaultParameter(VaultConstants.ParameterSettings.DEFAULT_UI_PARAMETER_NAMESPACE, "")
+        testVaultParameter(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, "")
     }
 
     private fun testVaultParameter(storedNamespace: String, expectedNamespace: String) {

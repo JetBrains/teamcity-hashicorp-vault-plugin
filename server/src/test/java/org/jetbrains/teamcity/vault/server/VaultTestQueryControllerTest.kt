@@ -75,6 +75,39 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     }
 
     @Test
+    fun testQuery_EmptyNamespace() {
+        val namespace = ""
+        val settings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
+
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, namespace))
+            .thenReturn(settings)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(settings, namespace))
+            .thenReturn(settings)
+        Mockito.`when`(sessionManagerBuilder.build(settings).sessionToken.token)
+            .thenReturn(TOKEN)
+
+        val query = VaultQuery.extract(VAULT_QUERY)
+        val result = VaultResolver.ResolvingResult(
+            mapOf(
+                query.full to SECRET_VALUE
+            ), emptyMap()
+        )
+
+        Mockito.`when`(vaultResolver.doFetchAndPrepareReplacements(settings, TOKEN, listOf(query)))
+            .thenReturn(result)
+
+        // namespace is empty, property is not sent
+        doPost(
+            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
+        )
+
+        val response = myResponse.returnedContentAsXml.getChild("testConnectionResult")?.value
+        Assert.assertNotNull(response)
+        Assert.assertEquals(response, SECRET_VALUE)
+    }
+
+    @Test
     fun testQuery_NoProjectId() {
         doPost(
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
@@ -110,11 +143,11 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     }
 
     @Test
-    fun testQuery_MissingNamespace() {
-
+    fun testQuery_NamespaceNotSelected() {
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
+            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", VaultConstants.ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value

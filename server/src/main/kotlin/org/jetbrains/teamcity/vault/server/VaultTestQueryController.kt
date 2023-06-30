@@ -98,22 +98,22 @@ class VaultTestQueryController(
         try {
             val parameterSettings = VaultParameterSettings(properties)
             val serverFeature = try {
-                hashiCorpVaultConnectionResolver.getVaultConnection(project, parameterSettings.getNamespace())
+                hashiCorpVaultConnectionResolver.getVaultConnection(project, parameterSettings.namespace)
             } catch (e: ParameterNamespaceCollisionException) {
-                errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Vault namespace ${parameterSettings.getNamespace()} is declared more than once in the same project")
+                errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Vault namespace ${parameterSettings.namespace} is declared more than once in the same project")
                 errors.serialize(xmlResponse)
                 return
             }
 
             if (serverFeature == null) {
-                errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Failed to find hashicorp connection ${parameterSettings.getNamespace()}")
+                errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Failed to find hashicorp connection ${parameterSettings.namespace}")
                 errors.serialize(xmlResponse)
                 return
             }
 
             IOGuard.allowNetworkCall<Exception> {
                 val agentFeature = hashiCorpVaultConnectionResolver
-                    .serverFeatureSettingsToAgentSettings(serverFeature, parameterSettings.getNamespace())
+                    .serverFeatureSettingsToAgentSettings(serverFeature, parameterSettings.namespace)
                 val token = sessionManagerBuilder
                     .build(agentFeature).sessionToken.token
                 val query = VaultQuery.extract(parameterSettings.vaultQuery)

@@ -64,7 +64,8 @@
   }
 </script>
 
-<c:set var="defaultOption" value="<%=VaultConstants.ParameterSettings.DEFAULT_UI_PARAMETER_NAMESPACE%>"/>
+<c:set var="emptyNamespaceOption" value="<%=VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE%>"/>
+<c:set var="namespaceNotSelectedValue" value="<%=VaultConstants.ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE%>"/>
 <c:set var="namespaceDropdown" value="<%=VaultConstants.ParameterSettings.NAMESPACE%>"/>
 <c:set var="vaultQuery" value="<%=VaultConstants.ParameterSettings.VAULT_QUERY%>"/>
 
@@ -73,12 +74,12 @@
     <th style="width: 20%"><label for="prop:${namespaceDropdown}">Parameter Namespace: <l:star/></label></th>
     <td>
       <props:selectProperty id="${namespaceDropdown}" name="${namespaceDropdown}" className="longField">
-        <props:option value="">-- Please choose namespace --</props:option>
+        <props:option value="${namespaceNotSelectedValue}">-- Please choose namespace --</props:option>
         <c:forEach items="${vaultFeatureSettings}" var="feature">
           <c:choose>
             <c:when test="${empty feature.namespace}">
-              <props:option value="${defaultOption}">
-                <c:out value="Default Namespace"/>
+              <props:option value="${emptyNamespaceOption}">
+                <c:out value="Default Namespace (empty)"/>
               </props:option>
             </c:when>
             <c:otherwise>
