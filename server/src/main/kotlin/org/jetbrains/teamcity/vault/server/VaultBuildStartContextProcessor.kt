@@ -81,7 +81,7 @@ class VaultBuildStartContextProcessor(
             }
 
             try {
-                val agentSettings = hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(build, settings, ns)
+                val agentSettings = hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(settings, ns)
                 agentSettings
                     .toSharedParameters().forEach {
                         context.addSharedParameter(it.key, it.value)
@@ -98,6 +98,7 @@ class VaultBuildStartContextProcessor(
 
                 }
             } catch (e: Throwable) {
+                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.namespace}", "VaultConnection", e.localizedMessage))
                 build.stop(null, e.localizedMessage)
             }
         }

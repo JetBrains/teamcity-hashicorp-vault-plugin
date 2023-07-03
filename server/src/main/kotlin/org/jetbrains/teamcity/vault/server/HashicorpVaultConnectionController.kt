@@ -1,5 +1,6 @@
 package org.jetbrains.teamcity.vault.server
 
+import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.serverSide.BuildsManager
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.web.util.WebAuthUtil
@@ -25,7 +26,7 @@ class HashicorpVaultConnectionController(
         val buildId = WebAuthUtil.getAuthenticatedBuildId(request) ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "No authenticated build has been found. You do not have access to this build")
         val build = buildsManager.findRunningBuildById(buildId)
         if (build == null) {
-            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Build with id $buildId not found")
+            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Running build with id $buildId not found")
         }
 
         val project = projectManager.findProjectById(build.projectId)
@@ -45,9 +46,11 @@ class HashicorpVaultConnectionController(
 
 
         return try {
-            val agentFeatureSettings = hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(build, feature, namespace)
+            val agentFeatureSettings = hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(feature, namespace)
             agentFeatureSettings.toFeatureProperties()
         } catch (e: Throwable) {
+            build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${feature.namespace}", "VaultConnection", e.localizedMessage))
+            build.stop(null, e.localizedMessage)
             throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to request token", e)
         }
     }

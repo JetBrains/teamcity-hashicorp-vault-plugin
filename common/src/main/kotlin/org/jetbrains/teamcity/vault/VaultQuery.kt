@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jetbrains.teamcity.vault.agent
-
-import org.jetbrains.teamcity.vault.ensureHasPrefix
+package org.jetbrains.teamcity.vault
 
 data class VaultQuery(val vaultPath: String, val jsonPath: String? = null) {
     companion object {

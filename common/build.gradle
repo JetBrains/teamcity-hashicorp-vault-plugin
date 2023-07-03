@@ -27,6 +27,9 @@ dependencies {
     compileOnly "org.springframework:spring-web:$spring_version"
     compileOnly "org.springframework:spring-context:$spring_version"
     compileOnly "org.apache.httpcomponents:httpclient:$httpclient_version"
+    implementation('com.jayway.jsonpath:json-path:2.4.0') {
+        exclude group: 'org.slf4j'
+    }
 
     testFixturesApi("org.springframework.vault:spring-vault-core:$sprint_vault_version")
     testFixturesApi "org.testcontainers:testcontainers:$testcontainers_version"

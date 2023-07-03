@@ -46,7 +46,8 @@ class VaultBuildFeature(
     dispatcher: EventDispatcher<AgentLifeCycleListener>,
     private val trustStoreProvider: SSLTrustStoreProvider,
     private val myVaultParametersResolver: VaultParametersResolver,
-    private val sslTrustStoreProvider: SSLTrustStoreProvider
+    private val sslTrustStoreProvider: SSLTrustStoreProvider,
+    private val sessionManagerBuilder: SessionManagerBuilder
 ) : AgentLifeCycleAdapter(), PositionAware {
     companion object {
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultBuildFeature::class.java.name)
@@ -206,43 +207,9 @@ class VaultBuildFeature(
         }
         val namespace = settings.namespace
         val logger = runningBuild.buildLogger
-        val url = settings.url
         val token: String
-        val timeoutSeconds = (parameters[getVaultParameterName(namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX)])?.toLongOrNull()
-            ?: 15
         try {
-            val template = createRestTemplate(settings, trustStoreProvider)
-            val authentication: ClientAuthentication = when (settings.auth.method) {
-                AuthMethod.APPROLE,
-                AuthMethod.LDAP -> {
-                    val wrapped = when (val auth = settings.auth) {
-                        is Auth.AppRoleAuthAgent -> auth.wrappedToken
-                        is Auth.LdapAgent -> auth.wrappedToken
-                        else -> error("Unsupported auth method: ${settings.auth.method}, class: ${settings.auth::class.qualifiedName}")
-                    }
-                    if (wrapped.isBlank()) {
-                        logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, "Wrapped HashiCorp Vault token for url $url not found", null)
-                        return null
-                    }
-                    if (VaultConstants.SPECIAL_VALUES.contains(wrapped)) {
-                        logger.internalError(
-                            VaultConstants.FeatureSettings.FEATURE_TYPE,
-                            "Wrapped HashiCorp Vault token value for url $url is incorrect, seems there was error fetching token on TeamCity server side",
-                            null
-                        )
-                        return null
-                    }
-                    createCubbyholeAuthentication(wrapped, template)
-                }
-
-                AuthMethod.AWS_IAM -> {
-                    createAwsIamAuthentication(template)
-                }
-            }
-            val sessionManager = LifecycleAwareSessionManager(
-                authentication, scheduler, template,
-                LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(timeoutSeconds, TimeUnit.SECONDS), logger
-            )
+            val sessionManager = sessionManagerBuilder.buildWithImprovedLogging(settings, logger)
             sessions[runningBuild.buildId] = sessionManager
             token = sessionManager.sessionToken.token
         } catch (e: Exception) {
@@ -279,21 +246,6 @@ class VaultBuildFeature(
         }
 
         return token
-    }
-
-    private fun createAwsIamAuthentication(restTemplate: RestTemplate): AwsIamAuthentication {
-        val options = AwsIamAuthenticationOptions.builder()
-            .credentialsProvider(InstanceProfileCredentialsProvider.getInstance()).build()
-
-        return AwsIamAuthentication(options, restTemplate)
-    }
-
-    private fun createCubbyholeAuthentication(wrapped: String, restTemplate: RestTemplate): CubbyholeAuthentication {
-        val options = CubbyholeAuthenticationOptions.builder()
-            .wrapped()
-            .initialToken(VaultToken.of(wrapped))
-            .build()
-        return CubbyholeAuthentication(options, restTemplate)
     }
 
     override fun beforeBuildFinish(build: AgentRunningBuild, buildStatus: BuildFinishedStatus) {

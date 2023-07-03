@@ -77,6 +77,7 @@ subprojects {
         testImplementation("javax.servlet:javax.servlet-api:3.1.0")
         testImplementation "org.mockito:mockito-testng:0.4.23"
         testImplementation "org.mockito.kotlin:mockito-kotlin:4.0.0"
+        testImplementation("com.willowtreeapps.assertk:assertk:0.26.1")
     }
     test {
         useTestNG()

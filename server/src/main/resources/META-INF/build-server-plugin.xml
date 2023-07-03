@@ -16,5 +16,7 @@
     <bean class="org.jetbrains.teamcity.vault.server.HashiCorpVaultParameter"/>
     <bean class="org.jetbrains.teamcity.vault.server.HashiCorpVaultConnectionResolver"/>
     <bean class="org.jetbrains.teamcity.vault.server.HashicorpVaultConnectionController"/>
+    <bean class="org.jetbrains.teamcity.vault.VaultResolver"/>
+    <bean class="org.jetbrains.teamcity.vault.server.VaultTestQueryController"/>
     <mvc:annotation-driven/>
 </beans>
