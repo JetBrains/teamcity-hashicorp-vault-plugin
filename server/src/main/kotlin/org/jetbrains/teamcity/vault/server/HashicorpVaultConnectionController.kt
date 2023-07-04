@@ -44,15 +44,10 @@ class HashicorpVaultConnectionController(
             "No authenticated build has been found. Access to the build tokens is denied."
         )
         val build = buildsManager.findRunningBuildById(buildId)
-        if (build == null) {
-            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Running build with id $buildId not found")
-        }
+                ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Running build with id $buildId not found")
 
         val project = projectManager.findProjectById(build.projectId)
-
-        if (project == null) {
-            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Project with id ${build.projectId} not found")
-        }
+                ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Project with id ${build.projectId} not found")
 
         val feature = try {
             hashiCorpVaultConnectionResolver.getVaultConnection(project, namespace)
