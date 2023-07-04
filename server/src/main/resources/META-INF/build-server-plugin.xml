@@ -18,5 +18,6 @@
     <bean class="org.jetbrains.teamcity.vault.server.HashicorpVaultConnectionController"/>
     <bean class="org.jetbrains.teamcity.vault.VaultResolver"/>
     <bean class="org.jetbrains.teamcity.vault.server.VaultTestQueryController"/>
+    <bean class="org.jetbrains.teamcity.vault.SessionManagerBuilder"/>
     <mvc:annotation-driven/>
 </beans>

@@ -5,5 +5,5 @@
        default-autowire="constructor">
     <bean id="vaultParametersResolver" class="org.jetbrains.teamcity.vault.agent.VaultParametersResolver"/>
     <bean id="vaultBuildFeature" class="org.jetbrains.teamcity.vault.agent.VaultBuildFeature"/>
-    <bean id="vaultBuildFeature" class="org.jetbrains.teamcity.vault.SessionManagerBuilder"/>
+    <bean id="sessionManagerBuilder" class="org.jetbrains.teamcity.vault.SessionManagerBuilder"/>
 </beans>
