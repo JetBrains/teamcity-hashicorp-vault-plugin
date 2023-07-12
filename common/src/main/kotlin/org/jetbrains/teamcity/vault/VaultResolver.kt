@@ -50,8 +50,15 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
 
             for (path in paths.toSet()) {
                 try {
-                    val response = client.read(path.removePrefix("/"))
-                    responses[path] = Response(response)
+                    if (path.startsWith("/auth/") && path.endsWith("/secret-id"))
+                    {
+                        val response = client.write(path.removePrefix("/"), null)
+                        responses[path] = Response(response)
+                    }
+                    else {
+                        val response = client.read(path.removePrefix("/"))
+                        responses[path] = Response(response)
+                    }
                 } catch (e: Exception) {
                     LOG.warn("Failed to fetch data for path '$path'", e)
                     responses[path] = Error(e)
