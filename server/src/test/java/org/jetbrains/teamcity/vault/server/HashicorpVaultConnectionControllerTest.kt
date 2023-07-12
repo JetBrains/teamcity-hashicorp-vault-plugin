@@ -53,10 +53,69 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
     }
 
     @Test(expectedExceptions = [ResponseStatusException::class])
-    fun testGetToken_NoBuildId() {
+    fun testGetToken_SecondAttemptFails() {
+        myTestLogger?.doNotFailOnErrorMessages()
+        val build = createRunningBuild(myBuildType, emptyArray(), emptyArray())
+        val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
+        Mockito.`when`(request.getAttribute(WebAuthUtil.TEAM_CITY_AUTHENTICATED_BUILD)).thenReturn(build.buildId)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject)).thenReturn(
+            listOf(
+                myProject.projectId to serverSettings,
+                myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
+            )
+        )
+
+        val agentSettings = getDefaultSettings(
+            Auth.getAgentAuthFromProperties(
+                emptyMap()
+            )
+        )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE)).thenReturn(agentSettings)
+
+        val settingsMap = controller.getToken(NAMESPACE, request)
+        Assert.assertEquals(settingsMap, agentSettings.toFeatureProperties())
         controller.getToken(NAMESPACE, request)
     }
 
+    @Test
+    fun testGetToken_SecondAttemptForAnotherFeatureWorks() {
+        val build = createRunningBuild(myBuildType, emptyArray(), emptyArray())
+        val serverSettings1 = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
+        val namespace2 = "$NAMESPACE-2"
+        val serverSettings2 = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()), namespace2)
+        Mockito.`when`(request.getAttribute(WebAuthUtil.TEAM_CITY_AUTHENTICATED_BUILD)).thenReturn(build.buildId)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject)).thenReturn(
+            listOf(
+                myProject.projectId to serverSettings1,
+                myProject.projectId to serverSettings2,
+            )
+        )
+
+        val agentSettings1 = getDefaultSettings(
+            Auth.getAgentAuthFromProperties(
+                emptyMap()
+            )
+        )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings1, NAMESPACE)).thenReturn(agentSettings1)
+
+        val agentSettings2 = getDefaultSettings(
+            Auth.getAgentAuthFromProperties(
+                emptyMap()
+            ),
+            namespace2
+        )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings2, namespace2)).thenReturn(agentSettings2)
+
+        val settingsMap1 = controller.getToken(NAMESPACE, request)
+        Assert.assertEquals(settingsMap1, agentSettings1.toFeatureProperties())
+        val settingsMap2 = controller.getToken(namespace2, request)
+        Assert.assertEquals(settingsMap2, agentSettings2.toFeatureProperties())
+    }
+
+    @Test(expectedExceptions = [ResponseStatusException::class])
+    fun testGetToken_NoBuildId() {
+        controller.getToken(NAMESPACE, request)
+    }
 
 
     @Test(expectedExceptions = [ResponseStatusException::class])
@@ -72,8 +131,8 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
         controller.getToken(NAMESPACE, request)
     }
 
-    private fun getDefaultSettings(auth: Auth) = VaultFeatureSettings(
-        NAMESPACE, "url", "vaultNamespace", true, auth
+    private fun getDefaultSettings(auth: Auth, namespace: String = NAMESPACE ) = VaultFeatureSettings(
+        namespace, "url", "vaultNamespace", true, auth
     )
 
     companion object {
