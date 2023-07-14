@@ -2,7 +2,6 @@ package org.jetbrains.teamcity.vault.server
 
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.log.Loggers
-import jetbrains.buildServer.serverSide.SBuildType
 import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import org.jetbrains.teamcity.vault.Auth
@@ -10,23 +9,59 @@ import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 
 class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
-    val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + HashiCorpVaultConnectionResolver::class.java.name)
+    private val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + HashiCorpVaultConnectionResolver::class.java.name)
 
-    fun getProjectToConnectionPairs(buildType: SBuildType): List<Pair<String, VaultFeatureSettings>> {
-        return getProjectToConnectionPairs(buildType.project)
+    @Suppress("serial")
+    class ParameterNamespaceCollisionException(val namespace: String, val projectId: String) : Exception()
+
+    @Throws(ParameterNamespaceCollisionException::class)
+    fun getVaultConnections(project: SProject): List<VaultFeatureSettings> {
+        return getVaultConnections(project, null)
     }
 
-    fun getProjectToConnectionPairs(project: SProject): List<Pair<String, VaultFeatureSettings>> {
-        val connectionFeatures = project.getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE).filter {
-            VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
+    @Throws(ParameterNamespaceCollisionException::class)
+    fun getVaultConnection(project: SProject, namespace: String): VaultFeatureSettings? {
+        val rawResult = getVaultConnections(project, namespace)
+        if (rawResult.isEmpty()) {
+            return null
+        }
+        return rawResult.single()
+    }
+
+    @Throws(ParameterNamespaceCollisionException::class)
+    private fun getVaultConnections(project: SProject, parameterNamespace: String?): List<VaultFeatureSettings> {
+        // Namespace is a key
+        val effectiveFeatures = mutableMapOf<String, VaultFeatureSettings>()
+
+        // Own features come first, Root project's last. Own feature has higher priority.
+        val rawProjectFeatures = project
+                .getAvailableFeaturesOfType(OAuthConstants.FEATURE_TYPE)
+                .filter {
+                    VaultConstants.FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
+                }
+
+        val knownDescriptors = mutableSetOf<ConnectionDescriptor>()
+
+        rawProjectFeatures.forEach { featureDescriptor ->
+            val settings = VaultFeatureSettings(featureDescriptor.parameters)
+
+            // Filter connections by parameter namespace if specified
+            if (parameterNamespace != null && parameterNamespace != settings.namespace) {
+                return@forEach
+            }
+
+            // Detect namespace collisions:
+            // When multiple connections in the same project have the same parameter namespace
+            val descriptor = ConnectionDescriptor(featureDescriptor.projectId, settings.namespace)
+            if (descriptor in knownDescriptors) {
+                throw ParameterNamespaceCollisionException(settings.namespace, featureDescriptor.projectId)
+            }
+
+            knownDescriptors.add(descriptor)
+            effectiveFeatures.putIfAbsent(settings.namespace, settings)
         }
 
-        // Two features with same prefix cannot coexist in same project
-        // Though it's possible to override feature with same prefix in subproject
-        val projectToFeaturePairs = connectionFeatures.map {
-            it.projectId to VaultFeatureSettings(it.parameters)
-        }
-        return projectToFeaturePairs
+        return effectiveFeatures.map { (_, settings) -> settings }
     }
 
     fun serverFeatureSettingsToAgentSettings(settings: VaultFeatureSettings, namespace: String): VaultFeatureSettings =
@@ -50,4 +85,6 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
         } else {
             settings
         }
+
+    private data class ConnectionDescriptor(val projectId: String, val parameterNamespace: String)
 }

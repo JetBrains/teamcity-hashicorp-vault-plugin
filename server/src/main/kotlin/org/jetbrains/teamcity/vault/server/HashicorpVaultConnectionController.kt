@@ -2,7 +2,6 @@ package org.jetbrains.teamcity.vault.server
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.text.StringUtil
-import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.serverSide.BuildsManager
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.RunningBuildEx
@@ -10,11 +9,10 @@ import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.web.util.WebAuthUtil
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.server.HashiCorpVaultConnectionResolver.ParameterNamespaceCollisionException
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 import javax.servlet.http.HttpServletRequest
 
@@ -34,6 +32,11 @@ class HashicorpVaultConnectionController(
 
     fun getTokenGenerationId(feature: VaultFeatureSettings) = "$STORAGE_ID-${feature.namespace}"
 
+    @ExceptionHandler(ResponseStatusException::class)
+    fun handleResponseStatusException(ex: ResponseStatusException): ResponseEntity<String> {
+        return ResponseEntity(ex.reason, ex.status)
+    }
+
     @RequestMapping(VaultConstants.ControllerSettings.WRAP_TOKEN_PATH, method = [RequestMethod.GET], produces = ["application/json"])
     fun getToken(@RequestParam(name = "namespace") namespace: String, request: HttpServletRequest): Map<String, String> {
         val buildId = WebAuthUtil.getAuthenticatedBuildId(request) ?: throw ResponseStatusException(
@@ -51,15 +54,11 @@ class HashicorpVaultConnectionController(
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Project with id ${build.projectId} not found")
         }
 
-        val feature = hashiCorpVaultConnectionResolver
-            .getProjectToConnectionPairs(project)
-            .filter { it.second.namespace == namespace }
-            .firstOrNull()?.second
-
-        if (feature == null) {
-            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Vault namespace $namespace not found")
-        }
-
+        val feature = try {
+            hashiCorpVaultConnectionResolver.getVaultConnection(project, namespace)
+        } catch (e: ParameterNamespaceCollisionException) {
+            throw ResponseStatusException(HttpStatus.CONFLICT, "Parameter namespace $namespace is declared more than once in the same project")
+        } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Parameter namespace $namespace not found")
 
         if (hasTokenBeenGenerated(build, feature)) {
             val errorMessage = "There has been an attempt to generate a second hashicorp vault token for build ${build.buildId} in project ${project.projectId}"

@@ -4,12 +4,12 @@ import jetbrains.buildServer.serverSide.impl.BaseServerTestCase
 import jetbrains.buildServer.web.util.WebAuthUtil
 import org.jetbrains.teamcity.vault.Auth
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.server.HashiCorpVaultConnectionResolver.ParameterNamespaceCollisionException
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.testng.MockitoTestNGListener
 import org.springframework.web.server.ResponseStatusException
 import org.testng.Assert
-import org.testng.Assert.*
 import org.testng.annotations.BeforeMethod
 import org.testng.annotations.Listeners
 import org.testng.annotations.Test
@@ -34,12 +34,8 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
         val build = createRunningBuild(myBuildType, emptyArray(), emptyArray())
         val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
         Mockito.`when`(request.getAttribute(WebAuthUtil.TEAM_CITY_AUTHENTICATED_BUILD)).thenReturn(build.buildId)
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject)).thenReturn(
-            listOf(
-                myProject.projectId to serverSettings,
-                myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-            )
-        )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+                .thenReturn(serverSettings)
 
         val agentSettings = getDefaultSettings(
             Auth.getAgentAuthFromProperties(
@@ -58,12 +54,8 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
         val build = createRunningBuild(myBuildType, emptyArray(), emptyArray())
         val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
         Mockito.`when`(request.getAttribute(WebAuthUtil.TEAM_CITY_AUTHENTICATED_BUILD)).thenReturn(build.buildId)
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject)).thenReturn(
-            listOf(
-                myProject.projectId to serverSettings,
-                myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-            )
-        )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+                .thenReturn(serverSettings)
 
         val agentSettings = getDefaultSettings(
             Auth.getAgentAuthFromProperties(
@@ -84,12 +76,10 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
         val namespace2 = "$NAMESPACE-2"
         val serverSettings2 = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()), namespace2)
         Mockito.`when`(request.getAttribute(WebAuthUtil.TEAM_CITY_AUTHENTICATED_BUILD)).thenReturn(build.buildId)
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject)).thenReturn(
-            listOf(
-                myProject.projectId to serverSettings1,
-                myProject.projectId to serverSettings2,
-            )
-        )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+                .thenReturn(serverSettings1)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, namespace2))
+                .thenReturn(serverSettings2)
 
         val agentSettings1 = getDefaultSettings(
             Auth.getAgentAuthFromProperties(
@@ -122,11 +112,19 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
     fun testGetToken_NoAppropriateVaultFeature() {
         val build = createRunningBuild(myBuildType, emptyArray(), emptyArray())
         Mockito.`when`(request.getAttribute(WebAuthUtil.TEAM_CITY_AUTHENTICATED_BUILD)).thenReturn(build.buildId)
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject)).thenReturn(
-            listOf(
-                myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-            )
-        )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+                .thenReturn(null)
+
+        controller.getToken(NAMESPACE, request)
+    }
+
+
+    @Test(expectedExceptions = [ResponseStatusException::class])
+    fun testGetToken_NamespaceCollision() {
+        val build = createRunningBuild(myBuildType, emptyArray(), emptyArray())
+        Mockito.`when`(request.getAttribute(WebAuthUtil.TEAM_CITY_AUTHENTICATED_BUILD)).thenReturn(build.buildId)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+                .thenThrow(ParameterNamespaceCollisionException(NAMESPACE, myProject.projectId))
 
         controller.getToken(NAMESPACE, request)
     }

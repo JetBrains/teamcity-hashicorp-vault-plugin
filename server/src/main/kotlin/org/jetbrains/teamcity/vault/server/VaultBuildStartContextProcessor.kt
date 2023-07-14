@@ -25,6 +25,7 @@ import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.positioning.PositionAware
 import jetbrains.buildServer.util.positioning.PositionConstraint
 import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.server.HashiCorpVaultConnectionResolver.ParameterNamespaceCollisionException
 
 class VaultBuildStartContextProcessor(
     private val hashiCorpVaultConnectionResolver: HashiCorpVaultConnectionResolver
@@ -33,36 +34,19 @@ class VaultBuildStartContextProcessor(
         private val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)
     }
 
-    private fun getFeatures(build: SRunningBuild, reportProblems: Boolean): List<VaultFeatureSettings> {
-        val buildType = build.buildType ?: return emptyList()
-
-        val projectToConnectionPairs = hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(buildType)
-
-        if (reportProblems) {
-            projectToConnectionPairs.groupBy({ it.first }, { it.second }).forEach { pid, features ->
-                features.groupBy { it.namespace }
-                        .filterValues { it.size > 1 }
-                        .forEach { namespace, clashing ->
-                            val nsDescripption = if (isDefault(namespace)) "default namespace" else "'$namespace' namespace"
-                            val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project '$pid'"
-                            build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection", message))
-                            if (clashing.any { it.failOnError }) {
-                                build.stop(null, message)
-                            }
-                        }
-            }
-        }
-        val vaultFeatures = projectToConnectionPairs.map { it.second }
-
-        return vaultFeatures.groupBy { it.namespace }.map { (_, v) -> v.first() }
-    }
-
     override fun updateParameters(context: BuildStartContext) {
         val build = context.build
+        val project = build.buildType?.project ?: return
 
-        val settingsList = getFeatures(build, true)
-        if (settingsList.isEmpty())
+        val settingsList = try {
+            hashiCorpVaultConnectionResolver.getVaultConnections(project)
+        } catch (e: ParameterNamespaceCollisionException) {
+            val ns = if (e.namespace.isEmpty()) "empty namespace" else "namespace '${e.namespace}'"
+            val message = "Multiple HashiCorp Vault connections with $ns present in project '${e.projectId}'"
+            build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${e.namespace}_${e.projectId}", "VaultConnection", message))
+            build.stop(null, message)
             return
+        }
 
         // Set teamcity.vault.<namespace>.legacy.parameters.present parameter for builds where
         // legacy vault references are present

@@ -157,16 +157,8 @@ class VaultBuildFeature(
             }
 
             val response = DelegatingRequestHandler().doSyncRequest(requestBuilder.build())
-            if (response.statusCode == HttpStatus.NOT_FOUND.value()) {
-                val errorMessage = "$errorPrefix parameter namespace is not found"
-                LOG.error(errorMessage)
-                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
-                build.stopBuild(errorMessage)
-                return null
-            }
-
             if (response.statusCode != HttpStatus.OK.value()) {
-                val errorMessage = "$errorPrefix non-200 response status code from TeamCity Server: ${response.statusCode} ${response.statusText}"
+                val errorMessage = "$errorPrefix ${response.bodyAsString}"
                 LOG.error(errorMessage)
                 logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
                 build.stopBuild(errorMessage)

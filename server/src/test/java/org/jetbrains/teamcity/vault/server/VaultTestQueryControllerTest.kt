@@ -10,7 +10,6 @@ import org.mockito.testng.MockitoTestNGListener
 import org.springframework.http.HttpStatus
 import org.springframework.vault.VaultException
 import org.testng.Assert
-import org.testng.Assert.*
 import org.testng.annotations.Listeners
 import org.testng.annotations.Test
 
@@ -44,13 +43,9 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     fun testQuery() {
         val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject))
-            .thenReturn(
-                listOf(
-                    myProject.projectId to serverSettings,
-                    myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-                )
-            )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+            .thenReturn(serverSettings)
+
         val agentSettings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
 
         Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
@@ -130,13 +125,8 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
 
     @Test
     fun testQuery_MissingConnection() {
-
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject))
-            .thenReturn(
-                listOf(
-                    myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-                )
-            )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+            .thenReturn(null)
 
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
@@ -154,13 +144,8 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     fun testQuery_FailureToGenerateAgentSettings() {
         val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject))
-            .thenReturn(
-                listOf(
-                    myProject.projectId to serverSettings,
-                    myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-                )
-            )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+            .thenReturn(serverSettings)
 
         val error = "Mock error"
         Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
@@ -182,13 +167,8 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     fun testQuery_FailureToBuildSession() {
         val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject))
-            .thenReturn(
-                listOf(
-                    myProject.projectId to serverSettings,
-                    myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-                )
-            )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+            .thenReturn(serverSettings)
         val agentSettings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
 
         Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
@@ -213,13 +193,8 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     fun testQuery_FailureToGetReplacements() {
         val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject))
-            .thenReturn(
-                listOf(
-                    myProject.projectId to serverSettings,
-                    myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-                )
-            )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+            .thenReturn(serverSettings)
         val agentSettings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
 
         Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
@@ -254,13 +229,8 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     fun testQuery_FailureErrorReplacement() {
         val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.getProjectToConnectionPairs(myProject))
-            .thenReturn(
-                listOf(
-                    myProject.projectId to serverSettings,
-                    myProject.projectId to VaultFeatureSettings("url", "vaultNamespace")
-                )
-            )
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+            .thenReturn(serverSettings)
         val agentSettings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
 
         Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))

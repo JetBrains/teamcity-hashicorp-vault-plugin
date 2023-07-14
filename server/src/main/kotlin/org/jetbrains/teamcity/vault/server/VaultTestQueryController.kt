@@ -28,6 +28,7 @@ import org.jetbrains.teamcity.vault.SessionManagerBuilder
 import org.jetbrains.teamcity.vault.VaultParameterSettings
 import org.jetbrains.teamcity.vault.VaultQuery
 import org.jetbrains.teamcity.vault.VaultResolver
+import org.jetbrains.teamcity.vault.server.HashiCorpVaultConnectionResolver.ParameterNamespaceCollisionException
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.scheduling.TaskScheduler
@@ -96,10 +97,13 @@ class VaultTestQueryController(
 
         try {
             val parameterSettings = VaultParameterSettings(properties)
-            val serverFeature = hashiCorpVaultConnectionResolver
-                .getProjectToConnectionPairs(project)
-                .filter { it.second.namespace == parameterSettings.getNamespace() }
-                .firstOrNull()?.second
+            val serverFeature = try {
+                hashiCorpVaultConnectionResolver.getVaultConnection(project, parameterSettings.getNamespace())
+            } catch (e: ParameterNamespaceCollisionException) {
+                errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Vault namespace ${parameterSettings.getNamespace()} is declared more than once in the same project")
+                errors.serialize(xmlResponse)
+                return
+            }
 
             if (serverFeature == null) {
                 errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Failed to find hashicorp connection ${parameterSettings.getNamespace()}")
