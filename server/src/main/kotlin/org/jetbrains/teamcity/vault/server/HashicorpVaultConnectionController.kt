@@ -5,6 +5,7 @@ import com.intellij.openapi.util.text.StringUtil
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.serverSide.BuildsManager
 import jetbrains.buildServer.serverSide.ProjectManager
+import jetbrains.buildServer.serverSide.RunningBuildEx
 import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.web.util.WebAuthUtil
 import org.jetbrains.teamcity.vault.VaultConstants
@@ -76,7 +77,7 @@ class HashicorpVaultConnectionController(
     }
 
     private fun hasTokenBeenGenerated(build: SRunningBuild, feature: VaultFeatureSettings): Boolean {
-        val customStorage = build.getCustomDataStorage(STORAGE_ID)
+        val customStorage = (build as RunningBuildEx).temporaryCustomDataStorage
         val tokenGenerationId = getTokenGenerationId(feature)
         customStorage.refresh()
         val value = customStorage.getValue(tokenGenerationId)
