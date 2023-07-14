@@ -27,19 +27,10 @@ import jetbrains.buildServer.util.positioning.PositionConstraint
 import org.jetbrains.teamcity.vault.*
 
 class VaultBuildStartContextProcessor(
-    private val connector: VaultConnector,
     private val hashiCorpVaultConnectionResolver: HashiCorpVaultConnectionResolver
 ) : BuildStartContextProcessor, PositionAware {
     companion object {
-        val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)
-        internal fun isShouldEnableVaultIntegration(build: SBuild, settings: VaultFeatureSettings, sharedParameters: Map<String, String>): Boolean {
-            val parameters = build.buildOwnParameters
-            return isShouldSetEnvParameters(parameters, settings.namespace)
-                    // Slowest part:
-                    || VaultReferencesUtil.hasReferences(build.parametersProvider.all, listOf(settings.namespace))
-                    // Some parameters may be set by TeamCity (for example, docker registry username and password)
-                    || VaultReferencesUtil.hasReferences(sharedParameters, listOf(settings.namespace))
-        }
+        private val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultBuildStartContextProcessor::class.java.name)
     }
 
     private fun getFeatures(build: SRunningBuild, reportProblems: Boolean): List<VaultFeatureSettings> {
@@ -50,15 +41,15 @@ class VaultBuildStartContextProcessor(
         if (reportProblems) {
             projectToConnectionPairs.groupBy({ it.first }, { it.second }).forEach { pid, features ->
                 features.groupBy { it.namespace }
-                    .filterValues { it.size > 1 }
-                    .forEach { namespace, clashing ->
-                        val nsDescripption = if (isDefault(namespace)) "default namespace" else "'$namespace' namespace"
-                        val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project '$pid'"
-                        build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection", message))
-                        if (clashing.any { it.failOnError }) {
-                            build.stop(null, message)
+                        .filterValues { it.size > 1 }
+                        .forEach { namespace, clashing ->
+                            val nsDescripption = if (isDefault(namespace)) "default namespace" else "'$namespace' namespace"
+                            val message = "Multiple HashiCorp Vault connections with $nsDescripption present in project '$pid'"
+                            build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_$pid", "VaultConnection", message))
+                            if (clashing.any { it.failOnError }) {
+                                build.stop(null, message)
+                            }
                         }
-                    }
             }
         }
         val vaultFeatures = projectToConnectionPairs.map { it.second }
@@ -73,35 +64,29 @@ class VaultBuildStartContextProcessor(
         if (settingsList.isEmpty())
             return
 
-        settingsList.map { settings ->
-            val ns = if (isDefault(settings.namespace)) "" else " ('${settings.namespace}' namespace)"
-            if (!isShouldEnableVaultIntegration(build, settings, context.sharedParameters)) {
+        // Set teamcity.vault.<namespace>.legacy.parameters.present parameter for builds where
+        // legacy vault references are present
+        settingsList.forEach { settings ->
+            if (!isParamatersContainLegacyVaultReferences(build, settings, context.sharedParameters)) {
+                val ns = if (isDefault(settings.namespace)) "" else " ('${settings.namespace}' namespace)"
                 LOG.debug("There's no need to fetch HashiCorp Vault$ns parameter for build $build")
-                return@map
+                return@forEach
             }
-
-            try {
-                val agentSettings = hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(settings, ns)
-                agentSettings
-                    .toSharedParameters().forEach {
-                        context.addSharedParameter(it.key, it.value)
-                    }
-                val auth = agentSettings.auth
-                val wrappedToken = when (auth) {
-                    is Auth.AppRoleAuthAgent -> auth.wrappedToken
-                    is Auth.LdapAgent -> auth.wrappedToken
-                    else -> null
-                }
-
-                if (wrappedToken != null) {
-                    context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.WRAPPED_TOKEN_PROPERTY_SUFFIX), wrappedToken)
-
-                }
-            } catch (e: Throwable) {
-                build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.namespace}", "VaultConnection", e.localizedMessage))
-                build.stop(null, e.localizedMessage)
-            }
+            context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.LEGACY_REFERENCES_USED_SUFFIX), settings.failOnError.toString())
         }
+    }
+
+    private fun isParamatersContainLegacyVaultReferences(
+            build: SBuild,
+            settings: VaultFeatureSettings,
+            sharedParameters: Map<String, String>
+    ): Boolean {
+        val namespace = settings.namespace
+        return isShouldSetEnvParameters(build.buildOwnParameters, namespace)
+                // Slowest part:
+                || VaultReferencesUtil.hasReferences(build.parametersProvider.all, listOf(namespace))
+                // Some parameters may be set by TeamCity (for example, docker registry username and password)
+                || VaultReferencesUtil.hasReferences(sharedParameters, listOf(namespace))
     }
 
     override fun getOrderId() = "HashiCorpVaultPluginBuildStartContextProcessor"

@@ -18,7 +18,6 @@ package org.jetbrains.teamcity.vault
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.util.StringUtil
-import jetbrains.buildServer.util.VersionComparatorUtil
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.support.ClientHttpRequestFactoryFactory
 import org.jetbrains.teamcity.vault.support.MappingJackson2HttpMessageConverter
@@ -54,12 +53,8 @@ fun getVaultParameterName(namespace: String, suffix: String): String {
     return VaultConstants.PARAMETER_PREFIX + ".$namespace" + suffix
 }
 
-fun isUrlParameter(value: String) =
-        value.startsWith(VaultConstants.PARAMETER_PREFIX) && value.endsWith(VaultConstants.URL_PROPERTY_SUFFIX)
-
-fun isJava8OrNewer(): Boolean {
-    return VersionComparatorUtil.compare(System.getProperty("java.specification.version"), "1.8") >= 0
-}
+fun isLegacyReferencesUsedParameter(value: String) =
+        value.startsWith(VaultConstants.PARAMETER_PREFIX) && value.endsWith(VaultConstants.LEGACY_REFERENCES_USED_SUFFIX)
 
 fun createClientHttpRequestFactory(trustStoreProvider: SSLTrustStoreProvider): ClientHttpRequestFactory {
     return ClientHttpRequestFactoryFactory.create(ClientOptions(), trustStoreProvider)

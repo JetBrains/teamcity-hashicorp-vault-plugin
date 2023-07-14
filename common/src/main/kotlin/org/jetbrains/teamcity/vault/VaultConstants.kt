@@ -21,13 +21,10 @@ import org.springframework.vault.authentication.AppRoleAuthenticationOptions
 object VaultConstants {
     val FEATURE_SUPPORTED_AGENT_PARAMETER = "teamcity.vault.supported"
 
-    val PARAMETER_PREFIX = "teamcity.vault"
-    val URL_PROPERTY_SUFFIX = ".url"
-    val VAULT_NAMESPACE_PROPERTY_SUFFIX = ".vault.namespace"
-    val WRAPPED_TOKEN_PROPERTY_SUFFIX = ".wrapped.token"
-    val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
-    val FAIL_ON_ERROR_PROPERTY_SUFFIX = ".failOnError"
-    val VAULT_AUTH_PROPERTY_SUFFIX = ".authMethod"
+    const val PARAMETER_PREFIX = "teamcity.vault"
+    const val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
+    const val LEGACY_REFERENCES_USED_SUFFIX = ".legacy.references.used"
+
     const val PARAMETER_TYPE = "hashicorp-vault"
 
 
