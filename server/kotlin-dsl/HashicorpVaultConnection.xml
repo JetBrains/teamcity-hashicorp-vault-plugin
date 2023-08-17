@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dsl-extension kind="projectFeature" type="OAuthProvider" generateDslJar="true" applicable="params['providerType'] == 'teamcity-vault'">
+  <class name="HashiCorpVaultConnection">
+    <description>
+      Stores information and configuration for the access to a HashiCorp Vault.
+    </description>
+  </class>
+
+  <init>
+    <param name="providerType" value="teamcity-vault" />
+  </init>
+
+  <function name="hashiCorpVaultParameter">
+    <description>
+      @see HashiCorpVaultParameter
+    </description>
+  </function>
+
+  <params>
+    <param name="displayName" dslName="name">
+      <description>
+        HashiCorp Vault connection display name
+      </description>
+    </param>
+    <param name="namespace" dslName="namespace" type="string">
+      <description>
+        Parameter Namespace. Should be provided in case of multiple vault connections
+      </description>
+    </param>
+    <param name="vault-namespace" dslName="vaultNamespace" type="string">
+      <description>
+        HashiCorp Vault namespace that the auth method and secrets engines are housed under.
+      </description>
+    </param>
+    <param name="url" dslName="url" type="string">
+      <description>
+        Vault URL
+      </description>
+    </param>
+    <param name="auth-method" dslName="authMethod" type="compound">
+      <description>
+        The way how to obtain credentials (just provide the keys, assume IAM role or other)
+      </description>
+      <option name="appRole" value="approle">
+        <param name="endpoint" dslName="endpointPath" type="string" mandatory="true">
+          <description>
+            AppRole auth endpoint path
+          </description>
+        </param>
+        <param name="role-id" dslName="roleId" type="string" mandatory="true">
+          <description>
+            AppRole Role ID
+          </description>
+        </param>
+        <param name="secure:secret-id" dslName="secretId" type="string" mandatory="true">
+          <description>
+            AppRole Secret ID
+          </description>
+        </param>
+      </option>
+      <option name="iam" value="iam">
+      </option>
+      <option name="ldap" value="ldap">
+        <param name="path" dslName="path" type="string" mandatory="true">
+          <description>
+            Path of the ldap authentication backend mount
+          </description>
+        </param>
+        <param name="username" dslName="username" type="string" mandatory="true">
+          <description>
+            LDAP Username
+          </description>
+        </param>
+        <param name="secure:password" dslName="password" type="string" mandatory="true">
+          <description>
+            LDAP Password
+          </description>
+        </param>
+      </option>
+    </param>
+    <param name="fail-on-error" dslName="failOnError" type="boolean" trueValue="true" falseValue="false">
+      <description>
+        Whether to fail builds in case of parameter resolving error
+      </description>
+    </param>
+  </params>
+
+  <examples>
+    <example>
+      <description>
+        Adds a new Connection that allows TeamCity to connect to a HashiCorpVault using AppRole
+      </description>
+      <code>
+        hashiCorpVaultParameter {
+            id = "PROJECT_ID"
+            name = "HashiCorp Vault"
+            authMethod = appRole {
+              endpointPath = "approle"
+              roleId = "id"
+              secretId = "credentialsJSON:ee2362ab-33fb-40bd-b49b-e77c4a45e978"
+          }
+        }
+      </code>
+    </example>
+    <example>
+      <description>
+        Adds a new Connection that allows TeamCity to connect to a HashiCorpVault using AppRole. It defines it own parameter namespace and a respective vault namespace.
+      </description>
+      <code>
+        hashiCorpVaultParameter {
+            id = "PROJECT_ID"
+            name = "HashiCorp Vault"
+            namespace = "other-namespace"
+            vaultNamespace = "other"
+            authMethod = appRole {
+              endpointPath = "approle"
+              roleId = "id"
+              secretId = "credentialsJSON:ee2362ab-33fb-40bd-b49b-e77c4a45e978"
+          }
+        }
+      </code>
+    </example>
+    <example>
+      <description>
+        Adds a new Connection that allows TeamCity to connect to a HashiCorpVault using LDAP
+      </description>
+      <code>
+        hashiCorpVaultParameter {
+            id = "PROJECT_ID"
+            name = "HashiCorp Vault"
+            authMethod = ldap {
+              path = "path"
+              username = "username"
+              password = "credentialsJSON:636e34b4-d02e-4f27-9d12-141f75e8832b"
+            }
+        }
+      </code>
+    </example>
+    <example>
+      <description>
+        Adds a new Connection that allows TeamCity to connect to a HashiCorpVault using LDAP
+      </description>
+      <code>
+        hashiCorpVaultParameter {
+            id = "PROJECT_ID"
+            name = "HashiCorp Vault"
+            authMethod = iam()
+        }
+      </code>
+    </example>
+  </examples>
+</dsl-extension>
