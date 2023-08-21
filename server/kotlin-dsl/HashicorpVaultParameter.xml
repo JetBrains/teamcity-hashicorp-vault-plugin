@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dsl-extension
+    kind="remoteParameter"
+    type="hashicorp-vault"
+    generateDslJar="true">
+  <class name="HashiCorpVaultParameter">
+    <description>
+      HashiCorp vault remote parameter
+    </description>
+  </class>
+
+  <function name="hashiCorpVaultParameter">
+    <description>
+      @see HashiCorpVaultParameter
+    </description>
+  </function>
+
+  <params>
+    <param name="teamcity_hashicorp_vault_vaultQuery" dslName="query" type="string" mandatory="true">
+      <description>
+        The query to access the KV vault. It should be written in the `vaultName/path/to!/key` format.
+        Should your vault be a KV 2.0, the query should be in the `vaultName/data/path/to!/key` format.
+      </description>
+    </param>
+    <param name="teamcity_hashicorp_vault_namespace" dslName="namespace" type="string">
+      <description>
+        The vault connection namespace id that should be used to access this secret
+      </description>
+    </param>
+  </params>
+
+  <examples>
+    <example>
+      <description>
+        Adds a new vault parameter with the name `test` that will fetch a value from the KV 1.0 vault named `secret` from the path `path/to`, with the key `key`.
+        The connection namespace to use it is `connection-1`
+      </description>
+      <code>
+        hashiCorpVaultParameter {
+          name = "test"
+          query = "secret/path/to!/key"
+          namespace = "connection-1"
+        }
+      </code>
+    </example>
+    <example>
+      <description>
+        Adds a new vault parameter with the name `test` that will fetch a value from the KV 2.0 vault named `secret` from the path `path/to`, with the key `key`.
+        The connection namespace to use it is `connection-1`
+      </description>
+      <code>
+        hashiCorpVaultParameter {
+          name = "test"
+          query = "secret/data/path/to!/key"
+          namespace = "connection-1"
+        }
+      </code>
+    </example>
+  </examples>
+</dsl-extension>

@@ -38,6 +38,4 @@ class VaultJspKeys {
     val AUTH_METHOD_LDAP = VaultConstants.FeatureSettings.AUTH_METHOD_LDAP
 
     val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
-
-    val AGENT_REQUIREMENT = VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT
 }

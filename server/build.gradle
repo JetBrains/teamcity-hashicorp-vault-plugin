@@ -60,6 +60,12 @@ teamcity {
             nodeResponsibilitiesAware = true
         }
         archiveName = "${project.rootProject.name}.zip"
+
+        files {
+            into("kotlin-dsl") {
+                from("kotlin-dsl")
+            }
+        }
     }
 
     environments {

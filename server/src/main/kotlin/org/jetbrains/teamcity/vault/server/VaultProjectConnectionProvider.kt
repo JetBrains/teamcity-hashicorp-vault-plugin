@@ -39,11 +39,11 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
         return VaultFeatureSettings.getDefaultParameters()
     }
 
-    override fun getEditParametersUrl(): String? {
+    override fun getEditParametersUrl(): String {
         return descriptor.getPluginResourcesPath("editProjectConnectionVault.jsp")
     }
 
-    override fun getPropertiesProcessor(): PropertiesProcessor? {
+    override fun getPropertiesProcessor(): PropertiesProcessor {
         return getParametersProcessor()
     }
 
