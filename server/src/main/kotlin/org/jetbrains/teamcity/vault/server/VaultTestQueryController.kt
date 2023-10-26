@@ -65,9 +65,7 @@ class VaultTestQueryController(
     override fun doGet(request: HttpServletRequest, response: HttpServletResponse) = null
 
     override fun doPost(request: HttpServletRequest, response: HttpServletResponse, xmlResponse: Element) {
-        val propertiesBean = BasePropertiesBean(emptyMap())
-        PluginPropertiesUtil.bindPropertiesFromRequest(request, propertiesBean)
-        val properties = propertiesBean.properties.toMutableMap()
+        val properties = getRequestProperties(request)
 
         val projectId = properties[PROJECT_ID] ?: return writeError(response, HttpStatus.BAD_REQUEST, "Failed to find projectId parameter")
         val project = projectManager.findProjectByExternalId(projectId) ?: return writeError(response, HttpStatus.NOT_FOUND, "Project $projectId not found")
@@ -124,7 +122,7 @@ class VaultTestQueryController(
                     errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Error while fetching parameter: ${result.errors.values.first()}")
                     errors.serialize(xmlResponse)
                 } else {
-                    XmlResponseUtil.writeTestResult(xmlResponse, result.replacements.values.first())
+                    XmlResponseUtil.writeTestResult(xmlResponse, "Success!")
                 }
             }
             return
@@ -138,12 +136,20 @@ class VaultTestQueryController(
     }
 
     override fun checkPermissions(securityContext: SecurityContextEx, request: HttpServletRequest) {
-        val projectId = request.getParameter(PROJECT_ID)
+        val projectProperties = getRequestProperties(request)
+        val projectId = projectProperties[PROJECT_ID]
         val project = projectManager.findProjectByExternalId(projectId)
         if (project == null) {
             throw AccessDeniedException(securityContext.authorityHolder, "No project $projectId")
         } else {
             securityContext.authorityHolder.isPermissionGrantedForProject(project.projectId, Permission.EDIT_PROJECT)
         }
+    }
+
+    private fun getRequestProperties(request: HttpServletRequest): MutableMap<String, String> {
+        val propertiesBean = BasePropertiesBean(emptyMap())
+        PluginPropertiesUtil.bindPropertiesFromRequest(request, propertiesBean)
+        val properties = propertiesBean.properties.toMutableMap()
+        return properties
     }
 }

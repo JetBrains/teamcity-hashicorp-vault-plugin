@@ -71,7 +71,6 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
 
         val response = myResponse.returnedContentAsXml.getChild("testConnectionResult")?.value
         Assert.assertNotNull(response)
-        Assert.assertEquals(response, SECRET_VALUE)
     }
 
     @Test
@@ -104,7 +103,6 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
 
         val response = myResponse.returnedContentAsXml.getChild("testConnectionResult")?.value
         Assert.assertNotNull(response)
-        Assert.assertEquals(response, SECRET_VALUE)
     }
 
     @Test

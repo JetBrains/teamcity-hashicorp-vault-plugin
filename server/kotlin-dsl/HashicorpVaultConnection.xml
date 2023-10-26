@@ -10,7 +10,7 @@
     <param name="providerType" value="teamcity-vault" />
   </init>
 
-  <function name="hashiCorpVaultParameter">
+  <function name="hashiCorpVaultConnection">
     <description>
       @see HashiCorpVaultParameter
     </description>
@@ -42,7 +42,7 @@
         The way how to obtain credentials (just provide the keys, assume IAM role or other)
       </description>
       <option name="appRole" value="approle">
-        <param name="endpoint" dslName="endpointPath" type="string" mandatory="true">
+        <param name="endpoint" dslName="endpointPath" type="string">
           <description>
             AppRole auth endpoint path
           </description>

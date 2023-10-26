@@ -7,6 +7,7 @@
 <jsp:useBean id="context" scope="request" type="jetbrains.buildServer.controllers.parameters.ParameterEditContext"/>
 <jsp:useBean id="vaultFeatureSettings" scope="request"
              type="java.util.List<org.jetbrains.teamcity.vault.VaultFeatureSettings>"/>
+<jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>
 
 <c:set var="project" value="<%=context.getAdditionalParameter(ParameterContext.PROJECT)%>" />
 <c:set var="projectId" value='${project == null ? "" : project.externalId}' />
@@ -46,8 +47,8 @@
           const testQueryResultNodes = responseXML.documentElement.getElementsByTagName("testConnectionResult");
           if (testQueryResultNodes && testQueryResultNodes.length > 0) {
             const testQueryResult = testQueryResultNodes.item(0);
-            if (testQueryResult.firstChild) {
-              additionalInfo = "Variable will resolve the value: " + testQueryResult.firstChild.nodeValue;
+            if (testQueryResult.firstChild === "Success") {
+              additionalInfo = "Variable will resolve a value";
             }
           }
 
@@ -68,6 +69,7 @@
 <c:set var="namespaceNotSelectedValue" value="<%=VaultConstants.ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE%>"/>
 <c:set var="namespaceDropdown" value="<%=VaultConstants.ParameterSettings.NAMESPACE%>"/>
 <c:set var="vaultQuery" value="<%=VaultConstants.ParameterSettings.VAULT_QUERY%>"/>
+<c:set var="currentNamespace" value="${propertiesBean.properties[namespaceDropdown]}" scope="request"/>
 
 <table class="runnerFormTable">
   <tr>
@@ -78,12 +80,12 @@
         <c:forEach items="${vaultFeatureSettings}" var="feature">
           <c:choose>
             <c:when test="${empty feature.namespace}">
-              <props:option value="${emptyNamespaceOption}">
+              <props:option value="${emptyNamespaceOption}" selected="${empty currentNamespace}">
                 <c:out value="Default Namespace (empty)"/>
               </props:option>
             </c:when>
             <c:otherwise>
-              <forms:option value="${feature.namespace}">
+              <forms:option value="${feature.namespace}" selected="${currentNamespace == feature.namespace}">
                 <c:out value="${feature.namespace}"/>
               </forms:option>
             </c:otherwise>

@@ -2,6 +2,7 @@ package org.jetbrains.teamcity.vault.server
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.text.StringUtil
+import jetbrains.buildServer.serverSide.BuildEx
 import jetbrains.buildServer.serverSide.BuildsManager
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.RunningBuildEx
@@ -37,6 +38,7 @@ class HashicorpVaultConnectionController(
         return ResponseEntity(ex.reason, ex.status)
     }
 
+    // http:localhost:8111/bs/app/url/path?namespace=something
     @RequestMapping(VaultConstants.ControllerSettings.WRAP_TOKEN_PATH, method = [RequestMethod.GET], produces = ["application/json"])
     fun getToken(@RequestParam(name = "namespace") namespace: String, request: HttpServletRequest): Map<String, String> {
         val buildId = WebAuthUtil.getAuthenticatedBuildId(request) ?: throw ResponseStatusException(

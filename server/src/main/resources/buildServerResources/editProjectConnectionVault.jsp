@@ -192,14 +192,15 @@
     </td>
 </tr>
 
-<forms:submit id="testConnectionButton" type="button" label="Test Connection" className="testConnectionButton" onclick="return BS.OAuthConnectionDialog.submitTestConnection();" />
+<forms:button id="vaultTestConnectionButton" className="testConnectionButton"
+              onclick="return BS.OAuthConnectionDialog.submitTestConnection();">Test Connection</forms:button>
 <bs:dialog dialogId="testConnectionDialog" title="Test Connection" closeCommand="BS.TestConnectionDialog.close();" closeAttrs="showdiscardchangesmessage='false'">
     <div id="testConnectionStatus"></div>
     <div id="testConnectionDetails" class="mono"></div>
 </bs:dialog>
 <script>
     $j('#OAuthConnectionDialog .popupSaveButtonsBlock .testConnectionButton').remove();
-    $j("#testConnectionButton").appendTo($j('#OAuthConnectionDialog .popupSaveButtonsBlock')[0])
+    $j("#vaultTestConnectionButton").appendTo($j('#OAuthConnectionDialog .popupSaveButtonsBlock')[0]);
     BS.Vault = {
         onAuthChange: function(element) {
             $j('.auth-container').hide();
@@ -207,7 +208,7 @@
             $j('.auth-' + value).show();
             BS.VisibilityHandlers.updateVisibility('mainContent');
         }
-    }
+    };
 
     $j(document).ready(function() {
         BS.Vault.onAuthChange($j('input[name="prop:${keys.AUTH_METHOD}"]:checked'));
