@@ -35,10 +35,6 @@ class SessionManagerBuilder(
             }
             createCubbyholeAuthentication(wrapped, template)
         }
-
-        AuthMethod.AWS_IAM -> {
-            createAwsIamAuthentication(template)
-        }
     }
 
     private fun getTimeoutSeconds(settings: VaultFeatureSettings) = TeamCityProperties.getLong(getVaultParameterName(settings.namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX), 15)

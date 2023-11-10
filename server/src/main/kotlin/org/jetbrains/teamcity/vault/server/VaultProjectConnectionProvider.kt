@@ -62,13 +62,6 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                 }
 
                 when (it[VaultConstants.FeatureSettings.AUTH_METHOD]) {
-                    VaultConstants.FeatureSettings.AUTH_METHOD_IAM -> {
-                        it.remove(VaultConstants.FeatureSettings.ENDPOINT)
-                        it.remove(VaultConstants.FeatureSettings.ROLE_ID)
-                        it.remove(VaultConstants.FeatureSettings.SECRET_ID)
-                        it.remove(VaultConstants.FeatureSettings.USERNAME)
-                        it.remove(VaultConstants.FeatureSettings.PASSWORD)
-                    }
                     VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE -> {
                         it.remove(VaultConstants.FeatureSettings.USERNAME)
                         it.remove(VaultConstants.FeatureSettings.PASSWORD)

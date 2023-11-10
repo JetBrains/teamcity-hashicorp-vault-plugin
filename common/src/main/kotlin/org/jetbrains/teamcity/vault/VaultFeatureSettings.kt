@@ -17,7 +17,6 @@ package org.jetbrains.teamcity.vault
 
 enum class AuthMethod(val id: String) {
     APPROLE("approle"),
-    AWS_IAM("iam"),
     LDAP("ldap"),
 }
 
@@ -43,12 +42,6 @@ sealed class Auth(val method: AuthMethod) {
         override fun toMap(map: MutableMap<String, String>) {
             map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
             map[VaultConstants.FeatureSettings.WRAPPED_TOKEN] = wrappedToken
-        }
-    }
-
-    object AwsIam : Auth(AuthMethod.AWS_IAM) {
-        override fun toMap(map: MutableMap<String, String>) {
-            map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
         }
     }
 
@@ -85,7 +78,6 @@ sealed class Auth(val method: AuthMethod) {
                     )
                 }
 
-                AuthMethod.AWS_IAM.id -> AwsIam
                 AuthMethod.LDAP.id -> LdapServer(
                         map[VaultConstants.FeatureSettings.USERNAME] ?: "",
                         map[VaultConstants.FeatureSettings.PASSWORD] ?: "",
@@ -104,7 +96,6 @@ sealed class Auth(val method: AuthMethod) {
                     AppRoleAuthAgent(map[VaultConstants.FeatureSettings.WRAPPED_TOKEN] ?: "")
                 }
 
-                AuthMethod.AWS_IAM.id -> AwsIam
                 AuthMethod.LDAP.id -> LdapAgent(
                     map[VaultConstants.FeatureSettings.WRAPPED_TOKEN] ?: ""
                 )

@@ -58,7 +58,6 @@ object VaultConstants {
         @JvmField val PATH = "path"
 
         @JvmField val AUTH_METHOD = "auth-method"
-        @JvmField val AUTH_METHOD_IAM = AuthMethod.AWS_IAM.id
         @JvmField val AUTH_METHOD_APPROLE = AuthMethod.APPROLE.id
         @JvmField val AUTH_METHOD_LDAP = AuthMethod.LDAP.id
         @JvmField val DEFAULT_AUTH_METHOD = AuthMethod.APPROLE.id

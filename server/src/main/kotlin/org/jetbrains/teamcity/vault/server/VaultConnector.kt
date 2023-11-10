@@ -51,12 +51,6 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
         fun revoke(info: LeasedWrappedTokenInfo, trustStoreProvider: SSLTrustStoreProvider, catch: Boolean = true): Boolean {
             val settings = info.connection
             when (settings.auth.method) {
-                AuthMethod.AWS_IAM -> {
-                    // AWS IAM auth uses separate tokens, so we cannot revoke agent token from server
-                    // we don't even request wrapped token before build
-                    return true
-                }
-
                 AuthMethod.APPROLE,
                 AuthMethod.LDAP -> {
                     try {
@@ -99,31 +93,6 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             return false
         }
 
-        private fun getTokenFromAwsIamAuth(template: RestTemplate): Pair<String, String> {
-            val options = AwsIamAuthenticationOptions.builder()
-                .credentialsProvider(InstanceProfileCredentialsProvider.getInstance()).build()
-
-            val token: VaultToken
-            val aws = AwsIamAuthentication(options, template)
-            try {
-                token = aws.login()
-                template.withVaultToken(token.token)
-                val response = template.getForEntity("/auth/token/lookup-self", VaultResponse::class.java)
-                val data = response.body.data
-                val accessor = data["accessor"].toString()
-
-                return token.token to accessor
-            } catch (e: SdkBaseException) {
-                throw ConnectionException("Failed to login to AWS IAM", e)
-            } catch (e: VaultException) {
-                val cause = e.cause
-                if (cause is HttpStatusCodeException) {
-                    throw getReadableException(cause, AuthMethod.AWS_IAM)
-                }
-                throw e
-            }
-        }
-
         /**
          * @return true if operation succeed or it doesn't makes sense to try again later
          */
@@ -144,7 +113,6 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             if (entity.statusCode == HttpStatus.FORBIDDEN) {
                 when (settings.auth.method) {
                     AuthMethod.APPROLE -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give approle '${(settings.auth as Auth.AppRoleAuthServer).roleId}' 'update' access to '/auth/token/revoke-accessor'$suffix")
-                    AuthMethod.AWS_IAM -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give AWS IAM role access to '/auth/token/revoke-accessor'$suffix")
                     AuthMethod.LDAP -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give LDAP role access to '/auth/token/revoke-accessor'$suffix")
                 }
                 return true
@@ -329,12 +297,6 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             AuthMethod.APPROLE,
             AuthMethod.LDAP -> {
                 val (token, accessor) = doRequestToken(settings, trustStoreProvider)
-                LeasedTokenInfo(token, accessor, settings)
-            }
-
-            AuthMethod.AWS_IAM -> {
-                val template = createRestTemplate(settings, trustStoreProvider)
-                val (token, accessor) = getTokenFromAwsIamAuth(template)
                 LeasedTokenInfo(token, accessor, settings)
             }
         }

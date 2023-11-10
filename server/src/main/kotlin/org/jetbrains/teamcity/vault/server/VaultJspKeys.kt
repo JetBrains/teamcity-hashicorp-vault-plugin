@@ -33,7 +33,6 @@ class VaultJspKeys {
     val PATH = VaultConstants.FeatureSettings.PATH
 
     val AUTH_METHOD = VaultConstants.FeatureSettings.AUTH_METHOD
-    val AUTH_METHOD_IAM = VaultConstants.FeatureSettings.AUTH_METHOD_IAM
     val AUTH_METHOD_APPROLE = VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE
     val AUTH_METHOD_LDAP = VaultConstants.FeatureSettings.AUTH_METHOD_LDAP
 

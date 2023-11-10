@@ -58,8 +58,6 @@
           </description>
         </param>
       </option>
-      <option name="iam" value="iam">
-      </option>
       <option name="ldap" value="ldap">
         <param name="path" dslName="path" type="string" mandatory="true">
           <description>

@@ -204,7 +204,6 @@ class VaultBuildFeature(
         } catch (e: Exception) {
             val errorPrefix = when (settings.auth.method) {
                 AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token"
-                AuthMethod.AWS_IAM -> "Failed to get HashiCorp Vault token using AWS IAM auth"
                 AuthMethod.LDAP -> "Failed to get HashiCorp Vault token using LDAP"
             }
             if (settings.failOnError) {
