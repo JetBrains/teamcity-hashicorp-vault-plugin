@@ -21,6 +21,7 @@ import jetbrains.buildServer.controllers.admin.projects.PluginPropertiesUtil
 import jetbrains.buildServer.serverSide.*
 import jetbrains.buildServer.serverSide.auth.AccessDeniedException
 import jetbrains.buildServer.serverSide.auth.Permission
+import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import jetbrains.buildServer.web.openapi.WebControllerManager
 import org.jdom.Element
@@ -33,8 +34,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler
-import org.springframework.web.server.ResponseStatusException
-import org.springframework.web.servlet.ModelAndView
 import java.io.OutputStreamWriter
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
@@ -87,9 +86,10 @@ class VaultTestQueryController(
     private fun doTestQuery(project: SProject, properties: Map<String, String>, xmlResponse: Element) {
         val errors = ActionErrors()
 
-        VaultParameterSettings.getInvalidProperties(properties).forEach { errors.addError(InvalidProperty(it.key, it.value)) }
-        if (errors.hasErrors()) {
-            errors.serialize(xmlResponse)
+        val invalids = VaultParameterSettings.getInvalidProperties(properties)
+        if (invalids.isNotEmpty()) {
+            val errorMessage = "Errors found in the parameter defintion: ${StringUtil.join(invalids.values, ", ")}"
+            failTestConnection(errors, xmlResponse, errorMessage)
             return
         }
 
@@ -98,14 +98,12 @@ class VaultTestQueryController(
             val serverFeature = try {
                 hashiCorpVaultConnectionResolver.getVaultConnection(project, parameterSettings.namespace)
             } catch (e: ParameterNamespaceCollisionException) {
-                errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Vault namespace ${parameterSettings.namespace} is declared more than once in the same project")
-                errors.serialize(xmlResponse)
+                failTestConnection(errors, xmlResponse, "Vault namespace ${parameterSettings.namespace} is declared more than once in the same project")
                 return
             }
 
             if (serverFeature == null) {
-                errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Failed to find hashicorp connection ${parameterSettings.namespace}")
-                errors.serialize(xmlResponse)
+                failTestConnection(errors, xmlResponse, "Failed to find hashicorp connection ${parameterSettings.namespace}")
                 return
             }
 
@@ -144,6 +142,15 @@ class VaultTestQueryController(
         } else {
             securityContext.authorityHolder.isPermissionGrantedForProject(project.projectId, Permission.EDIT_PROJECT)
         }
+    }
+
+    private fun failTestConnection(
+        errors: ActionErrors,
+        xmlResponse: Element,
+        errorMessage: String
+    ) {
+        errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, errorMessage)
+        errors.serialize(xmlResponse)
     }
 
     private fun getRequestProperties(request: HttpServletRequest): MutableMap<String, String> {

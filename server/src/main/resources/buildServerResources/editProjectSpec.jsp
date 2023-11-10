@@ -62,7 +62,11 @@
 
   BS.TestConnectionDialog.afterClose = function () {
     $j('#OAuthConnectionDialog .testQueryButton').remove();
-  }
+  };
+
+  BS.TestConnectionDialog.getSuccessTitle = () => 'Test successful';
+
+  BS.TestConnectionDialog.getFailureTitle = () => 'Test failure';
 </script>
 
 <c:set var="emptyNamespaceOption" value="<%=VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE%>"/>
