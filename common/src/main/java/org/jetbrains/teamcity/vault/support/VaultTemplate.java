@@ -124,6 +124,15 @@ public class VaultTemplate {
         sessionTemplate.getInterceptors().add(interceptor);
     }
 
+    public void removeLastInterceptors() {
+
+        int indexOfLastElementPT = plainTemplate.getInterceptors().size() - 1;
+        plainTemplate.getInterceptors().remove(indexOfLastElementPT);
+
+        int indexOfLastElementST = sessionTemplate.getInterceptors().size() - 1;
+        sessionTemplate.getInterceptors().remove(indexOfLastElementST);
+    }
+
     public VaultSysTemplate opsForSys() {
         return new VaultSysTemplate(this);
     }

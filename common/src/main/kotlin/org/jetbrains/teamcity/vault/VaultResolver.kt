@@ -5,6 +5,7 @@ import com.jayway.jsonpath.JsonPath
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultTemplate
+import jetbrains.buildServer.serverSide.TeamCityProperties
 import org.springframework.vault.authentication.SimpleSessionManager
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
@@ -45,13 +46,31 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
 
         private class ResolvingError(message: String) : Exception(message)
 
+        private fun isPathForGetSecretID(path: String): Boolean {
+            if (path.startsWith("/auth/") && path.endsWith("/secret-id"))
+            {
+                return true
+            }
+
+            return false
+        }
+
         private fun fetch(client: VaultTemplate, paths: Collection<String>): HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>> {
             val responses = HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>>(paths.size)
 
             for (path in paths.toSet()) {
                 try {
-                    val response = client.read(path.removePrefix("/"))
-                    responses[path] = Response(response)
+                    if ( isPathForGetSecretID(path))
+                    {
+                        client.wrapResponses(TeamCityProperties.getProperty("teamcity.vault.xVaultWrapTTL", "2m"))
+                        val response = client.write(path.removePrefix("/"), null) 
+                        responses[path] = Response(response)
+                        client.removeLastInterceptors()
+                    }
+                    else {
+                        val response = client.read(path.removePrefix("/"))
+                        responses[path] = Response(response)
+                    }
                 } catch (e: Exception) {
                     LOG.warn("Failed to fetch data for path '$path'", e)
                     responses[path] = Error(e)
@@ -85,7 +104,14 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
         @Throws(ResolvingError::class)
         private fun extract(response: VaultResponse, parameter: VaultQuery): String {
             val jsonPath = parameter.jsonPath
-            val data = unwrapKV2IfNeeded(response.data)
+
+            val data: Map<String, Any>?
+            if ( isPathForGetSecretID(parameter.vaultPath))
+                data = unwrapKV2IfNeeded(response.wrapInfo)
+            else {
+                data = unwrapKV2IfNeeded(response.data)
+            }
+            
             if (jsonPath == null) {
                 if (data.isEmpty()) {
                     throw ResolvingError("There's no data in HashiCorp Vault response for '${parameter.vaultPath}'")
