@@ -151,7 +151,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value
         Assert.assertNotNull(response)
         assertk.assertThat(response!!)
-            .contains("namespace")
+            .contains("connection")
     }
 
     @Test
