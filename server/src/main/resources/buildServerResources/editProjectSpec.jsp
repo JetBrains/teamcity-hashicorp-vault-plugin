@@ -106,9 +106,9 @@
     </td>
   </tr>
   <tr>
-    <th style="width: 20%"><label for=prop:"${vaultQuery}">Vault Query: <l:star/></label></th>
+    <th><label for="prop:${vaultQuery}">Vault Query: <l:star/></label></th>
     <td>
-      <props:textProperty name="${vaultQuery}" className="longField"/>
+      <props:textProperty style="width: 27em" name="${vaultQuery}"/>
     </td>
   </tr>
   <props:hiddenProperty name="projectId" value="${projectId}"/>
