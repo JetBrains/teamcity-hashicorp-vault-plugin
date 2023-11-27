@@ -30,14 +30,14 @@ class VaultParameterSettingsTest {
 
     @Test
     fun testCreatePojo_DefaultNamespace() {
-        val settings = VaultParameterSettings(getVaultParametersMap(TEST_VAULT_QUERY, FeatureSettings.DEFAULT_PARAMETER_NAMESPACE))
+        val settings = VaultParameterSettings(getVaultParametersMap(TEST_VAULT_QUERY, FeatureSettings.DEFAULT_ID))
         Assert.assertEquals(TEST_VAULT_QUERY, settings.vaultQuery)
-        Assert.assertEquals(FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, settings.namespace)
+        Assert.assertEquals(FeatureSettings.DEFAULT_ID, settings.namespace)
     }
 
-    private fun getVaultParametersMap(vaultQuery: String?, namespace: String?) = buildMap {
+    private fun getVaultParametersMap(vaultQuery: String?, id: String?) = buildMap {
         if (vaultQuery != null) put(ParameterSettings.VAULT_QUERY, vaultQuery)
-        if (namespace != null) put(ParameterSettings.NAMESPACE, namespace)
+        if (id != null) put(ParameterSettings.VAULT_ID, id)
     }
 
 

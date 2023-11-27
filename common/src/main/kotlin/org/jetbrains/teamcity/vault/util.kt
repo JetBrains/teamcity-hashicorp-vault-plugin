@@ -40,7 +40,7 @@ import org.springframework.web.util.DefaultUriTemplateHandler
 import java.net.URI
 
 fun isDefault(namespace: String): Boolean {
-    return namespace == VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
+    return namespace == VaultConstants.FeatureSettings.DEFAULT_ID
 }
 
 fun getEnvPrefix(namespace: String): String {

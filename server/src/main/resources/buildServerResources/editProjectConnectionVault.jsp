@@ -73,21 +73,21 @@
     }
 </script>
 <tr>
-    <td><label for="displayName">Display name:</label>
+    <td><label for="${keys.DISPLAY_NAME}">Display name:</label>
         <l:star/>
     </td>
     <td>
-        <props:textProperty name="displayName" className="longField" />
+        <props:textProperty name="${keys.DISPLAY_NAME}" className="longField" />
         <span class="smallNote">Provide some name to distinguish this connection from others.</span>
-        <span class="error" id="error_displayName"></span>
+        <span class="error" id="error_${keys.DISPLAY_NAME}"></span>
     </td>
 </tr>
 <tr>
-    <td><label for="${keys.NAMESPACE}">Parameter namespace:</label></td>
+    <td><label for="${keys.NAMESPACE}">ID:</label></td>
     <td>
         <props:textProperty name="${keys.NAMESPACE}" className="longField" />
         <span class="error" id="error_${keys.NAMESPACE}"></span>
-        <span class="smallNote">Provide some namespace to use in TeamCity parameters in case of multiple vault connections.</span>
+        <span class="smallNote">Provide an ID to use in TeamCity parameters in case of multiple vault connections.</span>
     </td>
 </tr>
 <tr>

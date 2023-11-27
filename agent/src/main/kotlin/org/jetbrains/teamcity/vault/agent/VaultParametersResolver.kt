@@ -30,7 +30,7 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
     }
 
     fun resolveLegacyReferences(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {
-        val references = getRelatedParameterReferences(build, settings.namespace)
+        val references = getRelatedParameterReferences(build, settings.id)
         if (references.isEmpty()) {
             LOG.info("There's nothing to resolve")
             return
@@ -38,11 +38,11 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         val logger = build.buildLogger
         logger.message("${references.size} ${"reference".pluralize(references)} to resolve: $references")
 
-        val parameters = references.map { VaultQuery.extract(VaultReferencesUtil.getPath(it, settings.namespace)) }
+        val parameters = references.map { VaultQuery.extract(VaultReferencesUtil.getPath(it, settings.id)) }
 
         val replacements = resolveReplacements(build, settings, parameters, token)
 
-        replaceParametersReferences(build, replacements.replacements, references, settings.namespace)
+        replaceParametersReferences(build, replacements.replacements, references, settings.id)
     }
 
     fun resolveParameters(build: AgentRunningBuild, settings: VaultFeatureSettings, vaultParameters: List<VaultParameter>, token: String) {
@@ -82,13 +82,13 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         val replacements = doFetchAndPrepareReplacements(settings, token, parameters)
 
         if (settings.failOnError && replacements.errors.isNotEmpty()) {
-            val ns = if (isDefault(settings.namespace)) "" else "('${settings.namespace}' namespace)"
+            val ns = if (isDefault(settings.id)) "" else "('${settings.id}' namespace)"
             replacements.errors.values.forEach {
                 build.buildLogger.warning(it)
             }
 
             val message = "${"Error".pluralize(replacements.errors.size)} while fetching data from HashiCorp Vault $ns"
-            build.buildLogger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.namespace}_A", "VaultConnection", message))
+            build.buildLogger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${settings.id}_A", "VaultConnection", message))
             build.stopBuild(message)
         }
 

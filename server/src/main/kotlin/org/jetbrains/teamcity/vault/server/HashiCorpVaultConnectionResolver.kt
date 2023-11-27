@@ -46,19 +46,19 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
             val settings = VaultFeatureSettings(featureDescriptor.parameters)
 
             // Filter connections by parameter namespace if specified
-            if (parameterNamespace != null && parameterNamespace != settings.namespace) {
+            if (parameterNamespace != null && parameterNamespace != settings.id) {
                 return@forEach
             }
 
             // Detect namespace collisions:
             // When multiple connections in the same project have the same parameter namespace
-            val descriptor = ConnectionDescriptor(featureDescriptor.projectId, settings.namespace)
+            val descriptor = ConnectionDescriptor(featureDescriptor.projectId, settings.id)
             if (descriptor in knownDescriptors) {
-                throw ParameterNamespaceCollisionException(settings.namespace, featureDescriptor.projectId)
+                throw ParameterNamespaceCollisionException(settings.id, featureDescriptor.projectId)
             }
 
             knownDescriptors.add(descriptor)
-            effectiveFeatures.putIfAbsent(settings.namespace, settings)
+            effectiveFeatures.putIfAbsent(settings.id, settings)
         }
 
         return effectiveFeatures.map { (_, settings) -> settings }

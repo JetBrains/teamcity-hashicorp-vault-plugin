@@ -111,7 +111,7 @@ public class VaultParametersResolverTest {
 
     Mockito.when(runningBuild.getBuildLogger()).thenReturn(logger);
     Mockito.when(runningBuild.getPasswordReplacer()).thenReturn(passwordReplacer);
-    final VaultParameter parameter = new VaultParameter(key, new VaultParameterSettings(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, path));
+    final VaultParameter parameter = new VaultParameter(key, new VaultParameterSettings(VaultConstants.FeatureSettings.DEFAULT_ID, path));
 
     resolver.resolveParameters(runningBuild, feature, Collections.singletonList(parameter), vault.getToken());
     Mockito.verify(passwordReplacer).addPassword(EXPECTED_VALUE);

@@ -61,7 +61,7 @@ class HashiCorpVaultConnectionResolverTest : BaseServerTestCase() {
         assertNotNull(connection)
         assertEquals(connection, allConnections.single())
 
-        assertEquals(namespace, connection?.namespace)
+        assertEquals(namespace, connection?.id)
         assertEquals(projectName, connection.extractTestProjectName())
     }
 
@@ -80,13 +80,13 @@ class HashiCorpVaultConnectionResolverTest : BaseServerTestCase() {
 
         subProjectConnectionNamespaces.forEach { namespace ->
             val connection = connectionResolver.getVaultConnection(project, namespace)
-            assertEquals(connection?.namespace, namespace)
+            assertEquals(connection?.id, namespace)
             assertEquals(connection.extractTestProjectName(), subProjectName)
         }
 
         parentProjectConnectionNamespaces.forEach { namespace ->
             val connection = connectionResolver.getVaultConnection(project, namespace)
-            assertEquals(connection?.namespace, namespace)
+            assertEquals(connection?.id, namespace)
             assertEquals(connection.extractTestProjectName(), parentProjectName)
         }
 
@@ -96,7 +96,7 @@ class HashiCorpVaultConnectionResolverTest : BaseServerTestCase() {
         val allConnectionsGroupedByProject = allConnections
                 .groupBy(
                         keySelector = { settings -> settings.extractTestProjectName() },
-                        valueTransform = { settings -> settings.namespace }
+                        valueTransform = { settings -> settings.id }
                 )
         assertEquals(subProjectConnectionNamespaces.toSet(), checkNotNull(allConnectionsGroupedByProject[subProjectName]).toSet())
         assertEquals(parentProjectConnectionNamespaces.toSet(), checkNotNull(allConnectionsGroupedByProject[parentProjectName]).toSet())
@@ -120,7 +120,7 @@ class HashiCorpVaultConnectionResolverTest : BaseServerTestCase() {
         assertNotNull(connection)
         assertEquals(allConnections.single(), connection)
 
-        assertEquals(namespace, connection?.namespace)
+        assertEquals(namespace, connection?.id)
         assertEquals(parentProjectName, connection.extractTestProjectName())
     }
 
@@ -142,7 +142,7 @@ class HashiCorpVaultConnectionResolverTest : BaseServerTestCase() {
         assertNotNull(connection)
         assertEquals(allConnections.single(), connection)
 
-        assertEquals(namespace, connection?.namespace)
+        assertEquals(namespace, connection?.id)
         assertEquals(subProjectName, connection.extractTestProjectName())
     }
 

@@ -19,7 +19,7 @@ import org.jetbrains.teamcity.vault.VaultConstants
 
 @Suppress("PropertyName")
 class VaultJspKeys {
-    val NAMESPACE = VaultConstants.FeatureSettings.NAMESPACE
+    val NAMESPACE = VaultConstants.FeatureSettings.ID
     val URL = VaultConstants.FeatureSettings.URL
     val VAULT_NAMESPACE = VaultConstants.FeatureSettings.VAULT_NAMESPACE
 
@@ -37,4 +37,6 @@ class VaultJspKeys {
     val AUTH_METHOD_LDAP = VaultConstants.FeatureSettings.AUTH_METHOD_LDAP
 
     val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
+
+    val DISPLAY_NAME = VaultConstants.FeatureSettings.DISPLAY_NAME
 }

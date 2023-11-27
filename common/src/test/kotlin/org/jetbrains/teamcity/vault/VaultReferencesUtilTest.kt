@@ -115,7 +115,7 @@ class VaultReferencesUtilTest {
             "/path")
         doVaultPathTest(
             "",
-            getReference(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, "path"),
+            getReference(VaultConstants.FeatureSettings.DEFAULT_ID, "path"),
             "/path")
     }
 

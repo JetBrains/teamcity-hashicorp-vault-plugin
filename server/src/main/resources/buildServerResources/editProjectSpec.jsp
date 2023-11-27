@@ -69,28 +69,35 @@
   BS.TestConnectionDialog.getFailureTitle = () => 'Test failure';
 </script>
 
-<c:set var="emptyNamespaceOption" value="<%=VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE%>"/>
+<c:set var="emptyNamespaceOption" value="<%=VaultConstants.FeatureSettings.DEFAULT_ID%>"/>
 <c:set var="namespaceNotSelectedValue" value="<%=VaultConstants.ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE%>"/>
-<c:set var="namespaceDropdown" value="<%=VaultConstants.ParameterSettings.NAMESPACE%>"/>
+<c:set var="vaultId" value="<%=VaultConstants.ParameterSettings.VAULT_ID%>"/>
 <c:set var="vaultQuery" value="<%=VaultConstants.ParameterSettings.VAULT_QUERY%>"/>
-<c:set var="currentNamespace" value="${propertiesBean.properties[namespaceDropdown]}" scope="request"/>
+<c:set var="currentId" value="${propertiesBean.properties[vaultId]}" scope="request"/>
 
 <table class="runnerFormTable">
   <tr>
-    <th style="width: 20%"><label for="prop:${namespaceDropdown}">Parameter Namespace: <l:star/></label></th>
+    <th style="width: 20%"><label for="prop:${vaultId}">Vault ID: <l:star/></label></th>
     <td>
-      <props:selectProperty id="${namespaceDropdown}" name="${namespaceDropdown}" className="longField">
+      <props:selectProperty id="${vaultId}" name="${vaultId}" className="longField">
         <props:option value="${namespaceNotSelectedValue}">-- Please choose namespace --</props:option>
         <c:forEach items="${vaultFeatureSettings}" var="feature">
           <c:choose>
-            <c:when test="${empty feature.namespace}">
-              <props:option value="${emptyNamespaceOption}" selected="${empty currentNamespace}">
+            <c:when test="${empty feature.id}">
+              <props:option value="${emptyNamespaceOption}" selected="${empty currentId}">
                 <c:out value="Default Namespace (empty)"/>
               </props:option>
             </c:when>
             <c:otherwise>
-              <forms:option value="${feature.namespace}" selected="${currentNamespace == feature.namespace}">
-                <c:out value="${feature.namespace}"/>
+              <forms:option value="${feature.id}" selected="${currentId == feature.id}">
+                <c:choose>
+                  <c:when test="${empty feature.displayName}">
+                    <c:out value="${feature.id}"/>
+                  </c:when>
+                  <c:otherwise>
+                    <c:out value="${feature.displayName}"/>
+                  </c:otherwise>
+                </c:choose>
               </forms:option>
             </c:otherwise>
           </c:choose>

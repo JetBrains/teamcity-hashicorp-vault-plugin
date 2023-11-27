@@ -1,6 +1,6 @@
 package org.jetbrains.teamcity.vault
 
-import org.jetbrains.teamcity.vault.VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
+import org.jetbrains.teamcity.vault.VaultConstants.FeatureSettings.DEFAULT_ID
 import org.jetbrains.teamcity.vault.VaultConstants.ParameterSettings
 
 data class VaultParameterSettings(
@@ -8,7 +8,7 @@ data class VaultParameterSettings(
     val vaultQuery: String
 ) {
     fun toMap(): Map<String, String> = mapOf(
-        ParameterSettings.NAMESPACE to namespace,
+        ParameterSettings.VAULT_ID to namespace,
         ParameterSettings.VAULT_QUERY to vaultQuery
     )
 
@@ -19,8 +19,8 @@ data class VaultParameterSettings(
                 invalids[ParameterSettings.VAULT_QUERY] = "The vault query is required"
             }
 
-            if (arguments[ParameterSettings.NAMESPACE] == ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE) {
-                invalids[ParameterSettings.NAMESPACE] = "Please choose a namespace connection"
+            if (arguments[ParameterSettings.VAULT_ID] == ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE) {
+                invalids[ParameterSettings.VAULT_ID] = "Please choose a vault connection"
             }
 
             return invalids
@@ -31,7 +31,7 @@ data class VaultParameterSettings(
             val invalids = getInvalidProperties(arguments)
             require(invalids.isEmpty()) { invalids.firstNotNullOf { it.value } }
 
-            val namespace = arguments[ParameterSettings.NAMESPACE] ?: DEFAULT_PARAMETER_NAMESPACE
+            val namespace = arguments[ParameterSettings.VAULT_ID] ?: DEFAULT_ID
             val query = arguments.getValue(ParameterSettings.VAULT_QUERY)
             return VaultParameterSettings(namespace, query)
         }

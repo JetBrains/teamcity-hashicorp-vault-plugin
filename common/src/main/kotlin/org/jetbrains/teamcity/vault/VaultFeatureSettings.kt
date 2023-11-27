@@ -106,12 +106,9 @@ sealed class Auth(val method: AuthMethod) {
     }
 }
 
-data class VaultFeatureSettings(val namespace: String, val url: String, val vaultNamespace: String, val failOnError: Boolean = true, val auth: Auth) {
-
-
-
+data class VaultFeatureSettings(val id: String, val url: String, val vaultNamespace: String, val failOnError: Boolean = true, val auth: Auth, val displayName: String? = null) {
     constructor(url: String, vaultNamespace: String) : this(
-        VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+        VaultConstants.FeatureSettings.DEFAULT_ID,
         url,
         vaultNamespace,
         true,
@@ -127,17 +124,18 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
     )
 
     constructor(map: Map<String, String>) : this(
-        map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+        map[VaultConstants.FeatureSettings.ID] ?: VaultConstants.FeatureSettings.DEFAULT_ID,
         map[VaultConstants.FeatureSettings.URL] ?: "",
         map[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
             ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
         map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false,
-        Auth.getServerAuthFromProperties(map)
+        Auth.getServerAuthFromProperties(map),
+        map[VaultConstants.FeatureSettings.DISPLAY_NAME]
     )
 
     fun toFeatureProperties(map: MutableMap<String, String>) {
         map[VaultConstants.FeatureSettings.URL] = url
-        map[VaultConstants.FeatureSettings.NAMESPACE] = namespace
+        map[VaultConstants.FeatureSettings.ID] = id
         map[VaultConstants.FeatureSettings.VAULT_NAMESPACE] = vaultNamespace
         map[VaultConstants.FeatureSettings.FAIL_ON_ERROR] = failOnError.toString()
         auth.toMap(map)
@@ -152,7 +150,7 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
     companion object {
         fun getDefaultParameters(): Map<String, String> {
             return mapOf(
-                VaultConstants.FeatureSettings.NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+                VaultConstants.FeatureSettings.ID to VaultConstants.FeatureSettings.DEFAULT_ID,
                 VaultConstants.FeatureSettings.VAULT_NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
                 VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE,
                 VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,
@@ -164,7 +162,7 @@ data class VaultFeatureSettings(val namespace: String, val url: String, val vaul
 
         fun getAgentFeatureFromProperties(map: Map<String, String>): VaultFeatureSettings =
             VaultFeatureSettings(
-                map[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE,
+                map[VaultConstants.FeatureSettings.ID] ?: VaultConstants.FeatureSettings.DEFAULT_ID,
                 map[VaultConstants.FeatureSettings.URL] ?: "",
                 map[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
                     ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,

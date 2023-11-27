@@ -25,7 +25,7 @@ object VaultConnectionUtils {
     fun groupFeatures(projectToFeaturePairs: List<Pair<String, VaultFeatureSettings>>): List<VaultFeatureSettings> {
         val vaultFeatures = projectToFeaturePairs.map { it.second }
 
-        return vaultFeatures.groupBy { it.namespace }.map { (_, v) -> v.first() }
+        return vaultFeatures.groupBy { it.id }.map { (_, v) -> v.first() }
     }
 
     fun getFeaturePairs(project: SProject): List<Pair<String, VaultFeatureSettings>> {

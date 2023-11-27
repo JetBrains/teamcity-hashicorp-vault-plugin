@@ -66,7 +66,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("testConnectionResult")?.value
@@ -109,7 +109,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     fun testQuery_NoProjectId() {
         doPost(
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         Assert.assertEquals(myResponse.status, HttpStatus.BAD_REQUEST.value())
@@ -120,7 +120,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", "fakeProject",
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         Assert.assertEquals(myResponse.status, HttpStatus.NOT_FOUND.value())
@@ -131,7 +131,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
 
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value
@@ -145,7 +145,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", VaultConstants.ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", VaultConstants.ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value
@@ -162,7 +162,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value
@@ -185,7 +185,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value
@@ -211,7 +211,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value
@@ -247,7 +247,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value
@@ -283,7 +283,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         doPost(
             "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
-            "prop:${VaultConstants.ParameterSettings.NAMESPACE}", NAMESPACE,
+            "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value

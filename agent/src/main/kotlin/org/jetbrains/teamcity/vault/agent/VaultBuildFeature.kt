@@ -194,7 +194,7 @@ class VaultBuildFeature(
         if (settings.url.isBlank()) {
             return null
         }
-        val namespace = settings.namespace
+        val namespace = settings.id
         val logger = runningBuild.buildLogger
         val token: String
         try {
@@ -208,7 +208,7 @@ class VaultBuildFeature(
             }
             if (settings.failOnError) {
                 logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorPrefix + ": " + e.message, e)
-                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${runningBuild.buildTypeId}_${settings.namespace}_A", "VaultConnection", errorPrefix))
+                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${runningBuild.buildTypeId}_${settings.id}_A", "VaultConnection", errorPrefix))
                 runningBuild.stopBuild(errorPrefix)
             } else {
                 logger.error(errorPrefix + ": " + e.message)

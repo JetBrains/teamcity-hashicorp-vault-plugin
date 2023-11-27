@@ -32,7 +32,7 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
     override fun describeConnection(connection: OAuthConnectionDescriptor): String {
         val settings = VaultFeatureSettings(connection.parameters)
         return "Connection to HashiCorp Vault server at ${settings.url}" +
-                if (isDefault(settings.namespace)) "" else ", namespace '${settings.namespace}'"
+                if (isDefault(settings.id)) "" else ", namespace '${settings.id}'"
     }
 
     override fun getDefaultProperties(): Map<String, String> {
@@ -55,10 +55,10 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
                     errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
                 }
                 // NAMESPACE can be empty, means default one
-                val namespace = it[VaultConstants.FeatureSettings.NAMESPACE] ?: VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE
+                val namespace = it[VaultConstants.FeatureSettings.ID] ?: VaultConstants.FeatureSettings.DEFAULT_ID
                 val namespaceRegex = "[a-zA-Z0-9_-]+"
                 if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.NAMESPACE, "Non-default namespace should match regex '$namespaceRegex'"))
+                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.ID, "Non-default ID should match regex '$namespaceRegex'"))
                 }
 
                 when (it[VaultConstants.FeatureSettings.AUTH_METHOD]) {

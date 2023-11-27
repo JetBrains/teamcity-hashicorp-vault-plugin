@@ -37,7 +37,7 @@ class SessionManagerBuilder(
         }
     }
 
-    private fun getTimeoutSeconds(settings: VaultFeatureSettings) = TeamCityProperties.getLong(getVaultParameterName(settings.namespace, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX), 15)
+    private fun getTimeoutSeconds(settings: VaultFeatureSettings) = TeamCityProperties.getLong(getVaultParameterName(settings.id, VaultConstants.TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX), 15)
 
     private fun createAwsIamAuthentication(restTemplate: RestTemplate): AwsIamAuthentication {
         val options = AwsIamAuthenticationOptions.builder()

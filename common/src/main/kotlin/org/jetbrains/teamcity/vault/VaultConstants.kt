@@ -39,8 +39,8 @@ object VaultConstants {
         @JvmField val FEATURE_TYPE = "teamcity-vault"
 
         // Feature settings
-        @JvmField val NAMESPACE = "namespace"
-        @JvmField val DEFAULT_PARAMETER_NAMESPACE = ""
+        @JvmField val ID = "namespace"
+        @JvmField val DEFAULT_ID = ""
 
         @JvmField val VAULT_NAMESPACE = "vault-namespace"
         @JvmField val DEFAULT_VAULT_NAMESPACE = ""
@@ -64,6 +64,7 @@ object VaultConstants {
         @JvmField val WRAPPED_TOKEN = "wrapped-token"
 
         @JvmField val FAIL_ON_ERROR = "fail-on-error"
+        @JvmField val DISPLAY_NAME = "displayName"
 
         @JvmField val AGENT_SUPPORT_REQUIREMENT = "teamcity.vault.requirement"
         @JvmField val AGENT_SUPPORT_REQUIREMENT_VALUE = "%$FEATURE_SUPPORTED_AGENT_PARAMETER%"
@@ -77,7 +78,7 @@ object VaultConstants {
 
     object ParameterSettings {
         const val NAMESPACE_NOT_SELECTED_VALUE = "parameter-namespace-not-selected-please-select"
-        const val NAMESPACE = "teamcity_hashicorp_vault_namespace"
+        const val VAULT_ID = "teamcity_hashicorp_vault_namespace"
         const val VAULT_QUERY = "teamcity_hashicorp_vault_vaultQuery"
     }
 

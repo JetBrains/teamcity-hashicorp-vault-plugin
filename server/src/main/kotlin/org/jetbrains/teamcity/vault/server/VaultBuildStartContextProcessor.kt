@@ -21,7 +21,6 @@ import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.BuildStartContext
 import jetbrains.buildServer.serverSide.BuildStartContextProcessor
 import jetbrains.buildServer.serverSide.SBuild
-import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.util.positioning.PositionAware
 import jetbrains.buildServer.util.positioning.PositionConstraint
 import org.jetbrains.teamcity.vault.*
@@ -52,11 +51,11 @@ class VaultBuildStartContextProcessor(
         // legacy vault references are present
         settingsList.forEach { settings ->
             if (!isParamatersContainLegacyVaultReferences(build, settings, context.sharedParameters)) {
-                val ns = if (isDefault(settings.namespace)) "" else " ('${settings.namespace}' namespace)"
+                val ns = if (isDefault(settings.id)) "" else " ('${settings.id}' namespace)"
                 LOG.debug("There's no need to fetch HashiCorp Vault$ns parameter for build $build")
                 return@forEach
             }
-            context.addSharedParameter(getVaultParameterName(settings.namespace, VaultConstants.LEGACY_REFERENCES_USED_SUFFIX), settings.failOnError.toString())
+            context.addSharedParameter(getVaultParameterName(settings.id, VaultConstants.LEGACY_REFERENCES_USED_SUFFIX), settings.failOnError.toString())
         }
     }
 
@@ -65,7 +64,7 @@ class VaultBuildStartContextProcessor(
             settings: VaultFeatureSettings,
             sharedParameters: Map<String, String>
     ): Boolean {
-        val namespace = settings.namespace
+        val namespace = settings.id
         return isShouldSetEnvParameters(build.buildOwnParameters, namespace)
                 // Slowest part:
                 || VaultReferencesUtil.hasReferences(build.parametersProvider.all, listOf(namespace))

@@ -2,7 +2,6 @@ package org.jetbrains.teamcity.vault.server
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.text.StringUtil
-import jetbrains.buildServer.serverSide.BuildEx
 import jetbrains.buildServer.serverSide.BuildsManager
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.RunningBuildEx
@@ -31,7 +30,7 @@ class HashicorpVaultConnectionController(
         private const val IS_GENERATED = "isGenerated"
     }
 
-    fun getTokenGenerationId(feature: VaultFeatureSettings) = "$STORAGE_ID-${feature.namespace}"
+    fun getTokenGenerationId(feature: VaultFeatureSettings) = "$STORAGE_ID-${feature.id}"
 
     @ExceptionHandler(ResponseStatusException::class)
     fun handleResponseStatusException(ex: ResponseStatusException): ResponseEntity<String> {
@@ -67,7 +66,7 @@ class HashicorpVaultConnectionController(
             val agentFeatureSettings = hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(feature, namespace)
             agentFeatureSettings.toFeatureProperties()
         } catch (e: Throwable) {
-            LOG.error("Failed to request token for hashicorp vault namespace ${feature.namespace} build ${build.buildId} of ${project.projectId}", e)
+            LOG.error("Failed to request token for hashicorp vault namespace ${feature.id} build ${build.buildId} of ${project.projectId}", e)
             throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to request token", e)
         }
     }

@@ -7,7 +7,6 @@ import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import jetbrains.buildServer.serverSide.parameters.remote.RemoteParameterConstants
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import org.jetbrains.teamcity.vault.*
-import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.testng.MockitoTestNGListener
 import org.testng.Assert
@@ -36,7 +35,7 @@ class HashiCorpVaultParameterTest : BaseServerTestCase() {
 
     @Test
     fun testCreateVaultParameter_DefaultNamespace() {
-        testVaultParameter(VaultConstants.FeatureSettings.DEFAULT_PARAMETER_NAMESPACE, "")
+        testVaultParameter(VaultConstants.FeatureSettings.DEFAULT_ID, "")
     }
 
     private fun testVaultParameter(storedNamespace: String, expectedNamespace: String) {
