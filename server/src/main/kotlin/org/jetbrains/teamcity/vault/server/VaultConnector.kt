@@ -15,14 +15,12 @@
  */
 package org.jetbrains.teamcity.vault.server
 
-import com.amazonaws.SdkBaseException
-import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.util.containers.ConcurrentHashSet
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.*
-import jetbrains.buildServer.util.EventDispatcher
+import org.jetbrains.teamcity.vault.retrier.Retrier
+import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultResponses
@@ -32,17 +30,16 @@ import org.springframework.vault.VaultException
 import org.springframework.vault.authentication.*
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
-import org.springframework.vault.support.VaultToken
 import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
-class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private val trustStoreProvider: SSLTrustStoreProvider) {
-
+class VaultConnector(private val trustStoreProvider: SSLTrustStoreProvider) {
     companion object {
-        val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultConnector::class.java.name)!!
+        val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultConnector::class.java.name)
+        private val retrier = Retrier<VaultResponse>(listOf(SpringHttpErrorCodeListener()))
 
         /**
          * @return true if operation succeed
@@ -237,28 +234,6 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
             }
         }
 
-        private fun performLoginRequest(
-            template: RestTemplate,
-            method: AuthMethod,
-            path: String,
-            body: Map<String, String>,
-            maskingValue: String,
-            extractor: (VaultResponse) -> Pair<String, String>
-        ): Pair<String, String> {
-            try {
-                val vaultResponse = template.write(path, body)
-                    ?: throw VaultException("HashiCorp Vault hasn't returned anything from POST to '$path'")
-
-                return extractor(vaultResponse)
-            } catch (e: VaultException) {
-                val cause = e.cause
-                if (cause is HttpStatusCodeException) {
-                    throw getReadableException(cause, method) { it.replace(maskingValue, "*******") }
-                }
-                throw e
-            }
-        }
-
         private val extractTokenAndAccessor: (VaultResponse) -> Pair<String, String> = { response: VaultResponse ->
             val auth = response.auth
 
@@ -280,7 +255,30 @@ class VaultConnector(dispatcher: EventDispatcher<BuildServerListener>, private v
 
             token to accessor
         }
+
+        fun performLoginRequest(
+            template: RestTemplate,
+            method: AuthMethod,
+            path: String,
+            body: Map<String, String>,
+            maskingValue: String,
+            extractor: (VaultResponse) -> Pair<String, String>
+        ): Pair<String, String> =
+            try {
+                val vaultResponse = retrier.run {
+                    template.write(path, body)
+                        ?: throw VaultException("HashiCorp Vault hasn't returned anything from POST to '$path'")
+                }
+                extractor(vaultResponse)
+            } catch (e: VaultException) {
+                val cause = e.cause
+                if (cause is HttpStatusCodeException) {
+                    throw getReadableException(cause, method) { it.replace(maskingValue, "*******") }
+                }
+                throw e
+            }
     }
+
 
     @Suppress("UnstableApiUsage")
     fun requestWrappedToken(settings: VaultFeatureSettings): String {

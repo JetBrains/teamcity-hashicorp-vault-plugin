@@ -15,13 +15,13 @@
  */
 package org.jetbrains.teamcity.vault.server;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.charset.Charset;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.agent.NullBuildProgressLogger;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
+import org.jetbrains.teamcity.vault.retrier.Retrier;
 import jetbrains.buildServer.util.CollectionsUtil;
 import jetbrains.buildServer.util.ThreadUtil;
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider;
@@ -30,6 +30,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.vault.*;
 import org.jetbrains.teamcity.vault.support.LifecycleAwareSessionManager;
 import org.jetbrains.teamcity.vault.support.VaultTemplate;
+import org.mockito.Mockito;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
@@ -38,9 +41,15 @@ import org.springframework.vault.authentication.CubbyholeAuthentication;
 import org.springframework.vault.authentication.CubbyholeAuthenticationOptions;
 import org.springframework.vault.support.VaultHealth;
 import org.springframework.vault.support.VaultMount;
+import org.springframework.vault.support.VaultResponse;
 import org.springframework.vault.support.VaultToken;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
+import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -216,6 +225,27 @@ public class VaultConnectorTest {
   @Test(dataProvider = "namespaces")
   public void testNoErrorOnTokenRevocationWhenAgentAlreadyRevokedIt(String vaultNamespace) {
     doTestRevokeTokenAfterBuildFinish(true, vaultNamespace);
+  }
+
+  @Test
+  public void testRetrierIsCalledFor500Error() throws JsonProcessingException {
+    TeamCityProperties.getModel().storeDefaultValue(Retrier.RETRY_DELAY, "0");
+    final RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
+    final String path = "/path";
+    final Map<String, String> body = Collections.emptyMap();
+
+    final VaultResponse response = new VaultResponse();
+    String key = "key1";
+    String value = "value";
+    response.setData(ImmutableMap.of(key, value));
+    Mockito.when(restTemplate.postForObject(path, new ObjectMapper().writeValueAsString(body), VaultResponse.class))
+           .thenThrow(HttpServerErrorException.create(HttpStatus.INTERNAL_SERVER_ERROR, "Mock error", HttpHeaders.EMPTY, "".getBytes(), Charset.defaultCharset()))
+           .thenReturn(response);
+
+    Pair<String, String> pair =
+      VaultConnector.Companion.performLoginRequest(restTemplate, AuthMethod.APPROLE, path, body, "", vaultResponse -> new Pair<>(key, (String)vaultResponse.getData().get(key)));
+
+    Assert.assertEquals(value, pair.getSecond());
   }
 
   private void doTestRevokeTokenAfterBuildFinish(Boolean revokeFromAgent, String vaultNamespace) {

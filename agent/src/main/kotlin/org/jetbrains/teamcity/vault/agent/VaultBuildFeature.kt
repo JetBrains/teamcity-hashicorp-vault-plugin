@@ -15,46 +15,42 @@
  */
 package org.jetbrains.teamcity.vault.agent
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.util.Pair
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.*
-import jetbrains.buildServer.http.SimpleCredentials
 import jetbrains.buildServer.log.Loggers
+import org.jetbrains.teamcity.vault.retrier.Retrier
+import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.HTTPRequestBuilder
-import jetbrains.buildServer.util.HTTPRequestBuilder.DelegatingRequestHandler
-import jetbrains.buildServer.util.http.HttpMethod
 import jetbrains.buildServer.util.positioning.PositionAware
 import jetbrains.buildServer.util.positioning.PositionConstraint
-import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
-import org.apache.http.client.utils.URIBuilder
 import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.retrier.TeamCityHttpCodeListener
 import org.jetbrains.teamcity.vault.support.LifecycleAwareSessionManager
-import org.springframework.http.HttpStatus
 import java.util.concurrent.ConcurrentHashMap
 
 class VaultBuildFeature(
     dispatcher: EventDispatcher<AgentLifeCycleListener>,
     private val myVaultParametersResolver: VaultParametersResolver,
-    private val sslTrustStoreProvider: SSLTrustStoreProvider,
-    private val sessionManagerBuilder: SessionManagerBuilder
+    private val sessionManagerBuilder: SessionManagerBuilder,
+    private val vaultFeatureSettingsFetcher: VaultFeatureSettingsFetcher
 ) : AgentLifeCycleAdapter(), PositionAware {
     companion object {
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultBuildFeature::class.java.name)
     }
 
+    private val teamcityRetrier: Retrier<HTTPRequestBuilder.Response>
+    private val vaultRetrier: Retrier<String>
+
     init {
         dispatcher.addListener(this)
         LOG.info("HashiCorp Vault integration enabled")
+        teamcityRetrier = Retrier(responseListeners = listOf(TeamCityHttpCodeListener()))
+        vaultRetrier = Retrier(listOf(SpringHttpErrorCodeListener()))
     }
 
     private val sessions = ConcurrentHashMap<Long, LifecycleAwareSessionManager>()
-    private val objectMapper by lazy {
-        jacksonObjectMapper()
-    }
 
     override fun afterAgentConfigurationLoaded(agent: BuildAgent) {
         agent.configuration.addConfigurationParameter(VaultConstants.FEATURE_SUPPORTED_AGENT_PARAMETER, "true")
@@ -72,7 +68,7 @@ class VaultBuildFeature(
 
         val allNamespaces = vaultNamespacesAndParameters.keys + vaultLegacyReferencesNamespaces
         val settingsAndTokens = allNamespaces.mapNotNull { namespace ->
-            val settings = getVaultFeatureSettings(namespace, build) ?: return@mapNotNull null
+            val settings = vaultFeatureSettingsFetcher.getVaultFeatureSettings(namespace, build) ?: return@mapNotNull null
             val token = resolveToken(allParameters, settings, build) ?: return@mapNotNull null
             namespace to VaultFeatureSettingsAndToken(settings, token)
         }
@@ -129,63 +125,6 @@ class VaultBuildFeature(
                 }.toSet()
     }
 
-
-    private fun getVaultFeatureSettings(namespace: String, build: AgentRunningBuild): VaultFeatureSettings? {
-        val logger = build.buildLogger
-        val errorPrefix = "Failed to get HashiCorp Vault wrapped token from TeamCity server for parameter namespace '$namespace':"
-
-        return try {
-            val configuration = build.agentConfiguration as BuildAgentConfigurationEx
-            val requestBuilder = HTTPRequestBuilder("${configuration.serverUrl}/app/${VaultConstants.ControllerSettings.URL}/${VaultConstants.ControllerSettings.WRAP_TOKEN_PATH}")
-                .withMethod(HttpMethod.GET)
-                .addParameters(
-                    Pair("buildId", build.buildId.toString()),
-                    Pair("namespace", namespace)
-                )
-                .withCredentials(SimpleCredentials(build.accessUser, build.accessCode))
-                .withTimeout(configuration.serverConnectionTimeout * 1000)
-                .allowNonSecureConnection(true)
-                .withTrustStore(sslTrustStoreProvider.trustStore)
-
-            if (configuration.serverProxyHost != null) {
-                requestBuilder.withProxyHost(URIBuilder(configuration.serverProxyHost).setPort(configuration.serverProxyPort).build())
-
-                val serverProxyCredentials = configuration.serverProxyCredentials
-                if (serverProxyCredentials != null) {
-                    requestBuilder.withProxyCredentials(serverProxyCredentials)
-                }
-            }
-
-            val response = DelegatingRequestHandler().doSyncRequest(requestBuilder.build())
-            if (response.statusCode != HttpStatus.OK.value()) {
-                val errorMessage = "$errorPrefix ${response.bodyAsString}"
-                LOG.error(errorMessage)
-                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
-                build.stopBuild(errorMessage)
-                return null
-            }
-
-            val contentStream = response.contentStream
-            if (contentStream == null) {
-                val errorMessage = "$errorPrefix empty response from server"
-                LOG.error(errorMessage)
-                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
-                build.stopBuild(errorMessage)
-                return null
-            }
-
-            val featureSettingsParams = objectMapper.readValue<Map<String, String>>(contentStream)
-
-            VaultFeatureSettings.getAgentFeatureFromProperties(featureSettingsParams)
-        } catch (e: Throwable) {
-            val errorMessage = "$errorPrefix internal error"
-            LOG.error(errorMessage, e)
-            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorMessage, e)
-            build.stopBuild(errorMessage)
-            null
-        }
-    }
-
     private fun resolveToken(
         parameters: Map<String, String>,
         settings: VaultFeatureSettings,
@@ -200,7 +139,10 @@ class VaultBuildFeature(
         try {
             val sessionManager = sessionManagerBuilder.buildWithImprovedLogging(settings, logger)
             sessions[runningBuild.buildId] = sessionManager
-            token = sessionManager.sessionToken.token
+            val sessionToken = vaultRetrier.run {
+                sessionManager.sessionToken.token
+            }
+            token = sessionToken
         } catch (e: Exception) {
             val errorPrefix = when (settings.auth.method) {
                 AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token"

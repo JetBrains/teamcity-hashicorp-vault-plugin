@@ -2,6 +2,8 @@ package org.jetbrains.teamcity.vault
 
 import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
+import org.jetbrains.teamcity.vault.retrier.Retrier
+import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultTemplate
@@ -11,9 +13,12 @@ import org.springframework.vault.support.VaultResponse
 import org.springframework.vault.support.VaultToken
 import java.net.URI
 
+
 open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) {
     companion object {
         private val LOG = Logger.getInstance(VaultResolver::class.java)
+        private val retrier = Retrier<VaultResponse>(listOf(SpringHttpErrorCodeListener()))
+        const val DATA_KEY = "data"
     }
 
     data class ResolvingResult(val replacements: Map<String, String>, val errors: Map<String, String>)
@@ -50,7 +55,10 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
 
             for (path in paths.toSet()) {
                 try {
-                    val response = client.read(path.removePrefix("/"))
+
+                    val response = retrier.run {
+                        client.read(path.removePrefix("/"))
+                    }
                     responses[path] = Response(response)
                 } catch (e: Exception) {
                     LOG.warn("Failed to fetch data for path '$path'", e)
@@ -130,14 +138,14 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
         private fun unwrapKV2IfNeeded(data: Map<String, Any>): Map<String, Any> {
             if (isKV2Data(data)) {
                 @Suppress("UNCHECKED_CAST")
-                return data["data"] as Map<String, Any>
+                return data[DATA_KEY] as Map<String, Any>
             }
             return data
         }
 
         private fun isKV2Data(map: Map<String, Any>): Boolean {
             // Some heuristics to understand whether it's KV2 data
-            val data = map["data"]
+            val data = map[DATA_KEY]
             val metadata = map["metadata"]
             if (data == null || metadata == null) return false
             if (data !is Map<*, *>) return false

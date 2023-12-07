@@ -22,7 +22,7 @@ plugins {
 ext {
     ext.kotlin_version = '1.7.0'
     version_prefix = '0.1'
-    teamcity_version = '2023.05'
+    teamcity_version = '2023.11'
     // compile
     spring_version = '5.3.18'
     sprint_vault_version = '2.3.3'
