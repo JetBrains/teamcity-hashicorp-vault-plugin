@@ -14,6 +14,7 @@ class Retrier<T : Any>(private val exceptionListeners: List<ExceptionListener> =
             try {
                 response = runnable.invoke()
                 if (isResponseError(response)) {
+                    retryWait()
                     continue
                 }
 
@@ -23,7 +24,7 @@ class Retrier<T : Any>(private val exceptionListeners: List<ExceptionListener> =
                     throw e
                 }
                 throwable = e
-                Thread.sleep(getRetryDelay() * 1000)
+                retryWait()
             }
         }
 
@@ -32,6 +33,10 @@ class Retrier<T : Any>(private val exceptionListeners: List<ExceptionListener> =
         } else {
             return response
         }
+    }
+
+    private fun retryWait() {
+        Thread.sleep(getRetryDelay() * 1000)
     }
 
     private fun isResponseError(response: T) =
