@@ -6,8 +6,8 @@ import kotlin.reflect.KClass
 
 class TeamCityHttpCodeListener : Retrier.ResponseErrorListener<Response> {
     override fun isError(response: Response) = when(response.statusCode){
-        in 400..499 -> true
-        in 500..599 -> false
-        else -> true
+        in 400..499 -> false
+        in 500..599 -> true
+        else -> false
     }
 }
