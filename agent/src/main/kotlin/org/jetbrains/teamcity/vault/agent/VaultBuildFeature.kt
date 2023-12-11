@@ -138,6 +138,10 @@ class VaultBuildFeature(
             val sessionToken = retrier.run {
                 sessionManager.sessionToken.token
             }
+
+            if (sessionToken == null){
+                throw IllegalStateException("Failed to get session token")
+            }
             token = sessionToken
         } catch (e: Exception) {
             val errorPrefix = when (settings.auth.method) {

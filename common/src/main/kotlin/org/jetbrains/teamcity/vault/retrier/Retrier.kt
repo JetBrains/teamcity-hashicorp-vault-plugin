@@ -7,11 +7,12 @@ class Retrier<T : Any>(private val exceptionListeners: List<ExceptionListener> =
     private fun getMaxRetries() = TeamCityProperties.getInteger(MAX_RETRIES, 3)
     private fun getRetryDelay() = TeamCityProperties.getLong(RETRY_DELAY, 3)
 
-    fun run(runnable: () -> T): T {
+    fun run(runnable: () -> T): T? {
         var throwable: Throwable? = null
+        var response: T? = null
         for (i in 0 until getMaxRetries()) {
             try {
-                val response = runnable.invoke()
+                response = runnable.invoke()
                 if (isResponseError(response)) {
                     continue
                 }
@@ -26,7 +27,11 @@ class Retrier<T : Any>(private val exceptionListeners: List<ExceptionListener> =
             }
         }
 
-        throw throwable!!
+        if (throwable != null){
+            throw throwable
+        } else {
+            return response
+        }
     }
 
     private fun isResponseError(response: T) =

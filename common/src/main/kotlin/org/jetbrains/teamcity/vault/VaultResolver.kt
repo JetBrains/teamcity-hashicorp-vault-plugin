@@ -59,14 +59,23 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
                     val response = retrier.run {
                         client.read(path.removePrefix("/"))
                     }
-                    responses[path] = Response(response)
+
+                    if (response == null) {
+                        val errorMessage = getErrorMessage(path)
+                        LOG.warn(errorMessage)
+                        responses[path] = Error(errorMessage)
+                    } else {
+                        responses[path] = Response(response)
+                    }
                 } catch (e: Exception) {
-                    LOG.warn("Failed to fetch data for path '$path'", e)
+                    LOG.warn(getErrorMessage(path), e)
                     responses[path] = Error(e)
                 }
             }
             return responses
         }
+
+        private fun getErrorMessage(path: String) = "Failed to fetch data for path '$path'"
 
         private fun getReplacements(parameters: Collection<VaultQuery>, responses: HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>>): ResolvingResult {
             val replacements = HashMap<String, String>()

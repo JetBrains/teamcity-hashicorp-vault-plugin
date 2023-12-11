@@ -61,8 +61,8 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
                 HTTPRequestBuilder.DelegatingRequestHandler().doSyncRequest(requestBuilder.build())
             }
 
-            if (response.statusCode != HttpStatus.OK.value()) {
-                val errorMessage = "$errorPrefix ${response.bodyAsString}"
+            if (response == null || response.statusCode != HttpStatus.OK.value()) {
+                val errorMessage = "$errorPrefix ${response?.bodyAsString.orEmpty()}"
                 VaultBuildFeature.LOG.error(errorMessage)
                 logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
                 build.stopBuild(errorMessage)

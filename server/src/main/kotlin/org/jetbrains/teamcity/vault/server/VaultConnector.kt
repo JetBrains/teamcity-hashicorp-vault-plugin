@@ -265,10 +265,11 @@ class VaultConnector(private val trustStoreProvider: SSLTrustStoreProvider) {
             extractor: (VaultResponse) -> Pair<String, String>
         ): Pair<String, String> =
             try {
+                val errorMessage = "HashiCorp Vault hasn't returned anything from POST to '$path'"
                 val vaultResponse = retrier.run {
                     template.write(path, body)
-                        ?: throw VaultException("HashiCorp Vault hasn't returned anything from POST to '$path'")
-                }
+                        ?: throw VaultException(errorMessage)
+                } ?: throw VaultException(errorMessage)
                 extractor(vaultResponse)
             } catch (e: VaultException) {
                 val cause = e.cause
