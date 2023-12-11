@@ -8,16 +8,19 @@ import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.BuildAgentConfigurationEx
 import jetbrains.buildServer.http.SimpleCredentials
 import jetbrains.buildServer.util.HTTPRequestBuilder
-import jetbrains.buildServer.util.HTTPRequestBuilder.ApacheClient43RequestHandler
 import jetbrains.buildServer.util.http.HttpMethod
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.apache.http.client.utils.URIBuilder
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
+import org.jetbrains.teamcity.vault.retrier.Retrier
+import org.jetbrains.teamcity.vault.retrier.TeamCityHttpCodeListener
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 
 class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustStoreProvider, private val requestHandler: HTTPRequestBuilder.RequestHandler) {
+
+    private val retrier: Retrier<HTTPRequestBuilder.Response> = Retrier(responseListeners = listOf(TeamCityHttpCodeListener()))
 
     @Autowired
     constructor(sslTrustStoreProvider: SSLTrustStoreProvider): this(sslTrustStoreProvider, HTTPRequestBuilder.DelegatingRequestHandler())
@@ -53,7 +56,11 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
                 }
             }
 
-            val response = HTTPRequestBuilder.DelegatingRequestHandler().doSyncRequest(requestBuilder.build())
+
+            val response = retrier.run {
+                HTTPRequestBuilder.DelegatingRequestHandler().doSyncRequest(requestBuilder.build())
+            }
+
             if (response.statusCode != HttpStatus.OK.value()) {
                 val errorMessage = "$errorPrefix ${response.bodyAsString}"
                 VaultBuildFeature.LOG.error(errorMessage)
