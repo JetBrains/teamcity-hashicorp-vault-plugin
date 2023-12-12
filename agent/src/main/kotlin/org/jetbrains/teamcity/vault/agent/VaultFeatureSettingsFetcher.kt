@@ -65,7 +65,7 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
                 val errorMessage = "$errorPrefix ${response?.bodyAsString.orEmpty()}"
                 VaultBuildFeature.LOG.error(errorMessage)
                 logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
-                build.stopBuild(errorMessage)
+                build.interruptBuild(errorMessage, false)
                 return null
             }
 
@@ -74,7 +74,7 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
                 val errorMessage = "$errorPrefix empty response from server"
                 VaultBuildFeature.LOG.error(errorMessage)
                 logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
-                build.stopBuild(errorMessage)
+                build.interruptBuild(errorMessage, false)
                 return null
             }
 
