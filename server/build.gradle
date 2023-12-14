@@ -50,7 +50,7 @@ teamcity {
         descriptor {
             name = 'teamcity-vault-support'
             displayName = 'HashiCorp Vault Support'
-            description = 'Provides support for HashiCorp Vault Secrets Manager'
+            description = 'This plugin allows you to set up an integration between JetBrains TeamCity and HashiCorp Vault. With this integration in place, TeamCity builds can retrieve secrets from the remote Vault storage, which allows you to avoid storing sensitive data locally.'
             version = project.version
 
             vendorName = 'JetBrains'
