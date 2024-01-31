@@ -19,7 +19,14 @@
 
 <script>
   BS.VaultParametersDialog = OO.extend(BS.AbstractWebForm, {
-    formElement: () => $('parameterSpecEditForm'),
+    formElement: function () {
+      const oldSpecForm = $('parameterSpecEditForm');
+      if (oldSpecForm) {
+        return oldSpecForm;
+      } else {
+        return $('editParamForm');
+      }
+    },
 
     submitTestQuery: function () {
       const that = this;
@@ -75,9 +82,9 @@
 <c:set var="vaultQuery" value="<%=VaultConstants.ParameterSettings.VAULT_QUERY%>"/>
 <c:set var="currentId" value="${propertiesBean.properties[vaultId]}" scope="request"/>
 
-<table class="runnerFormTable">
+<table class="runnerFormTable remoteParameter">
   <tr>
-    <th style="width: 20%"><label for="prop:${vaultId}">Vault ID: <l:star/></label></th>
+    <th><label for="prop:${vaultId}">Vault ID: <l:star/></label></th>
     <td>
       <props:selectProperty id="${vaultId}" name="${vaultId}" className="longField">
         <props:option value="${namespaceNotSelectedValue}">-- Please choose namespace --</props:option>
@@ -108,7 +115,7 @@
   <tr>
     <th><label for="prop:${vaultQuery}">Vault Query: <l:star/></label></th>
     <td>
-      <props:textProperty style="width: 27em" name="${vaultQuery}"/>
+      <props:textProperty name="${vaultQuery}"/>
     </td>
   </tr>
   <props:hiddenProperty name="projectId" value="${projectId}"/>
