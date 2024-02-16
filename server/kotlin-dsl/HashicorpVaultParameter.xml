@@ -22,9 +22,17 @@
         Should your vault be a KV 2.0, the query should be in the `vaultName/data/path/to!/key` format.
       </description>
     </param>
-    <param name="teamcity_hashicorp_vault_namespace" dslName="namespace" type="string">
+    <param name="teamcity_hashicorp_vault_namespace" dslName="namespace" type="string" deprecated="true">
       <description>
         The vault connection namespace id that should be used to access this secret
+      </description>
+      <deprecated replaceWith="vaultId">
+        Use vaultId property instead
+      </deprecated>
+    </param>
+    <param name="teamcity_hashicorp_vault_namespace" dslName="vaultId" type="string">
+      <description>
+        The vault connection id that should be used to access this secret
       </description>
     </param>
   </params>
@@ -39,7 +47,7 @@
         hashiCorpVaultParameter {
           name = "test"
           query = "secret/path/to!/key"
-          namespace = "connection-1"
+          vaultId = "connection-1"
         }
       </code>
     </example>
@@ -52,7 +60,7 @@
         hashiCorpVaultParameter {
           name = "test"
           query = "secret/data/path/to!/key"
-          namespace = "connection-1"
+          vaultId = "connection-1"
         }
       </code>
     </example>

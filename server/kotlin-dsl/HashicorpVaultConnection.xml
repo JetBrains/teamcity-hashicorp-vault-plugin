@@ -22,10 +22,18 @@
         HashiCorp Vault connection display name
       </description>
     </param>
-    <param name="namespace" dslName="namespace" type="string">
+    <param name="namespace" dslName="vaultId" type="string">
       <description>
         Vault ID. Should be provided in case of multiple vault connections
       </description>
+    </param>
+    <param name="namespace" dslName="namespace" type="string" deprecated="true">
+      <description>
+        Vault ID. Should be provided in case of multiple vault connections
+      </description>
+      <deprecated replaceWith="vaultId">
+        Use `id` property instead
+      </deprecated>
     </param>
     <param name="vault-namespace" dslName="vaultNamespace" type="string">
       <description>
@@ -108,7 +116,7 @@
         hashiCorpVaultConnection {
             id = "PROJECT_ID"
             name = "HashiCorp Vault"
-            namespace = "other-namespace"
+            vaultId = "other-namespace"
             vaultNamespace = "other"
             authMethod = appRole {
               endpointPath = "approle"
