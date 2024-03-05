@@ -87,12 +87,12 @@
     <th><label for="prop:${vaultId}">Vault ID: <l:star/></label></th>
     <td>
       <props:selectProperty id="${vaultId}" name="${vaultId}" className="longField">
-        <props:option value="${namespaceNotSelectedValue}">-- Please choose namespace --</props:option>
+        <props:option value="${namespaceNotSelectedValue}">-- Please choose connection --</props:option>
         <c:forEach items="${vaultFeatureSettings}" var="feature">
           <c:choose>
             <c:when test="${empty feature.id}">
               <props:option value="${emptyNamespaceOption}" selected="${empty currentId}">
-                <c:out value="Default Namespace (empty)"/>
+                <c:out value="Default project connection"/>
               </props:option>
             </c:when>
             <c:otherwise>
