@@ -61,26 +61,28 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
                 HTTPRequestBuilder.DelegatingRequestHandler().doSyncRequest(requestBuilder.build())
             }
 
-            if (response == null || response.statusCode != HttpStatus.OK.value()) {
-                val errorMessage = "$errorPrefix ${response?.bodyAsString.orEmpty()}"
-                VaultBuildFeature.LOG.error(errorMessage)
-                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
-                build.interruptBuild(errorMessage, false)
-                return null
+            response.use {
+                if (response == null || response.statusCode != HttpStatus.OK.value()) {
+                    val errorMessage = "$errorPrefix ${response?.bodyAsString.orEmpty()}"
+                    VaultBuildFeature.LOG.error(errorMessage)
+                    logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
+                    build.interruptBuild(errorMessage, false)
+                    return null
+                }
+
+                val contentStream = response.contentStream
+                if (contentStream == null) {
+                    val errorMessage = "$errorPrefix empty response from server"
+                    VaultBuildFeature.LOG.error(errorMessage)
+                    logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
+                    build.interruptBuild(errorMessage, false)
+                    return null
+                }
+
+                val featureSettingsParams = objectMapper.readValue<Map<String, String>>(contentStream)
+
+                VaultFeatureSettings.getAgentFeatureFromProperties(featureSettingsParams)
             }
-
-            val contentStream = response.contentStream
-            if (contentStream == null) {
-                val errorMessage = "$errorPrefix empty response from server"
-                VaultBuildFeature.LOG.error(errorMessage)
-                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${namespace}_A", "VaultConnection", errorMessage))
-                build.interruptBuild(errorMessage, false)
-                return null
-            }
-
-            val featureSettingsParams = objectMapper.readValue<Map<String, String>>(contentStream)
-
-            VaultFeatureSettings.getAgentFeatureFromProperties(featureSettingsParams)
         } catch (e: Throwable) {
             val errorMessage = "$errorPrefix internal error"
             VaultBuildFeature.LOG.error(errorMessage, e)
