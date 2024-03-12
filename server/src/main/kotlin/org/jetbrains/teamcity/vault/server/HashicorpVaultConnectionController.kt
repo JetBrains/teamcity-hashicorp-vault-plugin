@@ -53,11 +53,11 @@ class HashicorpVaultConnectionController(
         val feature = try {
             hashiCorpVaultConnectionResolver.getVaultConnection(project, namespace)
         } catch (e: ParameterNamespaceCollisionException) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "Parameter namespace $namespace is declared more than once in the same project")
-        } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Parameter namespace $namespace not found")
+            throw ResponseStatusException(HttpStatus.CONFLICT, "Project connection with ID '$namespace' is declared more than once in the same project")
+        } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Project connection with ID '$namespace' not found")
 
         if (hasTokenBeenGenerated(build, feature)) {
-            val errorMessage = "There has been an attempt to generate a second hashicorp vault token for build ${build.buildId} in project ${project.projectId}"
+            val errorMessage = "There has been an attempt to generate a second HashiCorp Vault token for build ${build.buildId} in project ${project.projectId}"
             LOG.error(errorMessage)
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "A token has already been generated for this build")
         }

@@ -74,7 +74,7 @@ class VaultTestQueryController(
 
         val invalids = VaultParameterSettings.getInvalidProperties(properties)
         if (invalids.isNotEmpty()) {
-            val errorMessage = "Errors found in the parameter defintion: ${StringUtil.join(invalids.values, ", ")}"
+            val errorMessage = "Errors found in the parameter definition: ${StringUtil.join(invalids.values, ", ")}"
             failTestConnection(errors, xmlResponse, errorMessage)
             return
         }
@@ -84,12 +84,12 @@ class VaultTestQueryController(
             val serverFeature = try {
                 hashiCorpVaultConnectionResolver.getVaultConnection(project, parameterSettings.namespace)
             } catch (e: ParameterNamespaceCollisionException) {
-                failTestConnection(errors, xmlResponse, "Vault namespace ${parameterSettings.namespace} is declared more than once in the same project")
+                failTestConnection(errors, xmlResponse, "HashiCorp Vault connection with ID '${parameterSettings.namespace}' is declared more than once in the same project")
                 return
             }
 
             if (serverFeature == null) {
-                failTestConnection(errors, xmlResponse, "Failed to find hashicorp connection ${parameterSettings.namespace}")
+                failTestConnection(errors, xmlResponse, "Failed to find HashiCorp Vault connection ${parameterSettings.namespace}")
                 return
             }
 
