@@ -32,7 +32,7 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
 
     fun getVaultFeatureSettings(namespace: String, build: AgentRunningBuild): VaultFeatureSettings? {
         val logger = build.buildLogger
-        val errorPrefix = "Failed to get HashiCorp Vault wrapped token from TeamCity server for parameter namespace '$namespace':"
+        val errorPrefix = "Failed to get HashiCorp Vault wrapped token from TeamCity server for the project connection with ID '$namespace':"
 
         return try {
             val configuration = build.agentConfiguration as BuildAgentConfigurationEx
