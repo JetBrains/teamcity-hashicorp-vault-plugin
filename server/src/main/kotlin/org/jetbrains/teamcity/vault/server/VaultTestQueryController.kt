@@ -11,10 +11,7 @@ import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import jetbrains.buildServer.web.openapi.WebControllerManager
 import org.jdom.Element
-import org.jetbrains.teamcity.vault.SessionManagerBuilder
-import org.jetbrains.teamcity.vault.VaultParameterSettings
-import org.jetbrains.teamcity.vault.VaultQuery
-import org.jetbrains.teamcity.vault.VaultResolver
+import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.server.HashiCorpVaultConnectionResolver.ParameterNamespaceCollisionException
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -39,7 +36,6 @@ class VaultTestQueryController(
 
     companion object {
         const val PATH = "/admin/hashicorp-vault-test-query.html"
-        const val PROJECT_ID = "projectId"
     }
 
     init {
@@ -52,7 +48,7 @@ class VaultTestQueryController(
     override fun doPost(request: HttpServletRequest, response: HttpServletResponse, xmlResponse: Element) {
         val properties = getRequestProperties(request)
 
-        val projectId = properties[PROJECT_ID] ?: return writeError(response, HttpStatus.BAD_REQUEST, "Failed to find projectId parameter")
+        val projectId = properties[VaultConstants.PROJECT_ID] ?: return writeError(response, HttpStatus.BAD_REQUEST, "Failed to find projectId parameter")
         val project = projectManager.findProjectByExternalId(projectId) ?: return writeError(response, HttpStatus.NOT_FOUND, "Project $projectId not found")
 
         doTestQuery(project, properties, xmlResponse)
@@ -121,7 +117,7 @@ class VaultTestQueryController(
 
     override fun checkPermissions(securityContext: SecurityContextEx, request: HttpServletRequest) {
         val projectProperties = getRequestProperties(request)
-        val projectId = projectProperties[PROJECT_ID]
+        val projectId = projectProperties[VaultConstants.PROJECT_ID]
         val project = projectManager.findProjectByExternalId(projectId)
         if (project == null) {
             throw AccessDeniedException(securityContext.authorityHolder, "No project $projectId")

@@ -1,8 +1,10 @@
-
 package org.jetbrains.teamcity.vault.server
 
 import jetbrains.buildServer.serverSide.InvalidProperty
+import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.PropertiesProcessor
+import jetbrains.buildServer.serverSide.SProject
+import jetbrains.buildServer.serverSide.connections.ProjectConnectionsManager
 import jetbrains.buildServer.serverSide.oauth.OAuthConnectionDescriptor
 import jetbrains.buildServer.serverSide.oauth.OAuthProvider
 import jetbrains.buildServer.web.openapi.PluginDescriptor
@@ -10,7 +12,11 @@ import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.isDefault
 
-class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) : OAuthProvider() {
+class VaultProjectConnectionProvider(
+    private val descriptor: PluginDescriptor,
+    private val projectConnectionsManager: ProjectConnectionsManager,
+    private val projectManager: ProjectManager
+) : OAuthProvider() {
     override fun getType(): String = VaultConstants.FeatureSettings.FEATURE_TYPE
 
     override fun getDisplayName(): String = "HashiCorp Vault"
@@ -30,57 +36,85 @@ class VaultProjectConnectionProvider(private val descriptor: PluginDescriptor) :
     }
 
     override fun getPropertiesProcessor(): PropertiesProcessor {
-        return getParametersProcessor()
+        return getParametersProcessor(projectConnectionsManager, projectManager)
     }
 
     companion object {
-        fun getParametersProcessor(): PropertiesProcessor {
-            return PropertiesProcessor {
-                val errors = ArrayList<InvalidProperty>()
-                if (it[VaultConstants.FeatureSettings.URL].isNullOrBlank()) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
-                }
-                // NAMESPACE can be empty, means default one
-                val namespace = it[VaultConstants.FeatureSettings.ID] ?: VaultConstants.FeatureSettings.DEFAULT_ID
-                val namespaceRegex = "[a-zA-Z0-9_-]+"
-                if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
-                    errors.add(InvalidProperty(VaultConstants.FeatureSettings.ID, "Non-default ID should match regex '$namespaceRegex'"))
-                }
+        fun getParametersProcessor(projectConnectionsManager: ProjectConnectionsManager, projectManager: ProjectManager): PropertiesProcessor {
+            return object : PropertiesProcessor {
+                private fun verifyCollisions(project: SProject, errors: ArrayList<InvalidProperty>, namespace: String, connectionId: String?) {
+                    val connectionsOfType = projectConnectionsManager.getAvailableConnectionsOfType(project, VaultConstants.FeatureSettings.FEATURE_TYPE)
 
-                when (it[VaultConstants.FeatureSettings.AUTH_METHOD]) {
-                    VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE -> {
-                        it.remove(VaultConstants.FeatureSettings.USERNAME)
-                        it.remove(VaultConstants.FeatureSettings.PASSWORD)
-
-                        if (it[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
-                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
-                        }
-                        if (it[VaultConstants.FeatureSettings.ROLE_ID].isNullOrBlank()) {
-                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.ROLE_ID, "Should not be empty"))
-                        }
-                        if (it[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
-                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
-                        }
-                    }
-                    VaultConstants.FeatureSettings.AUTH_METHOD_LDAP -> {
-                        it.remove(VaultConstants.FeatureSettings.ENDPOINT)
-                        it.remove(VaultConstants.FeatureSettings.ROLE_ID)
-                        it.remove(VaultConstants.FeatureSettings.SECRET_ID)
-
-                        if (it[VaultConstants.FeatureSettings.USERNAME].isNullOrBlank()) {
-                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.USERNAME, "Should not be empty"))
-                        }
-                        if (it[VaultConstants.FeatureSettings.PASSWORD].isNullOrBlank()) {
-                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.PASSWORD, "Should not be empty"))
-                        }
+                    if (connectionsOfType.any {
+                            it.parameters[VaultConstants.FeatureSettings.ID] == namespace &&
+                                    it.id != connectionId
+                        }) {
+                        errors.add(InvalidProperty(VaultConstants.FeatureSettings.ID, """Vault ID "$namespace" is already in use"""))
                     }
                 }
 
-                // Convert slashes if needed of add new fields
-                VaultFeatureSettings(it).toFeatureProperties(it)
+                override fun process(properties: MutableMap<String, String>): Collection<InvalidProperty> {
+                    val errors = ArrayList<InvalidProperty>()
+                    if (properties[VaultConstants.FeatureSettings.URL].isNullOrBlank()) {
+                        errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
+                    }
+                    // NAMESPACE can be empty, means default one
+                    val namespace = properties[VaultConstants.FeatureSettings.ID] ?: VaultConstants.FeatureSettings.DEFAULT_ID
+                    val namespaceRegex = "[a-zA-Z0-9_-]+"
+                    if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
+                        errors.add(InvalidProperty(VaultConstants.FeatureSettings.ID, "Non-default ID should match regex '$namespaceRegex'"))
+                    }
 
-                return@PropertiesProcessor errors
+                    // Project ID was not being added before so it might not be present
+                    val projectExternalId = properties[VaultConstants.PROJECT_ID]
+                    val connectionId = properties[VaultConstants.CONNECTION_ID]
+                    val project = projectManager.findProjectByExternalId(projectExternalId)
+                    if (project != null) {
+                        verifyCollisions(project, errors, namespace, connectionId)
+                    }
+                    // IDs are only there for verification and shouldn't be committed to storage
+                    properties.remove(VaultConstants.PROJECT_ID)
+                    properties.remove(VaultConstants.CONNECTION_ID)
+
+
+                    when (properties[VaultConstants.FeatureSettings.AUTH_METHOD]) {
+                        VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE -> {
+                            properties.remove(VaultConstants.FeatureSettings.USERNAME)
+                            properties.remove(VaultConstants.FeatureSettings.PASSWORD)
+
+                            if (properties[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
+                                errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
+                            }
+                            if (properties[VaultConstants.FeatureSettings.ROLE_ID].isNullOrBlank()) {
+                                errors.add(InvalidProperty(VaultConstants.FeatureSettings.ROLE_ID, "Should not be empty"))
+                            }
+                            if (properties[VaultConstants.FeatureSettings.SECRET_ID].isNullOrBlank()) {
+                                errors.add(InvalidProperty(VaultConstants.FeatureSettings.SECRET_ID, "Should not be empty"))
+                            }
+                        }
+
+                        VaultConstants.FeatureSettings.AUTH_METHOD_LDAP -> {
+                            properties.remove(VaultConstants.FeatureSettings.ENDPOINT)
+                            properties.remove(VaultConstants.FeatureSettings.ROLE_ID)
+                            properties.remove(VaultConstants.FeatureSettings.SECRET_ID)
+
+                            if (properties[VaultConstants.FeatureSettings.USERNAME].isNullOrBlank()) {
+                                errors.add(InvalidProperty(VaultConstants.FeatureSettings.USERNAME, "Should not be empty"))
+                            }
+                            if (properties[VaultConstants.FeatureSettings.PASSWORD].isNullOrBlank()) {
+                                errors.add(InvalidProperty(VaultConstants.FeatureSettings.PASSWORD, "Should not be empty"))
+                            }
+                        }
+                    }
+
+                    // Convert slashes if needed of add new fields
+                    VaultFeatureSettings(properties).toFeatureProperties(properties)
+
+                    return errors
+                }
             }
         }
+
+
     }
 }
