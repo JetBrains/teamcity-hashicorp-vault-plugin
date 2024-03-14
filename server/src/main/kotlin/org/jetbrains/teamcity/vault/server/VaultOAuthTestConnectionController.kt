@@ -5,7 +5,9 @@ import jetbrains.buildServer.controllers.*
 import jetbrains.buildServer.controllers.admin.projects.EditVcsRootsController
 import jetbrains.buildServer.controllers.admin.projects.PluginPropertiesUtil
 import jetbrains.buildServer.serverSide.IOGuard
+import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.SBuildServer
+import jetbrains.buildServer.serverSide.connections.ProjectConnectionsManager
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import jetbrains.buildServer.web.openapi.WebControllerManager
 import org.jdom.Element
@@ -16,7 +18,9 @@ import javax.servlet.http.HttpServletResponse
 class VaultOAuthTestConnectionController(
     server: SBuildServer, wcm: WebControllerManager,
     private val trustStoreProvider: SSLTrustStoreProvider,
-    private val connector: VaultConnector
+    private val connector: VaultConnector,
+    private val projectConnectionsManager: ProjectConnectionsManager,
+    private val projectManager: ProjectManager
 ) : BaseFormXmlController(server) {
     init {
         wcm.registerController("/admin/hashicorp-vault-test-connection.html", this)
@@ -37,7 +41,7 @@ class VaultOAuthTestConnectionController(
     }
 
     private fun doTestConnection(properties: Map<String, String>, xmlResponse: Element) {
-        val processor = VaultProjectConnectionProvider.getParametersProcessor()
+        val processor = VaultProjectConnectionProvider.getParametersProcessor(projectConnectionsManager, projectManager)
         val errors = ActionErrors()
         processor.process(properties).forEach { errors.addError(it) }
         if (errors.hasErrors()) {

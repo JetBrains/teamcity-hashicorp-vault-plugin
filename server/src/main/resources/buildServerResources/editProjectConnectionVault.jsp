@@ -173,6 +173,9 @@
     </td>
 </tr>
 
+<props:hiddenProperty name="projectId" value="${project.externalId}"/>
+<props:hiddenProperty name="connectionFeatureId" value="${oauthConnectionBean.connectionId}"/>
+
 <forms:button id="vaultTestConnectionButton" className="testConnectionButton"
               onclick="return BS.OAuthConnectionDialog.submitTestConnection();">Test Connection</forms:button>
 <bs:dialog dialogId="testConnectionDialog" title="Test Connection" closeCommand="BS.TestConnectionDialog.close();" closeAttrs="showdiscardchangesmessage='false'">

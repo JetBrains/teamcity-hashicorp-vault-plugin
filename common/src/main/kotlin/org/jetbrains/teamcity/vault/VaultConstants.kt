@@ -12,6 +12,8 @@ object VaultConstants {
     const val LEGACY_REFERENCES_USED_SUFFIX = ".legacy.references.used"
 
     const val PARAMETER_TYPE = "hashicorp-vault"
+    const val PROJECT_ID = "projectId"
+    const val CONNECTION_ID = "connectionFeatureId"
 
 
     @JvmField val VAULT_PARAMETER_PREFIX = "vault:"
