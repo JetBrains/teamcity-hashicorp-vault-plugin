@@ -64,7 +64,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenReturn(result)
 
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
@@ -97,7 +97,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
 
         // namespace is empty, property is not sent
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
         )
 
@@ -118,7 +118,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     @Test
     fun testQuery_WrongProjectId() {
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", "fakeProject",
+            "prop:${VaultConstants.PROJECT_ID}", "fakeProject",
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
@@ -130,7 +130,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     fun testQuery_MissingVaultQuery() {
 
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
 
@@ -143,7 +143,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     @Test
     fun testQuery_NamespaceNotSelected() {
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", VaultConstants.ParameterSettings.NAMESPACE_NOT_SELECTED_VALUE,
         )
@@ -160,7 +160,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenReturn(null)
 
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
@@ -183,7 +183,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenThrow(VaultException(error))
 
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
@@ -209,7 +209,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenThrow(VaultException(error))
 
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
@@ -245,7 +245,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenThrow(VaultException(error))
 
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
@@ -281,7 +281,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenReturn(result)
 
         doPost(
-            "prop:${VaultTestQueryController.PROJECT_ID}", myProject.externalId,
+            "prop:${VaultConstants.PROJECT_ID}", myProject.externalId,
             "prop:${VaultConstants.ParameterSettings.VAULT_QUERY}", VAULT_QUERY,
             "prop:${VaultConstants.ParameterSettings.VAULT_ID}", NAMESPACE,
         )
