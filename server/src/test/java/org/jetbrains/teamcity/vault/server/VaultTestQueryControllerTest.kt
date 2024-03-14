@@ -168,7 +168,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         val response = myResponse.returnedContentAsXml.getChild("errors")?.getChild("error")?.value
         Assert.assertNotNull(response)
         assertk.assertThat(response!!)
-            .contains("hashicorp connection")
+            .contains("Failed to find HashiCorp Vault")
     }
 
     @Test
