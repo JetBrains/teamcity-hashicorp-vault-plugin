@@ -24,7 +24,7 @@ class VaultProjectConnectionProvider(
     override fun describeConnection(connection: OAuthConnectionDescriptor): String {
         val settings = VaultFeatureSettings(connection.parameters)
         return "Connection to HashiCorp Vault server at ${settings.url}" +
-                if (isDefault(settings.id)) "" else ", namespace '${settings.id}'"
+                if (isDefault(settings.id)) "" else ", ID '${settings.id}'"
     }
 
     override fun getDefaultProperties(): Map<String, String> {

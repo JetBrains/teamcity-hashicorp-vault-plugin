@@ -26,7 +26,7 @@ class VaultBuildStartContextProcessor(
         val settingsList = try {
             hashiCorpVaultConnectionResolver.getVaultConnections(project)
         } catch (e: ParameterNamespaceCollisionException) {
-            val ns = if (e.namespace.isEmpty()) "empty namespace" else "namespace '${e.namespace}'"
+            val ns = if (e.namespace.isEmpty()) "empty ID" else "ID '${e.namespace}'"
             val message = "Multiple HashiCorp Vault connections with $ns present in project '${e.projectId}'"
             build.addBuildProblem(BuildProblemData.createBuildProblem("VC_${build.buildTypeId}_${e.namespace}_${e.projectId}", "VaultConnection", message))
             build.stop(null, message)
