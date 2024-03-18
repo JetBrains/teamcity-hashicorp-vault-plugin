@@ -10,6 +10,7 @@ ext {
     version_prefix = '0.1'
     teamcity_version = '2023.11'
     // compile
+    gson_version = '2.10.1'
     spring_version = '5.3.18'
     sprint_vault_version = '2.3.3'
     httpclient_version = '4.3.6' // version is relevant to one used inside TeamCity
