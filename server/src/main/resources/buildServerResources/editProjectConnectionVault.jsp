@@ -173,7 +173,7 @@
     </td>
 </tr>
 
-<props:hiddenProperty name="projectId" value="${project.externalId}"/>
+<props:hiddenProperty name="projectId" value="${project.externalId}" id="vaultProjectId"/>
 <props:hiddenProperty name="connectionFeatureId" value="${oauthConnectionBean.connectionId}"/>
 
 <forms:button id="vaultTestConnectionButton" className="testConnectionButton"
