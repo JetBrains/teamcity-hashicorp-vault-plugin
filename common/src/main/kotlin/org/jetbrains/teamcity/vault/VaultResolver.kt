@@ -1,5 +1,6 @@
 package org.jetbrains.teamcity.vault
 
+import com.google.gson.Gson
 import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
 import org.jetbrains.teamcity.vault.retrier.Retrier
@@ -112,13 +113,7 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
                     key = data.keys.first()
                 }
                 val value = data[key]
-                if (value == null) {
-                    throw ResolvingError("'$key' is missing in HashiCorp Vault response for '${parameter.vaultPath}'")
-                }
-                if (value !is String) {
-                    throw ResolvingError("Cannot extract data from non-string '$key'. Actual type is ${value.javaClass.simpleName} for '${parameter.vaultPath}'")
-                }
-                return value
+                return marshallValueIntoJSON(value, parameter)
             }
 
             val pattern: JsonPath?
@@ -131,18 +126,26 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
             }
             try {
                 val value: Any? = pattern.read(data)
-                if (value == null) {
-                    throw ResolvingError("'$jsonPath' found nothing for '${parameter.vaultPath}'")
-                }
-                if (value !is String) {
-                    throw ResolvingError("Cannot extract data from non-string '$jsonPath'. Actual type is ${value.javaClass.simpleName} for '${parameter.vaultPath}'")
-                }
-                return value
+                return marshallValueIntoJSON(value, parameter)
             } catch (e: Exception) {
                 LOG.warn("Cannot extract '$jsonPath' data from '${parameter.vaultPath}', full reference: ${parameter.full}", e)
                 throw ResolvingError("Cannot extract '$jsonPath' data from '${parameter.vaultPath}' for '${parameter.vaultPath}'")
             }
         }
+
+
+        private fun marshallValueIntoJSON(value: Any?, parameter: VaultQuery): String {
+            if (value == null) {
+                throw ResolvingError("'${parameter.jsonPath}' found nothing for '${parameter.vaultPath}'")
+            }
+            if (value is String) {
+                return value
+            }
+            LOG.info("Extract '${parameter.jsonPath}' data from '${parameter.vaultPath}' [${value.javaClass.simpleName}], full reference: ${parameter.full}")
+            val gson: Gson = Gson()
+            return gson.toJson(value)
+        }
+
 
         private fun unwrapKV2IfNeeded(data: Map<String, Any>): Map<String, Any> {
             if (isKV2Data(data)) {
