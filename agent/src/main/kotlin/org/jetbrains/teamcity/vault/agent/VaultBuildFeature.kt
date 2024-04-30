@@ -8,6 +8,7 @@ import jetbrains.buildServer.log.Loggers
 import org.jetbrains.teamcity.vault.retrier.Retrier
 import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import jetbrains.buildServer.util.EventDispatcher
+import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.positioning.PositionAware
 import jetbrains.buildServer.util.positioning.PositionConstraint
 import org.jetbrains.teamcity.vault.*
@@ -86,7 +87,11 @@ class VaultBuildFeature(
             try {
                 val parameterTypeArguments = controlDescription.parameterTypeArguments
                 val parameterSettings = VaultParameterSettings(parameterTypeArguments)
-                VaultParameter(parameterKey, parameterSettings)
+                if (!StringUtil.isEmpty(allAccessibleParameters[parameterKey])){
+                    VaultParameter(parameterKey, parameterSettings.copy(vaultQuery = allAccessibleParameters[parameterKey]!!))
+                } else {
+                    VaultParameter(parameterKey, parameterSettings)
+                }
             } catch (e: Throwable) {
                 val errorMessage = "Failed to parse Vault parameter settings for parameter '$parameterKey'"
                 LOG.warnAndDebugDetails(errorMessage, e)

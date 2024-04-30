@@ -57,7 +57,7 @@ subprojects {
             ['org.apache.httpcomponents', 'commons-logging'].each{ group -> dep.exclude group: group }
         }
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
-        testImplementation("org.jetbrains.teamcity.internal:integration-tests:${teamcity_version}")
+        testImplementation("org.jetbrains.teamcity:server-test-core:${teamcity_version}")
         testImplementation "com.github.ben-manes.caffeine:caffeine:${caffeine_version}"
         testImplementation "org.jetbrains.teamcity:tests-support:${teamcity_version}"
         testImplementation("javax.servlet:javax.servlet-api:3.1.0")

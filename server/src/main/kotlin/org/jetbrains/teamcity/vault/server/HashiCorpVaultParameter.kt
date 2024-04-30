@@ -42,7 +42,8 @@ class HashiCorpVaultParameter(private val descriptor: PluginDescriptor) : Remote
 
     override fun validateParameterValue(request: HttpServletRequest, context: ParameterRenderContext, value: String?): MutableCollection<InvalidProperty> = mutableListOf()
 
-    override fun convertParameterValue(request: HttpServletRequest, context: ParameterRenderContext, value: String?): String? = value
+    // We should ignore every value that is stored
+    override fun convertParameterValue(request: HttpServletRequest, context: ParameterRenderContext, value: String?): String? = null
 
     override fun presentParameterValue(context: ParameterContext, value: String?): String = StringUtil.emptyIfNull(value)
 
@@ -79,7 +80,7 @@ class HashiCorpVaultParameter(private val descriptor: PluginDescriptor) : Remote
     override fun getRemoteParameterType(): String = PARAMETER_TYPE
 
     override fun createRemoteParameter(build: SBuild, parameter: Parameter): RemoteParameter = object : RemoteParameter {
-        override fun getValue(): String = ""
+        override fun getValue(): String = parameter.value
 
         override fun isSecret(): Boolean = true
 
