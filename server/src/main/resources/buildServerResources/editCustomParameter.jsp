@@ -6,7 +6,7 @@
 
 <c:set var="vaultQuery" value="<%=VaultConstants.ParameterSettings.VAULT_QUERY%>" />
 
-<props:textProperty name="${vaultQuery}" disabled="${context.readOnly}" className="longField" expandable="true" style="width: 100%;"/>
+<props:textProperty name="${vaultQuery}" disabled="${context.readOnly}" id="${context.id}" className="longField" expandable="true" style="width: 100%;"/>
 
 <style type="text/css">
   .posRel {
@@ -14,3 +14,10 @@
   }
 </style>
 
+<ext:registerTypedParameterScript context="${context}">
+  {
+    getControlValue: function() {
+      return $('${context.id}').value;
+    }
+  }
+</ext:registerTypedParameterScript>
