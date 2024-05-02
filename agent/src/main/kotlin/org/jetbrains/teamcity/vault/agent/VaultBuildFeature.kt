@@ -87,8 +87,14 @@ class VaultBuildFeature(
             try {
                 val parameterTypeArguments = controlDescription.parameterTypeArguments
                 val parameterSettings = VaultParameterSettings(parameterTypeArguments)
-                if (!StringUtil.isEmpty(allAccessibleParameters[parameterKey])){
-                    VaultParameter(parameterKey, parameterSettings.copy(vaultQuery = allAccessibleParameters[parameterKey]!!))
+                // If coming from custom build dialog
+                val paramValue = allAccessibleParameters[parameterKey]
+                if (!StringUtil.isEmpty(paramValue) && paramValue?.startsWith(VaultConstants.VAULT_PARAMETER_PREFIX) == true){
+                    VaultParameter(
+                        parameterKey,
+                        parameterSettings.copy(
+                            vaultQuery = VaultReferencesUtil.getPath(paramValue, VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE))
+                    )
                 } else {
                     VaultParameter(parameterKey, parameterSettings)
                 }

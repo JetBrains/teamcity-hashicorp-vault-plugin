@@ -17,7 +17,7 @@
 <ext:registerTypedParameterScript context="${context}">
   {
     getControlValue: function() {
-      return $('${context.id}').value;
+      return "vault:" + $('${context.id}').value;
     }
   }
 </ext:registerTypedParameterScript>
