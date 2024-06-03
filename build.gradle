@@ -14,7 +14,7 @@ ext {
     // compile
     spring_version = '5.3.18'
     sprint_vault_version = '2.3.3'
-    httpclient_version = '4.3.6' // version is relevant to one used inside TeamCity
+    httpclient_version = '4.5.14' // version is relevant to one used inside TeamCity
     // tests
     jetty_version = '9.4.19.v20190610'
     testcontainers_version = '1.15.2'
