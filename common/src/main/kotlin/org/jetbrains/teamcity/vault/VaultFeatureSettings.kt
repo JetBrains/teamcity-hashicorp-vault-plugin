@@ -4,6 +4,7 @@ package org.jetbrains.teamcity.vault
 enum class AuthMethod(val id: String) {
     APPROLE("approle"),
     LDAP("ldap"),
+    GCP_IAM("gcp-iam"),
 }
 
 sealed class Auth(val method: AuthMethod) {
@@ -47,6 +48,15 @@ sealed class Auth(val method: AuthMethod) {
         }
     }
 
+    data class GcpIamAuth(val role: String, val serviceAccount: String, val endpointPath: String) : Auth(AuthMethod.GCP_IAM) {
+        override fun toMap(map: MutableMap<String, String>) {
+            map[VaultConstants.FeatureSettings.AUTH_METHOD] = method.id
+            map[VaultConstants.FeatureSettings.GCP_ROLE] = role
+            map[VaultConstants.FeatureSettings.GCP_SERVICE_ACCOUNT] = serviceAccount
+            map[VaultConstants.FeatureSettings.GCP_ENDOINT_PATH] = endpointPath
+        }
+    }
+
     abstract fun toMap(map: MutableMap<String, String>)
 
     companion object {
@@ -70,6 +80,8 @@ sealed class Auth(val method: AuthMethod) {
                         map[VaultConstants.FeatureSettings.PATH] ?: ""
                 )
 
+                AuthMethod.GCP_IAM.id -> toGcpIamProperties(map)
+
                 else -> error("Unexpected auth method '$kind'")
             }
         }
@@ -86,8 +98,18 @@ sealed class Auth(val method: AuthMethod) {
                     map[VaultConstants.FeatureSettings.WRAPPED_TOKEN] ?: ""
                 )
 
+                AuthMethod.GCP_IAM.id -> toGcpIamProperties(map)
+
                 else -> error("Unexpected auth method '$kind'")
             }
+        }
+
+        private fun toGcpIamProperties(map: Map<String, String>): GcpIamAuth {
+            return GcpIamAuth(
+            map[VaultConstants.FeatureSettings.GCP_ROLE] ?: "",
+            map[VaultConstants.FeatureSettings.GCP_SERVICE_ACCOUNT] ?: "",
+            map[VaultConstants.FeatureSettings.GCP_ENDOINT_PATH] ?: VaultConstants.FeatureSettings.DEFAULT_GCP_ENPOINT_PATH
+            )
         }
     }
 }
@@ -142,7 +164,8 @@ data class VaultFeatureSettings(val id: String, val url: String, val vaultNamesp
                 VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,
                 VaultConstants.FeatureSettings.FAIL_ON_ERROR to "true",
                 VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
-                VaultConstants.FeatureSettings.URL to "http://localhost:8200"
+                VaultConstants.FeatureSettings.URL to "http://localhost:8200",
+                VaultConstants.FeatureSettings.GCP_ENDOINT_PATH to VaultConstants.FeatureSettings.DEFAULT_GCP_ENPOINT_PATH,
             )
         }
 

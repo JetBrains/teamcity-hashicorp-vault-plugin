@@ -2,6 +2,7 @@
 package org.jetbrains.teamcity.vault
 
 import org.springframework.vault.authentication.AppRoleAuthenticationOptions
+import org.springframework.vault.authentication.GcpIamCredentialsAuthenticationOptions
 
 @Suppress("MayBeConstant")
 object VaultConstants {
@@ -49,6 +50,7 @@ object VaultConstants {
         @JvmField val AUTH_METHOD_APPROLE = AuthMethod.APPROLE.id
         @JvmField val AUTH_METHOD_LDAP = AuthMethod.LDAP.id
         @JvmField val DEFAULT_AUTH_METHOD = AuthMethod.APPROLE.id
+        @JvmField val AUTH_METHOD_GCP_IAM = AuthMethod.GCP_IAM.id
         @JvmField val WRAPPED_TOKEN = "wrapped-token"
 
         @JvmField val FAIL_ON_ERROR = "fail-on-error"
@@ -58,6 +60,11 @@ object VaultConstants {
         @JvmField val AGENT_SUPPORT_REQUIREMENT_VALUE = "%$FEATURE_SUPPORTED_AGENT_PARAMETER%"
 
         @JvmField val CONNECTIONS_DETAIL = "teamcity.vault.connection"
+
+        @JvmField val GCP_ROLE = "gcp-role"
+        @JvmField val GCP_SERVICE_ACCOUNT = "gcp-service-account"
+        @JvmField val GCP_ENDOINT_PATH = "gcp-endpoint-path"
+        @JvmField val DEFAULT_GCP_ENPOINT_PATH = GcpIamCredentialsAuthenticationOptions.DEFAULT_GCP_AUTHENTICATION_PATH
     }
 
     object BehaviourParameters {
@@ -79,4 +86,28 @@ object VaultConstants {
     // Special values
     val SPECIAL_FAILED_TO_FETCH = "FAILED_TO_FETCH"
     val SPECIAL_VALUES = setOf<String>(SPECIAL_FAILED_TO_FETCH)
+
+    val GCP_IAM_PROPERTIES_SET: Set<String> by lazy {
+        setOf(
+            FeatureSettings.GCP_ROLE,
+            FeatureSettings.GCP_ENDOINT_PATH,
+            FeatureSettings.GCP_SERVICE_ACCOUNT
+        )
+    }
+
+    val APPROLE_PROPERTIES_SET: Set<String> by lazy {
+        setOf(
+            FeatureSettings.ENDPOINT,
+            FeatureSettings.ROLE_ID,
+            FeatureSettings.SECRET_ID
+        )
+    }
+
+    val LDAP_PROPERTIES_SET: Set<String> by lazy {
+        setOf(
+            FeatureSettings.USERNAME,
+            FeatureSettings.PASSWORD,
+            FeatureSettings.PATH
+        )
+    }
 }

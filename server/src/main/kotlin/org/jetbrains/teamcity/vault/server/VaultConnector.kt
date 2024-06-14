@@ -4,16 +4,18 @@ package org.jetbrains.teamcity.vault.server
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.log.Loggers
-import jetbrains.buildServer.serverSide.*
-import org.jetbrains.teamcity.vault.retrier.Retrier
-import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
+import jetbrains.buildServer.serverSide.TeamCityProperties
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.retrier.Retrier
+import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
+import org.jetbrains.teamcity.vault.gcp.GcpAuthenticationHandler
 import org.jetbrains.teamcity.vault.support.VaultResponses
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.http.HttpStatus
 import org.springframework.vault.VaultException
-import org.springframework.vault.authentication.*
+import org.springframework.vault.authentication.AppRoleAuthenticationOptions
+import org.springframework.vault.authentication.LdapAuthenticationOptions
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
 import org.springframework.web.client.DefaultResponseErrorHandler
@@ -22,7 +24,10 @@ import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.util.concurrent.TimeUnit
 
-class VaultConnector(private val trustStoreProvider: SSLTrustStoreProvider) {
+class VaultConnector(
+    private val trustStoreProvider: SSLTrustStoreProvider,
+    private val gcpAuthenticationHandler: GcpAuthenticationHandler
+) {
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultConnector::class.java.name)
         private val retrier = Retrier<VaultResponse>(listOf(SpringHttpErrorCodeListener()))
@@ -56,6 +61,7 @@ class VaultConnector(private val trustStoreProvider: SSLTrustStoreProvider) {
                     }
                     return false
                 }
+                AuthMethod.GCP_IAM -> return true
             }
         }
 
@@ -97,6 +103,7 @@ class VaultConnector(private val trustStoreProvider: SSLTrustStoreProvider) {
                 when (settings.auth.method) {
                     AuthMethod.APPROLE -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give approle '${(settings.auth as Auth.AppRoleAuthServer).roleId}' 'update' access to '/auth/token/revoke-accessor'$suffix")
                     AuthMethod.LDAP -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give LDAP role access to '/auth/token/revoke-accessor'$suffix")
+                    AuthMethod.GCP_IAM -> LOG.warn("Failed to revoke token via accessor '$accessor': access denied, give GCP role access to '/auth/token/revoke-accessor'$suffix")
                 }
                 return true
             }
@@ -283,6 +290,10 @@ class VaultConnector(private val trustStoreProvider: SSLTrustStoreProvider) {
             AuthMethod.LDAP -> {
                 val (token, accessor) = doRequestToken(settings, trustStoreProvider)
                 LeasedTokenInfo(token, accessor, settings)
+            }
+            AuthMethod.GCP_IAM -> {
+                val (token, accessor) = gcpAuthenticationHandler.vaultTokenData(settings)
+                return LeasedTokenInfo(token, accessor, settings)
             }
         }
     }

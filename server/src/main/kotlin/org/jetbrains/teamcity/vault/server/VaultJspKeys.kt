@@ -18,9 +18,14 @@ class VaultJspKeys {
     val PASSWORD = VaultConstants.FeatureSettings.PASSWORD
     val PATH = VaultConstants.FeatureSettings.PATH
 
+    val GCP_ROLE = VaultConstants.FeatureSettings.GCP_ROLE
+    val GCP_SERVICE_ACCOUNT = VaultConstants.FeatureSettings.GCP_SERVICE_ACCOUNT
+    val GCP_ENDPOINT_PATH = VaultConstants.FeatureSettings.GCP_ENDOINT_PATH
+
     val AUTH_METHOD = VaultConstants.FeatureSettings.AUTH_METHOD
     val AUTH_METHOD_APPROLE = VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE
     val AUTH_METHOD_LDAP = VaultConstants.FeatureSettings.AUTH_METHOD_LDAP
+    val AUTH_METHOD_GCP_IAM = VaultConstants.FeatureSettings.AUTH_METHOD_GCP_IAM
 
     val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
 

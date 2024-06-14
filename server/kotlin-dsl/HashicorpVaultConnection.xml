@@ -83,6 +83,23 @@
           </description>
         </param>
       </option>
+      <option name="gcpIam" value="gcp-iam">
+        <param name="gcp-role" dslName="gcpVaultRole" type="string" mandatory="true">
+          <description>
+            Vault GCP IAM Role
+          </description>
+        </param>
+        <param name="gcp-service-account" dslName="gcpServiceAccount" type="string" mandatory="false">
+          <description>
+            GCP Service Account
+          </description>
+        </param>
+        <param name="gcp-endpoint-path" dslName="gcpEndpointPath" type="string" mandatory="false">
+          <description>
+            Vault GCP mount path, defaults to 'gcp'
+          </description>
+        </param>
+      </option>
     </param>
     <param name="fail-on-error" dslName="failOnError" type="boolean" trueValue="true" falseValue="false">
       <description>
@@ -138,6 +155,36 @@
               path = "path"
               username = "username"
               password = "credentialsJSON:636e34b4-d02e-4f27-9d12-141f75e8832b"
+            }
+        }
+      </code>
+    </example>
+    <example>
+      <description>
+        Adds a new Connection that allows TeamCity to connect to a HashiCorpVault using GCP IAM, relying on default GCP credentials and the default Vault path
+      </description>
+      <code>
+        hashiCorpVaultConnection {
+            id = "PROJECT_ID"
+            name = "HashiCorp Vault"
+            authMethod = gcpIam {
+              gcpVaultRole = "role"
+            }
+        }
+      </code>
+    </example>
+    <example>
+      <description>
+        Adds a new Connection that allows TeamCity to connect to a HashiCorpVault using GCP IAM, using a service account and a custom mount path
+      </description>
+      <code>
+        hashiCorpVaultConnection {
+            id = "PROJECT_ID"
+            name = "HashiCorp Vault"
+            authMethod = gcpIam {
+              gcpVaultRole = "role"
+              gcpServiceAccount = "gcpSericeAccount"
+              gcpEndpointPath = "customVaultMountPath"
             }
         }
       </code>

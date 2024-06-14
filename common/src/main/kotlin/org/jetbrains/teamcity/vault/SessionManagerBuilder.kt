@@ -4,6 +4,7 @@ import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import jetbrains.buildServer.agent.BuildProgressLogger
 import jetbrains.buildServer.serverSide.TeamCityProperties
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
+import org.jetbrains.teamcity.vault.gcp.GcpAuthenticationHandler
 import org.jetbrains.teamcity.vault.support.LifecycleAwareSessionManager
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit
 
 class SessionManagerBuilder(
     private val trustStoreProvider: SSLTrustStoreProvider,
+    private val gcpAuthenticationHandler: GcpAuthenticationHandler
 ) {
     private val scheduler: TaskScheduler = ConcurrentTaskScheduler()
 
@@ -34,6 +36,14 @@ class SessionManagerBuilder(
                 throw RuntimeException("Wrapped HashiCorp Vault token value for url ${settings.url} is incorrect, seems there was error fetching token on TeamCity server side")
             }
             createCubbyholeAuthentication(wrapped, template)
+        }
+        AuthMethod.GCP_IAM -> {
+
+            if (settings.auth !is Auth.GcpIamAuth) {
+                error("Unsupported auth method: ${settings.auth.method}, class: ${settings.auth::class.qualifiedName}")
+            }
+
+            gcpAuthenticationHandler.gcpIamCredentialsAuthentication(settings.auth, template)
         }
     }
 

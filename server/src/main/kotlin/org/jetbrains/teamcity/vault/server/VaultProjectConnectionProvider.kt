@@ -81,6 +81,7 @@ class VaultProjectConnectionProvider(
                         VaultConstants.FeatureSettings.AUTH_METHOD_APPROLE -> {
                             properties.remove(VaultConstants.FeatureSettings.USERNAME)
                             properties.remove(VaultConstants.FeatureSettings.PASSWORD)
+                            removeGcpProperties(properties)
 
                             if (properties[VaultConstants.FeatureSettings.ENDPOINT].isNullOrBlank()) {
                                 errors.add(InvalidProperty(VaultConstants.FeatureSettings.ENDPOINT, "Should not be empty"))
@@ -97,12 +98,21 @@ class VaultProjectConnectionProvider(
                             properties.remove(VaultConstants.FeatureSettings.ENDPOINT)
                             properties.remove(VaultConstants.FeatureSettings.ROLE_ID)
                             properties.remove(VaultConstants.FeatureSettings.SECRET_ID)
+                            removeGcpProperties(properties)
 
                             if (properties[VaultConstants.FeatureSettings.USERNAME].isNullOrBlank()) {
                                 errors.add(InvalidProperty(VaultConstants.FeatureSettings.USERNAME, "Should not be empty"))
                             }
                             if (properties[VaultConstants.FeatureSettings.PASSWORD].isNullOrBlank()) {
                                 errors.add(InvalidProperty(VaultConstants.FeatureSettings.PASSWORD, "Should not be empty"))
+                            }
+                        }
+
+                        VaultConstants.FeatureSettings.AUTH_METHOD_GCP_IAM -> {
+                            removeNonGcpProperties(properties)
+
+                            if (properties[VaultConstants.FeatureSettings.GCP_ROLE].isNullOrBlank()) {
+                                errors.add(InvalidProperty(VaultConstants.FeatureSettings.GCP_ROLE, "Should not be empty"))
                             }
                         }
                     }
@@ -115,6 +125,13 @@ class VaultProjectConnectionProvider(
             }
         }
 
+        private fun removeGcpProperties(properties: MutableMap<String, String>) {
+            properties.keys.removeAll(VaultConstants.GCP_IAM_PROPERTIES_SET)
+        }
 
+        private fun removeNonGcpProperties(properties: MutableMap<String, String>) {
+            properties.keys.removeAll(VaultConstants.LDAP_PROPERTIES_SET)
+            properties.keys.removeAll(VaultConstants.APPROLE_PROPERTIES_SET)
+        }
     }
 }

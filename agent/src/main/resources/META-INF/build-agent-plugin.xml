@@ -7,4 +7,5 @@
     <bean id="vaultBuildFeature" class="org.jetbrains.teamcity.vault.agent.VaultBuildFeature"/>
     <bean id="sessionManagerBuilder" class="org.jetbrains.teamcity.vault.SessionManagerBuilder"/>
     <bean class="org.jetbrains.teamcity.vault.agent.VaultFeatureSettingsFetcher"/>
+    <bean class="org.jetbrains.teamcity.vault.gcp.GcpAuthenticationHandler"/>
 </beans>

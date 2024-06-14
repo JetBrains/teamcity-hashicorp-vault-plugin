@@ -6,6 +6,8 @@ dependencies {
     implementation(project(':common')) {
         exclude group: 'org.apache.httpcomponents'
     }
+    runtimeOnly("com.google.guava:guava:33.2.1-jre")
+
     implementation("org.springframework:spring-web:$spring_version") {
         exclude group: 'org.springframework'
     }

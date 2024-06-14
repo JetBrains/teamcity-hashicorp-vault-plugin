@@ -10,7 +10,7 @@ initializeWorkspace()
 ext {
     ext.kotlin_version = '1.7.0'
     version_prefix = '0.1'
-    teamcity_version = anyParam('teamcityVersion') ?: '2023.11'
+    teamcity_version = anyParam('teamcityVersion') ?: '2024.07-SNAPSHOT'
     // compile
     spring_version = '5.3.18'
     sprint_vault_version = '2.3.3'
@@ -18,7 +18,7 @@ ext {
     // tests
     jetty_version = '9.4.19.v20190610'
     testcontainers_version = '1.15.2'
-    assertj_version = '1.7.1'
+    assertj_version = '3.26.0'
     mockito_version = '4.1.0'
     jackson_version = '2.14.3'
     spacePackagesUrl = "https://packages.jetbrains.team/maven/p/tc/maven"
@@ -59,6 +59,13 @@ subprojects {
         testImplementation("org.testng:testng:6.8")
         implementation('com.amazonaws:aws-java-sdk-core:1.12.122') { dep ->
             ['org.apache.httpcomponents', 'commons-logging'].each{ group -> dep.exclude group: group }
+        }
+        implementation("com.google.cloud:google-cloud-iamcredentials:2.44.0") { dep ->
+            ['org.apache.httpcomponents', 'com.google.guava', 'org.conscrypt'].each { group -> dep.exclude group: group }
+            exclude group: 'io.grpc', module: 'grpc-xds'
+        }
+        runtimeOnly("com.google.http-client:google-http-client-jackson2:1.44.2") {
+            exclude group: 'com.google.http-client'
         }
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
         testImplementation("org.jetbrains.teamcity:server-test-core:${teamcity_version}")

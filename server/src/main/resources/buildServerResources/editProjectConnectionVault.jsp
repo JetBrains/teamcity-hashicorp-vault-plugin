@@ -6,12 +6,17 @@
 <jsp:useBean id="project" type="jetbrains.buildServer.serverSide.SProject" scope="request" />
 <jsp:useBean id="oauthConnectionBean" type="jetbrains.buildServer.serverSide.oauth.OAuthConnectionBean" scope="request" />
 <jsp:useBean id="propertiesBean" type="jetbrains.buildServer.serverSide.oauth.OAuthConnectionBean" scope="request" />
+<c:set var="gcpIamAuthEnabled" value="${intprop:getBoolean('teamcity.internal.vault.gcp.iam.enabled')}"/>
 <bs:linkScript>
     /js/bs/testConnection.js
 </bs:linkScript>
 <style type="text/css">
     .auth-container {
         display: none;
+    }
+
+    .smallNote {
+        word-break: break-word;
     }
 </style>
 <script>
@@ -64,7 +69,7 @@
     </td>
     <td>
         <props:textProperty name="${keys.DISPLAY_NAME}" className="longField" />
-        <span class="smallNote">Provide some name to distinguish this connection from others.</span>
+        <span class="smallNote">The public name of the connection</span>
         <span class="error" id="error_${keys.DISPLAY_NAME}"></span>
     </td>
 </tr>
@@ -73,7 +78,7 @@
     <td>
         <props:textProperty name="${keys.NAMESPACE}" className="longField" />
         <span class="error" id="error_${keys.NAMESPACE}"></span>
-        <span class="smallNote">Provide an ID to use in TeamCity parameters in case of multiple vault connections.</span>
+        <span class="smallNote">The ID can be used in TeamCity parameters and to identify this connection if multiple Vault connections exist</span>
     </td>
 </tr>
 <tr>
@@ -81,7 +86,7 @@
     <td>
         <props:textProperty name="${keys.URL}" className="longField textProperty_max-width js_max-width" />
         <span class="error" id="error_${keys.URL}" />
-        <span class="smallNote">Format: https://&lt;vaultserver&gt;:&lt;port&gt;</span>
+        <span class="smallNote">The Vault URL in the <code>https://&lt;vaultserver&gt;:&lt;port&gt;</code> format</span>
     </td>
 </tr>
 
@@ -90,7 +95,7 @@
     <td>
         <props:textProperty name="${keys.VAULT_NAMESPACE}" className="longField textProperty_max-width js_max-width" />
         <span class="error" id="error_${keys.VAULT_NAMESPACE}" />
-        <span class="smallNote">Vault namespace auth method and secrets engines are housed under.</span>
+        <span class="smallNote">The name of the Vault Enterprise namespace</span>
     </td>
 </tr>
 
@@ -107,6 +112,13 @@
 
         <br/>
 
+        <c:if test="${gcpIamAuthEnabled}">
+            <props:radioButtonProperty name="${keys.AUTH_METHOD}" id="${keys.AUTH_METHOD_GCP_IAM}" value="${keys.AUTH_METHOD_GCP_IAM}" onclick="BS.Vault.onAuthChange(this)" />
+            <label for="${keys.AUTH_METHOD_GCP_IAM}">Use GCP IAM Auth</label>
+
+            <br/>
+        </c:if>
+
     </td>
 </tr>
 
@@ -115,7 +127,7 @@
     <td>
         <props:textProperty name="${keys.ENDPOINT}" className="longField textProperty_max-width js_max-width" />
         <span class="error" id="error_${keys.ENDPOINT}" />
-        <span class="smallNote">Path where AppRole auth endpoint mounted, e.g. <code>approle</code></span>
+        <span class="smallNote">The path where the AppRole auth endpoint is mounted (for example, <code>approle</code>)</span>
     </td>
 </tr>
 
@@ -160,7 +172,38 @@
     <td>
         <props:textProperty name="${keys.PATH}" className="longField textProperty_max-width js_max-width" />
         <span class="error" id="error_${keys.PATH}" />
-        <span class="smallNote">Path of the ldap authentication backend mount, if left blank defaults to ldap.</span>
+        <span class="smallNote">The path of the LDAP authentication backend mount. Defaults to "LDAP" if not set</span>
+    </td>
+</tr>
+
+<tr class="auth-container auth-gcp-iam">
+    <td><label for="${keys.GCP_ROLE}">GCP Role</label></td>
+    <td>
+        <props:textProperty name="${keys.GCP_ROLE}" className="longField textProperty_max-width js_max-width" />
+        <span class="error" id="error_${keys.GCP_ROLE}" />
+    </td>
+</tr>
+
+<tr class="noBorder auth-container auth-gcp-iam">
+    <td><label for="${keys.GCP_SERVICE_ACCOUNT}">GCP Service Account ID</label></td>
+    <td>
+        <props:textProperty name="${keys.GCP_SERVICE_ACCOUNT}" className="longField textProperty_max-width js_max-width" />
+        <span class="error" id="error_${keys.GCP_SERVICE_ACCOUNT}" />
+        <span class="smallNote">
+            Obtains the value from credentials data if not set, refer to
+            <a target="_blank" rel="noopener noreferrer" href="https://cloud.google.com/docs/authentication/application-default-credentials">
+                default GCP credentials
+            </a>
+        </span>
+    </td>
+</tr>
+
+<tr class="noBorder auth-container auth-gcp-iam">
+    <td><label for="${keys.GCP_ENDPOINT_PATH}">GCP Endpoint Path</label></td>
+    <td>
+        <props:textProperty name="${keys.GCP_ENDPOINT_PATH}" className="longField textProperty_max-width js_max-width" />
+        <span class="error" id="error_${keys.GCP_ENDPOINT_PATH}" />
+        <span class="smallNote">The path of the GCP authentication backend mount</span>
     </td>
 </tr>
 
@@ -169,7 +212,7 @@
     <td>
         <props:checkboxProperty name="${keys.FAIL_ON_ERROR}" />
         <span class="error" id="error_${keys.FAIL_ON_ERROR}" />
-        <span class="smallNote">Whether to fail builds in case of parameter resolving error</span>
+        <span class="smallNote">Check this option if errors in resolving parameter values should fail the build</span>
     </td>
 </tr>
 
@@ -196,5 +239,6 @@
 
     $j(document).ready(function() {
         BS.Vault.onAuthChange($j('input[name="prop:${keys.AUTH_METHOD}"]:checked'));
+        BS.OAuthConnectionDialog.recenterDialog();
     })
 </script>

@@ -144,6 +144,7 @@ class VaultBuildFeature(
             val errorPrefix = when (settings.auth.method) {
                 AuthMethod.APPROLE -> "Failed to unwrap HashiCorp Vault token"
                 AuthMethod.LDAP -> "Failed to get HashiCorp Vault token using LDAP"
+                AuthMethod.GCP_IAM -> "Failed to get HashiCorp Vault token using GCP IAM"
             }
             if (settings.failOnError) {
                 logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorPrefix + ": " + e.message, e)
