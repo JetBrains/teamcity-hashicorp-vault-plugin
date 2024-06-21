@@ -4,13 +4,13 @@ package org.jetbrains.teamcity.vault.server
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.log.Loggers
-import jetbrains.buildServer.serverSide.*
-import org.jetbrains.teamcity.vault.retrier.VaultRetrier
-import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
+import jetbrains.buildServer.serverSide.TeamCityProperties
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
-import org.jetbrains.teamcity.vault.support.VaultResponses
+import org.jetbrains.teamcity.vault.retrier.Retrier
+import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import org.jetbrains.teamcity.vault.gcp.GcpAuthenticationHandler
+import org.jetbrains.teamcity.vault.support.VaultResponses
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.http.HttpStatus
 import org.springframework.vault.VaultException
@@ -30,7 +30,7 @@ class VaultConnector(
 ) {
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultConnector::class.java.name)
-        private val retrier = VaultRetrier.getRetrier()
+        private val retrier = Retrier<VaultResponse>(listOf(SpringHttpErrorCodeListener()))
 
         /**
          * @return true if operation succeed
