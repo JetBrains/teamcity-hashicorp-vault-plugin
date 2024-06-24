@@ -5,14 +5,15 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.log.Loggers
-import org.jetbrains.teamcity.vault.retrier.Retrier
-import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
+import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.positioning.PositionAware
 import jetbrains.buildServer.util.positioning.PositionConstraint
+import jetbrains.buildServer.util.retry.Retrier
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.LifecycleAwareSessionManager
+import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 
 class VaultBuildFeature(
@@ -25,12 +26,12 @@ class VaultBuildFeature(
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultBuildFeature::class.java.name)
     }
 
-    private val retrier: Retrier<String>
+    private val retrier: Retrier
 
     init {
         dispatcher.addListener(this)
         LOG.info("HashiCorp Vault integration enabled")
-        retrier = Retrier(listOf(SpringHttpErrorCodeListener()))
+        retrier = VaultRetrier.getRetrier()
     }
 
     private val sessions = ConcurrentHashMap<Long, LifecycleAwareSessionManager>()
@@ -132,9 +133,11 @@ class VaultBuildFeature(
         try {
             val sessionManager = sessionManagerBuilder.buildWithImprovedLogging(settings, logger)
             sessions[runningBuild.buildId] = sessionManager
-            val sessionToken = retrier.run {
-                sessionManager.sessionToken.token
-            }
+            val sessionToken = retrier.execute(
+                Callable {
+                    sessionManager.sessionToken.token
+                }
+            )
 
             if (sessionToken == null){
                 throw IllegalStateException("Failed to get session token")

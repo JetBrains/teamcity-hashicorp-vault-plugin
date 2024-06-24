@@ -1,16 +1,15 @@
-
 package org.jetbrains.teamcity.vault.server
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.log.Loggers
-import jetbrains.buildServer.serverSide.TeamCityProperties
+import jetbrains.buildServer.serverSide.*
+import org.jetbrains.teamcity.vault.retrier.VaultRetrier
+import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
-import org.jetbrains.teamcity.vault.retrier.Retrier
-import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
-import org.jetbrains.teamcity.vault.gcp.GcpAuthenticationHandler
 import org.jetbrains.teamcity.vault.support.VaultResponses
+import org.jetbrains.teamcity.vault.gcp.GcpAuthenticationHandler
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.http.HttpStatus
 import org.springframework.vault.VaultException
@@ -22,6 +21,7 @@ import org.springframework.web.client.DefaultResponseErrorHandler
 import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
 import java.net.URI
+import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 
 class VaultConnector(
@@ -30,7 +30,7 @@ class VaultConnector(
 ) {
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultConnector::class.java.name)
-        private val retrier = Retrier<VaultResponse>(listOf(SpringHttpErrorCodeListener()))
+        private val retrier = VaultRetrier.getRetrier()
 
         /**
          * @return true if operation succeed
@@ -61,6 +61,7 @@ class VaultConnector(
                     }
                     return false
                 }
+
                 AuthMethod.GCP_IAM -> return true
             }
         }
@@ -259,10 +260,10 @@ class VaultConnector(
         ): Pair<String, String> =
             try {
                 val errorMessage = "HashiCorp Vault hasn't returned anything from POST to '$path'"
-                val vaultResponse = retrier.run {
+                val vaultResponse = retrier.execute(Callable {
                     template.write(path, body)
                         ?: throw VaultException(errorMessage)
-                } ?: throw VaultException(errorMessage)
+                }) ?: throw VaultException(errorMessage)
                 extractor(vaultResponse)
             } catch (e: VaultException) {
                 val cause = e.cause
@@ -291,6 +292,7 @@ class VaultConnector(
                 val (token, accessor) = doRequestToken(settings, trustStoreProvider)
                 LeasedTokenInfo(token, accessor, settings)
             }
+
             AuthMethod.GCP_IAM -> {
                 val (token, accessor) = gcpAuthenticationHandler.vaultTokenData(settings)
                 return LeasedTokenInfo(token, accessor, settings)

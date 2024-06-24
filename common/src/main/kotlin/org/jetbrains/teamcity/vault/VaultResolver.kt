@@ -2,7 +2,8 @@ package org.jetbrains.teamcity.vault
 
 import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
-import org.jetbrains.teamcity.vault.retrier.Retrier
+import jetbrains.buildServer.serverSide.TeamCityProperties
+import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
@@ -12,12 +13,13 @@ import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
 import org.springframework.vault.support.VaultToken
 import java.net.URI
+import java.util.concurrent.Callable
 
 
 open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) {
     companion object {
         private val LOG = Logger.getInstance(VaultResolver::class.java)
-        private val retrier = Retrier<VaultResponse>(listOf(SpringHttpErrorCodeListener()))
+        private val retrier = VaultRetrier.getRetrier()
         const val DATA_KEY = "data"
     }
 
@@ -56,9 +58,9 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
             for (path in paths.toSet()) {
                 try {
 
-                    val response = retrier.run {
+                    val response = retrier.execute(Callable {
                         client.read(path.removePrefix("/"))
-                    }
+                    })
 
                     if (response == null) {
                         val errorMessage = getErrorMessage(path)
@@ -83,7 +85,7 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
 
             for (parameter in parameters) {
                 val response = responses[parameter.vaultPath]
-                when(response){
+                when (response) {
                     is Response -> {
                         try {
                             val value = extract(response.value, parameter)
@@ -92,6 +94,7 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
                             errors[parameter.full] = e.message!!
                         }
                     }
+
                     is Error -> errors[parameter.full] = "Failed to fetch data for path ${parameter.full}: ${response.value.message}"
                     else -> errors[parameter.full] = "Failed to fetch data for path ${parameter.full}"
                 }

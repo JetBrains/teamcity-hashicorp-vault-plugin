@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.agent.NullBuildProgressLogger;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
-import org.jetbrains.teamcity.vault.retrier.Retrier;
+import org.jetbrains.teamcity.vault.retrier.VaultRetrier;
 import jetbrains.buildServer.util.CollectionsUtil;
 import jetbrains.buildServer.util.ThreadUtil;
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider;
@@ -215,7 +215,7 @@ public class VaultConnectorTest {
 
   @Test
   public void testRetrierIsCalledFor500Error() throws JsonProcessingException {
-    TeamCityProperties.getModel().storeDefaultValue(Retrier.RETRY_DELAY, "0");
+    TeamCityProperties.getModel().storeDefaultValue(VaultRetrier.RETRY_DELAY, "0");
     final RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
     final String path = "/path";
     final Map<String, String> body = Collections.emptyMap();

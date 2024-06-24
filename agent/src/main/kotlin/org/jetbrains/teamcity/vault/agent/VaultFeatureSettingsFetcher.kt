@@ -7,23 +7,25 @@ import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.BuildAgentConfigurationEx
 import jetbrains.buildServer.http.SimpleCredentials
+import jetbrains.buildServer.serverSide.TeamCityProperties
 import jetbrains.buildServer.util.HTTPRequestBuilder
 import jetbrains.buildServer.util.http.HttpMethod
+import jetbrains.buildServer.util.retry.Retrier
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.apache.http.client.utils.URIBuilder
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
-import org.jetbrains.teamcity.vault.retrier.Retrier
-import org.jetbrains.teamcity.vault.retrier.TeamCityHttpCodeListener
+import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
+import java.util.concurrent.Callable
 
 class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustStoreProvider, private val requestHandler: HTTPRequestBuilder.RequestHandler) {
 
-    private val retrier: Retrier<HTTPRequestBuilder.Response> = Retrier(responseListeners = listOf(TeamCityHttpCodeListener()))
+    private val retrier: Retrier = VaultRetrier.getRetrier()
 
     @Autowired
-    constructor(sslTrustStoreProvider: SSLTrustStoreProvider): this(sslTrustStoreProvider, HTTPRequestBuilder.DelegatingRequestHandler())
+    constructor(sslTrustStoreProvider: SSLTrustStoreProvider) : this(sslTrustStoreProvider, HTTPRequestBuilder.DelegatingRequestHandler())
 
 
     private val objectMapper by lazy {
@@ -57,9 +59,10 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
             }
 
 
-            val response = retrier.run {
+            val response = retrier.execute(Callable {
                 HTTPRequestBuilder.DelegatingRequestHandler().doSyncRequest(requestBuilder.build())
             }
+            )
 
             response.use {
                 if (response == null || response.statusCode != HttpStatus.OK.value()) {
