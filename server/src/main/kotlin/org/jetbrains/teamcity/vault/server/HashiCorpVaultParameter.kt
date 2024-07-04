@@ -42,8 +42,12 @@ class HashiCorpVaultParameter(private val descriptor: PluginDescriptor) : Remote
 
     override fun validateParameterValue(request: HttpServletRequest, context: ParameterRenderContext, value: String?): MutableCollection<InvalidProperty> = mutableListOf()
 
-    // We should ignore every value that is stored
-    override fun convertParameterValue(request: HttpServletRequest, context: ParameterRenderContext, value: String?): String? = null
+    // The value should be used to store a representation of the query
+    override fun convertParameterValue(request: HttpServletRequest, context: ParameterRenderContext, value: String?): String? = if (StringUtil.isNotEmpty(value)){
+        value
+    } else {
+        "${VaultConstants.VAULT_PARAMETER_PREFIX}${VaultParameterSettings(context.description.parameterTypeArguments).vaultQuery}"
+    }
 
     override fun presentParameterValue(context: ParameterContext, value: String?): String = StringUtil.emptyIfNull(value)
 
