@@ -7,6 +7,7 @@ import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.RunningBuildEx
 import jetbrains.buildServer.serverSide.SRunningBuild
 import jetbrains.buildServer.web.util.WebAuthUtil
+import org.apache.commons.lang.StringEscapeUtils
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.server.HashiCorpVaultConnectionResolver.ParameterNamespaceCollisionException
@@ -34,7 +35,7 @@ class HashicorpVaultConnectionController(
 
     @ExceptionHandler(ResponseStatusException::class)
     fun handleResponseStatusException(ex: ResponseStatusException): ResponseEntity<String> {
-        return ResponseEntity(ex.reason, ex.status)
+        return ResponseEntity(StringEscapeUtils.escapeHtml(ex.reason), ex.status)
     }
 
     // http:localhost:8111/bs/app/url/path?namespace=something
