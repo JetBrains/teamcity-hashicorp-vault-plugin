@@ -5,6 +5,7 @@ import org.jetbrains.teamcity.vault.VaultConstants
 
 @Suppress("PropertyName")
 class VaultJspKeys {
+    val CONNECTION_ID = VaultConstants.FeatureSettings.USER_DEFINED_ID_PARAM
     val NAMESPACE = VaultConstants.FeatureSettings.ID
     val URL = VaultConstants.FeatureSettings.URL
     val VAULT_NAMESPACE = VaultConstants.FeatureSettings.VAULT_NAMESPACE

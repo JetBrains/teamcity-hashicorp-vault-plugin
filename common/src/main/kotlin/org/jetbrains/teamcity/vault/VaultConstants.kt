@@ -31,6 +31,8 @@ object VaultConstants {
         @JvmField val ID = "namespace"
         @JvmField val DEFAULT_ID = ""
 
+        @JvmField val USER_DEFINED_ID_PARAM = "id"
+
         @JvmField val VAULT_NAMESPACE = "vault-namespace"
         @JvmField val DEFAULT_VAULT_NAMESPACE = ""
 

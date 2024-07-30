@@ -1,6 +1,8 @@
 
 package org.jetbrains.teamcity.vault
 
+import jetbrains.buildServer.serverSide.SProjectFeatureDescriptor
+
 enum class AuthMethod(val id: String) {
     APPROLE("approle"),
     LDAP("ldap"),
@@ -141,9 +143,19 @@ data class VaultFeatureSettings(val id: String, val url: String, val vaultNamesp
         map[VaultConstants.FeatureSettings.DISPLAY_NAME]
     )
 
+    constructor(projectFeature: SProjectFeatureDescriptor) : this(
+        projectFeature.parameters[VaultConstants.FeatureSettings.ID] ?: projectFeature.id,
+        projectFeature.parameters[VaultConstants.FeatureSettings.URL] ?: "",
+        projectFeature.parameters[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
+            ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
+        projectFeature.parameters[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false,
+        Auth.getServerAuthFromProperties(projectFeature.parameters),
+        projectFeature.parameters[VaultConstants.FeatureSettings.DISPLAY_NAME]
+    )
+
+
     fun toFeatureProperties(map: MutableMap<String, String>) {
         map[VaultConstants.FeatureSettings.URL] = url
-        map[VaultConstants.FeatureSettings.ID] = id
         map[VaultConstants.FeatureSettings.VAULT_NAMESPACE] = vaultNamespace
         map[VaultConstants.FeatureSettings.FAIL_ON_ERROR] = failOnError.toString()
         auth.toMap(map)
@@ -158,7 +170,6 @@ data class VaultFeatureSettings(val id: String, val url: String, val vaultNamesp
     companion object {
         fun getDefaultParameters(): Map<String, String> {
             return mapOf(
-                VaultConstants.FeatureSettings.ID to VaultConstants.FeatureSettings.DEFAULT_ID,
                 VaultConstants.FeatureSettings.VAULT_NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
                 VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE,
                 VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,

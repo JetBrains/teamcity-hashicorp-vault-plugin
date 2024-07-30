@@ -20,5 +20,6 @@
     <bean class="org.jetbrains.teamcity.vault.server.VaultTestQueryController"/>
     <bean class="org.jetbrains.teamcity.vault.SessionManagerBuilder"/>
     <bean class="org.jetbrains.teamcity.vault.gcp.GcpAuthenticationHandler"/>
+    <bean class="org.jetbrains.teamcity.vault.server.HashicorpVaultConnectionIdGenerator"/>
     <mvc:annotation-driven/>
 </beans>

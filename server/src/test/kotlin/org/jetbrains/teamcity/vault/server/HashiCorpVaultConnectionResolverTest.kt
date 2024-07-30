@@ -1,6 +1,7 @@
 
 package org.jetbrains.teamcity.vault.server
 
+import assertk.assertions.containsAll
 import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.serverSide.impl.BaseServerTestCase
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
@@ -49,6 +50,31 @@ class HashiCorpVaultConnectionResolverTest : BaseServerTestCase() {
 
         assertEquals(namespace, connection?.id)
         assertEquals(projectName, connection.extractTestProjectName())
+    }
+
+    @Test
+    fun getVaultConnectionsTestVaultConnectionWithDefaultNamespaceAndCustomId() {
+        val settings = VaultFeatureSettings(
+            url = "http://testurl.com",
+            vaultNamespace = "vaultNamespace",
+        )
+
+        myProject.addFeature("customID", OAuthConstants.FEATURE_TYPE, buildMap {
+            putAll(settings.toFeatureProperties())
+            putIfAbsent(OAuthConstants.OAUTH_TYPE_PARAM, VaultConstants.FeatureSettings.FEATURE_TYPE)
+        })
+
+        myProject.addFeature("PROJECT_EXT_50", OAuthConstants.FEATURE_TYPE, buildMap {
+            putAll(settings.toFeatureProperties())
+            putIfAbsent(OAuthConstants.OAUTH_TYPE_PARAM, VaultConstants.FeatureSettings.FEATURE_TYPE)
+            putIfAbsent(VaultConstants.FeatureSettings.ID, "") // Old connections with default namespace have the parameter present with empty string
+        })
+
+        val allConnections = connectionResolver.getVaultConnections(myProject)
+        val settingsWithCustomId = settings.copy(
+            id = "customID"
+        )
+        assertk.assertThat(allConnections).containsAll(settings, settingsWithCustomId)
     }
 
     @Test
@@ -224,6 +250,7 @@ class HashiCorpVaultConnectionResolverTest : BaseServerTestCase() {
                 currentProject.addFeature(OAuthConstants.FEATURE_TYPE, buildMap {
                     putAll(settings.toFeatureProperties())
                     putIfAbsent(OAuthConstants.OAUTH_TYPE_PARAM, VaultConstants.FeatureSettings.FEATURE_TYPE)
+                    putIfAbsent(VaultConstants.FeatureSettings.ID, settings.id)
                 })
             }
         }

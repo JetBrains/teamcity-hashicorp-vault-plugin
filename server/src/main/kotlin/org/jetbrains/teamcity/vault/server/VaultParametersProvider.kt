@@ -35,7 +35,7 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
             FeatureSettings.FEATURE_TYPE == it.parameters[OAuthConstants.OAUTH_TYPE_PARAM]
         }
         val vaultFeatures = connectionFeatures.map {
-            VaultFeatureSettings(it.parameters)
+            VaultFeatureSettings(it)
         }
         val parameters = build.buildOwnParameters
         vaultFeatures.forEach { feature: VaultFeatureSettings ->

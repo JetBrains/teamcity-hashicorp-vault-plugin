@@ -22,7 +22,7 @@ object VaultConnectionUtils {
         // Two features with same prefix cannot coexist in same project
         // Though it's possible to override feature with same prefix in subproject
         val projectToFeaturePairs = connectionFeatures.map {
-            it.projectId to VaultFeatureSettings(it.parameters)
+            it.projectId to VaultFeatureSettings(it)
         }
         return projectToFeaturePairs
     }

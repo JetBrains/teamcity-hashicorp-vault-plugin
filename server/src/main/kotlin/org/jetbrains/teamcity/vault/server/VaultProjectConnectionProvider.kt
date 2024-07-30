@@ -4,9 +4,11 @@ import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.PropertiesProcessor
 import jetbrains.buildServer.serverSide.SProject
+import jetbrains.buildServer.serverSide.SProjectFeatureDescriptor
 import jetbrains.buildServer.serverSide.connections.ProjectConnectionsManager
 import jetbrains.buildServer.serverSide.oauth.OAuthConnectionDescriptor
 import jetbrains.buildServer.serverSide.oauth.OAuthProvider
+import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.web.openapi.PluginDescriptor
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
@@ -22,7 +24,7 @@ class VaultProjectConnectionProvider(
     override fun getDisplayName(): String = "HashiCorp Vault"
 
     override fun describeConnection(connection: OAuthConnectionDescriptor): String {
-        val settings = VaultFeatureSettings(connection.parameters)
+        val settings = VaultFeatureSettings(connection)
         return "Connection to HashiCorp Vault server at ${settings.url}" +
                 if (isDefault(settings.id)) "" else ", ID '${settings.id}'"
     }
@@ -58,19 +60,21 @@ class VaultProjectConnectionProvider(
                     if (properties[VaultConstants.FeatureSettings.URL].isNullOrBlank()) {
                         errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
                     }
-                    // NAMESPACE can be empty, means default one
-                    val namespace = properties[VaultConstants.FeatureSettings.ID] ?: VaultConstants.FeatureSettings.DEFAULT_ID
-                    val namespaceRegex = "[a-zA-Z0-9_-]+"
-                    if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
-                        errors.add(InvalidProperty(VaultConstants.FeatureSettings.ID, "Non-default ID should match regex '$namespaceRegex'"))
-                    }
 
-                    // Project ID was not being added before so it might not be present
-                    val projectExternalId = properties[VaultConstants.PROJECT_ID]
-                    val connectionId = properties[VaultConstants.CONNECTION_ID]
-                    val project = projectManager.findProjectByExternalId(projectExternalId)
-                    if (project != null) {
-                        verifyCollisions(project, errors, namespace, connectionId)
+                    val namespace = properties[VaultConstants.FeatureSettings.ID]
+                    if(!namespace.isNullOrBlank()) {
+                        val namespaceRegex = "[a-zA-Z0-9_-]+"
+                        if (namespace != "" && !namespace.matches(namespaceRegex.toRegex())) {
+                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.ID, "Non-default ID should match regex '$namespaceRegex'"))
+                        }
+
+                        // Project ID was not being added before so it might not be present
+                        val projectExternalId = properties[VaultConstants.PROJECT_ID]
+                        val connectionId = properties[VaultConstants.CONNECTION_ID]
+                        val project = projectManager.findProjectByExternalId(projectExternalId)
+                        if (project != null) {
+                            verifyCollisions(project, errors, namespace, connectionId)
+                        }
                     }
                     // IDs are only there for verification and shouldn't be committed to storage
                     properties.remove(VaultConstants.PROJECT_ID)

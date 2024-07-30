@@ -43,7 +43,7 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
         val knownDescriptors = mutableSetOf<ConnectionDescriptor>()
 
         rawProjectFeatures.forEach { featureDescriptor ->
-            val settings = VaultFeatureSettings(featureDescriptor.parameters)
+            val settings = VaultFeatureSettings(featureDescriptor)
 
             // Filter connections by parameter namespace if specified
             if (parameterNamespace != null && parameterNamespace != settings.id) {

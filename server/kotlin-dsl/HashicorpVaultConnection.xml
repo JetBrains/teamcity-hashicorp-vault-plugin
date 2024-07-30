@@ -26,6 +26,9 @@
       <description>
         Vault ID. Should be provided in case of multiple vault connections
       </description>
+      <deprecated replaceWith="id" strict="false">
+        Use `id` property instead
+      </deprecated>
     </param>
     <param name="namespace" dslName="namespace" type="string" deprecated="true">
       <description>

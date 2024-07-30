@@ -13,6 +13,7 @@ dependencies {
     compileOnly "org.springframework:spring-web:$spring_version"
     compileOnly "org.springframework:spring-context:$spring_version"
     compileOnly "org.apache.httpcomponents:httpclient:$httpclient_version"
+    compileOnly "org.jetbrains.teamcity:server-core:$teamcity_version"
     implementation('com.jayway.jsonpath:json-path:2.8.0') {
         exclude group: 'org.slf4j'
     }
