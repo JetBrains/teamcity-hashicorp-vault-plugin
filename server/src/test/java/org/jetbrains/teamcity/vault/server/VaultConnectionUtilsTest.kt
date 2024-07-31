@@ -40,9 +40,9 @@ class VaultConnectionUtilsTest {
     }
 
     private fun getFeatureDescriptor(projectId: String, settings: VaultFeatureSettings) = object : SProjectFeatureDescriptor {
-        override fun getId(): String {
-            throw NotImplementedError()
-        }
+        override fun getId(): String =
+            settings.id
+
 
         override fun getType(): String {
             throw NotImplementedError()
