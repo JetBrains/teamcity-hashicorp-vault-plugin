@@ -15,8 +15,8 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultParametersResolver::class.java.name)
     }
 
-    fun resolveLegacyReferences(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String) {
-        val references = getRelatedParameterReferences(build, settings.id)
+    fun resolveLegacyReferences(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String, namespace: String) {
+        val references = getRelatedParameterReferences(build, namespace)
         if (references.isEmpty()) {
             LOG.info("There's nothing to resolve")
             return
@@ -24,11 +24,11 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         val logger = build.buildLogger
         logger.message("${references.size} ${"reference".pluralize(references)} to resolve: $references")
 
-        val parameters = references.map { VaultQuery.extract(VaultReferencesUtil.getPath(it, settings.id)) }
+        val parameters = references.map { VaultQuery.extract(VaultReferencesUtil.getPath(it, namespace)) }
 
         val replacements = resolveReplacements(build, settings, parameters, token)
 
-        replaceParametersReferences(build, replacements.replacements, references, settings.id)
+        replaceParametersReferences(build, replacements.replacements, references, namespace)
     }
 
     fun resolveParameters(build: AgentRunningBuild, settings: VaultFeatureSettings, vaultParameters: List<VaultParameter>, token: String) {

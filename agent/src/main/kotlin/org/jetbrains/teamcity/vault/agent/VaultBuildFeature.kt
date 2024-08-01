@@ -66,7 +66,7 @@ class VaultBuildFeature(
                 }
 
                 if (vaultLegacyReferencesNamespaces.contains(namespace)) {
-                    myVaultParametersResolver.resolveLegacyReferences(build, settingsAndToken.settings, settingsAndToken.token)
+                    myVaultParametersResolver.resolveLegacyReferences(build, settingsAndToken.settings, settingsAndToken.token, namespace)
                 }
             }
         }
