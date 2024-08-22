@@ -105,6 +105,9 @@
       </option>
     </param>
     <param name="fail-on-error" dslName="failOnError" type="boolean" trueValue="true" falseValue="false">
+      <deprecated strict="false">
+        Failing on errors can lead to builds working unexpectedly without the parameters and is not advisable for secure parameters.
+      </deprecated>
       <description>
         Whether to fail builds in case of parameter resolving error
       </description>

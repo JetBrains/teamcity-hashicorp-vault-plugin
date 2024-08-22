@@ -227,14 +227,16 @@
     </td>
 </tr>
 
-<tr>
-    <td><label for="${keys.FAIL_ON_ERROR}">Fail in case of error</label></td>
-    <td>
-        <props:checkboxProperty name="${keys.FAIL_ON_ERROR}" />
-        <span class="error" id="error_${keys.FAIL_ON_ERROR}" />
-        <span class="smallNote">Check this option if errors in resolving parameter values should fail the build</span>
-    </td>
-</tr>
+<c:if test="${not propertiesBean.properties[keys.FAIL_ON_ERROR]}">
+    <tr>
+        <td><label for="${keys.FAIL_ON_ERROR}">Fail in case of error</label></td>
+        <td>
+            <props:checkboxProperty name="${keys.FAIL_ON_ERROR}" />
+            <span class="error" id="error_${keys.FAIL_ON_ERROR}" />
+            <span class="smallNote">Check this option if errors in resolving parameter values should fail the build</span>
+        </td>
+    </tr>
+</c:if>
 
 <props:hiddenProperty name="projectId" value="${project.externalId}" id="vaultProjectId"/>
 <props:hiddenProperty name="connectionFeatureId" value="${oauthConnectionBean.connectionId}"/>
