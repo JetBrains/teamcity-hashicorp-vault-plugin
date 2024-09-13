@@ -53,7 +53,7 @@ class VaultBuildFeature(
         val allNamespaces = vaultNamespacesAndParameters.keys + vaultLegacyReferencesNamespaces
         val settingsAndTokens = allNamespaces.mapNotNull { namespace ->
             val settings = vaultFeatureSettingsFetcher.getVaultFeatureSettings(namespace, build) ?: return@mapNotNull null
-            val token = resolveToken(allParameters, settings, build) ?: return@mapNotNull null
+            val token = resolveToken(allParameters, settings, build, namespace) ?: return@mapNotNull null
             namespace to VaultFeatureSettingsAndToken(settings, token)
         }
 
@@ -122,12 +122,12 @@ class VaultBuildFeature(
     private fun resolveToken(
         parameters: Map<String, String>,
         settings: VaultFeatureSettings,
-        runningBuild: AgentRunningBuild
+        runningBuild: AgentRunningBuild,
+        namespace: String
     ): String? {
         if (settings.url.isBlank()) {
             return null
         }
-        val namespace = settings.id
         val logger = runningBuild.buildLogger
         val token: String
         try {
