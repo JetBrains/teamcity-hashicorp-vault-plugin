@@ -16,6 +16,8 @@ object VaultConstants {
     const val PROJECT_ID = "projectId"
     const val CONNECTION_ID = "connectionFeatureId"
 
+    const val VAULT_PARAMETERS_FETCHED_SUFFIX = "parameters.fetched"
+
 
     @JvmField val VAULT_PARAMETER_PREFIX = "vault:"
 

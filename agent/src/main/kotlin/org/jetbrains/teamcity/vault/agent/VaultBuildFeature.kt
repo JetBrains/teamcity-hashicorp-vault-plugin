@@ -51,7 +51,11 @@ class VaultBuildFeature(
         val vaultLegacyReferencesNamespaces = extractLegacyVaultNamespaces(build)
 
         val allNamespaces = vaultNamespacesAndParameters.keys + vaultLegacyReferencesNamespaces
-        val settingsAndTokens = allNamespaces.mapNotNull { namespace ->
+        val nonFetchedNamespaces = allNamespaces.filter {
+            allParameters[getParametersFetchedForNamespaceParameter(it)] != "true"
+        }
+
+        val settingsAndTokens = nonFetchedNamespaces.mapNotNull { namespace ->
             val settings = vaultFeatureSettingsFetcher.getVaultFeatureSettings(namespace, build) ?: return@mapNotNull null
             val token = resolveToken(allParameters, settings, build, namespace) ?: return@mapNotNull null
             namespace to VaultFeatureSettingsAndToken(settings, token)
@@ -68,8 +72,17 @@ class VaultBuildFeature(
                 if (vaultLegacyReferencesNamespaces.contains(namespace)) {
                     myVaultParametersResolver.resolveLegacyReferences(build, settingsAndToken.settings, settingsAndToken.token, namespace)
                 }
+
+                build.addSharedConfigParameter(getParametersFetchedForNamespaceParameter(namespace), "true")
             }
         }
+    }
+
+    private fun getParametersFetchedForNamespaceParameter(namespace:String) = if (namespace == VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE){
+        "${VaultConstants.PARAMETER_PREFIX}.${VaultConstants.VAULT_PARAMETERS_FETCHED_SUFFIX}"
+
+    } else {
+        "${VaultConstants.PARAMETER_PREFIX}.$namespace.${VaultConstants.VAULT_PARAMETERS_FETCHED_SUFFIX}"
     }
 
 
