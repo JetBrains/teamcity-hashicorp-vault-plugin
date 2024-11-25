@@ -28,8 +28,6 @@ class VaultJspKeys {
     val AUTH_METHOD_LDAP = VaultConstants.FeatureSettings.AUTH_METHOD_LDAP
     val AUTH_METHOD_GCP_IAM = VaultConstants.FeatureSettings.AUTH_METHOD_GCP_IAM
 
-    val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
-
     val DISPLAY_NAME = VaultConstants.FeatureSettings.DISPLAY_NAME
 
     val EMPTY_NAMESPACE = VaultConstants.FeatureSettings.EMPTY_NAMESPACE
