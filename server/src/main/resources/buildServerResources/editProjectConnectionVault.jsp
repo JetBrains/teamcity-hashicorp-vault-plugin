@@ -76,11 +76,29 @@
 <tr>
     <c:choose>
         <c:when test="${not empty propertiesBean.properties[keys.NAMESPACE]}">
+
             <th><label for="${keys.NAMESPACE}">ID:</label></th>
             <td>
                 <props:textProperty name="${keys.NAMESPACE}" className="longField" />
                 <span class="error" id="error_${keys.NAMESPACE}"></span>
                 <span class="smallNote">The ID can be used in TeamCity parameters and to identify this connection if multiple Vault connections exist</span>
+            </td>
+        </c:when>
+        <c:when test="${propertiesBean.properties[keys.NAMESPACE] != null}">
+            <c:set var="connectionId" value="${oauthConnectionBean.getConnectionId()}"/>
+            <props:hiddenProperty name="${keys.NAMESPACE}" value="${keys.EMPTY_NAMESPACE}"/>
+            <th><label for="${keys.CONNECTION_ID}">ID:</label></th>
+            <td>
+                <c:choose>
+                    <c:when test = "${empty connectionId}">
+                        <props:textProperty name="${keys.CONNECTION_ID}" className="longField" />
+                        <span class="error" id="error_${keys.CONNECTION_ID}"></span>
+                        <span class="smallNote">The ID can be used in TeamCity parameters and to identify this connection if multiple Vault connections exist</span>
+                    </c:when>
+                    <c:otherwise>
+                        <label style="word-break: break-all;">${connectionId}</label>
+                    </c:otherwise>
+                </c:choose>
             </td>
         </c:when>
         <c:otherwise>

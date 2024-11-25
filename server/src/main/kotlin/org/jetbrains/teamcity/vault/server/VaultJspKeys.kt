@@ -31,4 +31,6 @@ class VaultJspKeys {
     val FAIL_ON_ERROR = VaultConstants.FeatureSettings.FAIL_ON_ERROR
 
     val DISPLAY_NAME = VaultConstants.FeatureSettings.DISPLAY_NAME
+
+    val EMPTY_NAMESPACE = VaultConstants.FeatureSettings.EMPTY_NAMESPACE
 }
