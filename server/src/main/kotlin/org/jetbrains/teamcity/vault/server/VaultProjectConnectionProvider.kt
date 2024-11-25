@@ -61,6 +61,11 @@ class VaultProjectConnectionProvider(
                         errors.add(InvalidProperty(VaultConstants.FeatureSettings.URL, "Should not be empty"))
                     }
 
+                    // TW-90895 Ensure the empty value is kept - even if it isn't a default value anymore
+                    if (properties[VaultConstants.FeatureSettings.ID] == VaultConstants.FeatureSettings.EMPTY_NAMESPACE){
+                        properties[VaultConstants.FeatureSettings.ID] = ""
+                    }
+
                     val namespace = properties[VaultConstants.FeatureSettings.ID]
                     if(!namespace.isNullOrBlank()) {
                         val namespaceRegex = "[a-zA-Z0-9_-]+"

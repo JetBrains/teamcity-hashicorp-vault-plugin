@@ -37,6 +37,7 @@ object VaultConstants {
 
         @JvmField val VAULT_NAMESPACE = "vault-namespace"
         @JvmField val DEFAULT_VAULT_NAMESPACE = ""
+        @JvmField val EMPTY_NAMESPACE = "emptyNameSpace"
 
         @JvmField val URL = "url"
 
