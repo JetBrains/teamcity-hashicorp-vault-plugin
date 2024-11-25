@@ -244,7 +244,6 @@ class HashiCorpVaultConnectionResolverTest : BaseServerTestCase() {
                         endpoint = "endpoint",
                         roleId = "roleId",
                         secretId = "secretId",
-                        failOnError = true
                 )
 
                 currentProject.addFeature(OAuthConstants.FEATURE_TYPE, buildMap {

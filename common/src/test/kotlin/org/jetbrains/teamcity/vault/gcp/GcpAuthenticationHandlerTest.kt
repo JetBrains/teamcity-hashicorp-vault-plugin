@@ -38,7 +38,7 @@ class GcpAuthenticationHandlerTest {
         val handler = GcpAuthenticationHandler(trustStoreMock)
 
         val wrongSettings =
-            VaultFeatureSettings("id", "url", "namespace", true, Auth.AppRoleAuthServer("endp", "role", "secret"))
+            VaultFeatureSettings("id", "url", "namespace", Auth.AppRoleAuthServer("endp", "role", "secret"))
         Assertions.assertThatThrownBy { handler.vaultTokenData(wrongSettings) }
             .isInstanceOf(IllegalStateException::class.java)
             .hasMessageMatching(".*Unsupported auth method.*")
@@ -52,7 +52,7 @@ class GcpAuthenticationHandlerTest {
         val gcpIamAuth = Auth.GcpIamAuth("kjk", "role", "gcp")
 
         val restMock = Mockito.mock(RestTemplate::class.java)
-        val vaultSettings = VaultFeatureSettings("id", "http://localhost", "namespace", true, gcpIamAuth)
+        val vaultSettings = VaultFeatureSettings("id", "http://localhost", "namespace", gcpIamAuth)
         val token = Mockito.mock(VaultToken::class.java)
 
         Mockito.doReturn(gcpAuthenticationMock)
@@ -95,7 +95,7 @@ class GcpAuthenticationHandlerTest {
             val gcpIamAuth = Auth.GcpIamAuth("kjk", "role", "gcp")
 
             val restMock = Mockito.mock(RestTemplate::class.java)
-            val vaultSettings = VaultFeatureSettings("id", "${it.url}/v1", "", true, gcpIamAuth)
+            val vaultSettings = VaultFeatureSettings("id", "${it.url}/v1", "", gcpIamAuth)
             val vaultToken = VaultToken.of(token)
 
             Mockito.doReturn(gcpAuthenticationMock)

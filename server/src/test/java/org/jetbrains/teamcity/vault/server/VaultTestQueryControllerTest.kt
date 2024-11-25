@@ -295,7 +295,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
     }
 
     private fun getDefaultSettings(auth: Auth) = VaultFeatureSettings(
-        NAMESPACE, "url", "vaultNamespace", true, auth
+        NAMESPACE, "url", "vaultNamespace", auth
     )
 
     companion object {

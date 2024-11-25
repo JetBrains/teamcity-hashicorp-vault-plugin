@@ -52,7 +52,7 @@ class HashiCorpVaultParameterTest : BaseServerTestCase() {
         })
         myBuildType.addParameter(vaultParameter)
         val settings =
-            VaultFeatureSettings(expectedNamespace, URL, VAULT_NAMESPACE, true, Auth.getServerAuthFromProperties(emptyMap()))
+            VaultFeatureSettings(expectedNamespace, URL, VAULT_NAMESPACE, Auth.getServerAuthFromProperties(emptyMap()))
         myProject.addFeature(
             OAuthConstants.FEATURE_TYPE, mapOf(
                 OAuthConstants.OAUTH_TYPE_PARAM to VaultConstants.FeatureSettings.FEATURE_TYPE

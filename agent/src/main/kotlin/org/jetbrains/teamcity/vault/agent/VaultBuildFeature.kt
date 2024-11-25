@@ -162,14 +162,9 @@ class VaultBuildFeature(
                 AuthMethod.LDAP -> "Failed to get HashiCorp Vault token using LDAP"
                 AuthMethod.GCP_IAM -> "Failed to get HashiCorp Vault token using GCP IAM"
             }
-            if (settings.failOnError) {
-                logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorPrefix + ": " + e.message, e)
-                logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${runningBuild.buildTypeId}_${settings.id}_A", "VaultConnection", errorPrefix))
-                runningBuild.stopBuild(errorPrefix)
-            } else {
-                logger.error(errorPrefix + ": " + e.message)
-                logger.exception(e)
-            }
+            logger.internalError(VaultConstants.FeatureSettings.FEATURE_TYPE, errorPrefix + ": " + e.message, e)
+            logger.logBuildProblem(BuildProblemData.createBuildProblem("VC_${runningBuild.buildTypeId}_${settings.id}_A", "VaultConnection", errorPrefix))
+            runningBuild.stopBuild(errorPrefix)
             return null
         }
 

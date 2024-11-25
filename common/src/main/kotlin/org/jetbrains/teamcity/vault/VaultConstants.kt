@@ -58,7 +58,6 @@ object VaultConstants {
         @JvmField val AUTH_METHOD_GCP_IAM = AuthMethod.GCP_IAM.id
         @JvmField val WRAPPED_TOKEN = "wrapped-token"
 
-        @JvmField val FAIL_ON_ERROR = "fail-on-error"
         @JvmField val DISPLAY_NAME = "displayName"
 
         @JvmField val AGENT_SUPPORT_REQUIREMENT = "teamcity.vault.requirement"
