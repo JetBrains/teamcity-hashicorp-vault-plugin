@@ -116,20 +116,18 @@ sealed class Auth(val method: AuthMethod) {
     }
 }
 
-data class VaultFeatureSettings(val id: String, val url: String, val vaultNamespace: String, val failOnError: Boolean = true, val auth: Auth, val displayName: String? = null) {
+data class VaultFeatureSettings(val id: String, val url: String, val vaultNamespace: String, val auth: Auth, val displayName: String? = null) {
     constructor(url: String, vaultNamespace: String) : this(
         VaultConstants.FeatureSettings.DEFAULT_ID,
         url,
         vaultNamespace,
-        true,
         Auth.getServerAuthFromProperties(emptyMap())
     )
 
-    constructor(namespace: String, url: String, vaultNamespace: String, endpoint: String, roleId: String, secretId: String, failOnError: Boolean) : this(
+    constructor(namespace: String, url: String, vaultNamespace: String, endpoint: String, roleId: String, secretId: String) : this(
         namespace,
         url,
         vaultNamespace,
-        failOnError,
         Auth.AppRoleAuthServer(endpoint, roleId, secretId)
     )
 
@@ -138,7 +136,6 @@ data class VaultFeatureSettings(val id: String, val url: String, val vaultNamesp
         map[VaultConstants.FeatureSettings.URL] ?: "",
         map[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
             ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
-        map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false,
         Auth.getServerAuthFromProperties(map),
         map[VaultConstants.FeatureSettings.DISPLAY_NAME]
     )
@@ -148,7 +145,6 @@ data class VaultFeatureSettings(val id: String, val url: String, val vaultNamesp
         projectFeature.parameters[VaultConstants.FeatureSettings.URL] ?: "",
         projectFeature.parameters[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
             ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
-        projectFeature.parameters[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false,
         Auth.getServerAuthFromProperties(projectFeature.parameters),
         projectFeature.parameters[VaultConstants.FeatureSettings.DISPLAY_NAME]
     )
@@ -157,7 +153,6 @@ data class VaultFeatureSettings(val id: String, val url: String, val vaultNamesp
     fun toFeatureProperties(map: MutableMap<String, String>) {
         map[VaultConstants.FeatureSettings.URL] = url
         map[VaultConstants.FeatureSettings.VAULT_NAMESPACE] = vaultNamespace
-        map[VaultConstants.FeatureSettings.FAIL_ON_ERROR] = failOnError.toString()
         auth.toMap(map)
     }
 
@@ -173,7 +168,6 @@ data class VaultFeatureSettings(val id: String, val url: String, val vaultNamesp
                 VaultConstants.FeatureSettings.VAULT_NAMESPACE to VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
                 VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT to VaultConstants.FeatureSettings.AGENT_SUPPORT_REQUIREMENT_VALUE,
                 VaultConstants.FeatureSettings.AUTH_METHOD to VaultConstants.FeatureSettings.DEFAULT_AUTH_METHOD,
-                VaultConstants.FeatureSettings.FAIL_ON_ERROR to "true",
                 VaultConstants.FeatureSettings.ENDPOINT to VaultConstants.FeatureSettings.DEFAULT_ENDPOINT_PATH,
                 VaultConstants.FeatureSettings.URL to "http://localhost:8200",
                 VaultConstants.FeatureSettings.GCP_ENDOINT_PATH to VaultConstants.FeatureSettings.DEFAULT_GCP_ENPOINT_PATH,
@@ -186,7 +180,6 @@ data class VaultFeatureSettings(val id: String, val url: String, val vaultNamesp
                 map[VaultConstants.FeatureSettings.URL] ?: "",
                 map[VaultConstants.FeatureSettings.VAULT_NAMESPACE]
                     ?: VaultConstants.FeatureSettings.DEFAULT_VAULT_NAMESPACE,
-                map[VaultConstants.FeatureSettings.FAIL_ON_ERROR]?.toBoolean() ?: false,
                 Auth.getAgentAuthFromProperties(map)
             )
     }

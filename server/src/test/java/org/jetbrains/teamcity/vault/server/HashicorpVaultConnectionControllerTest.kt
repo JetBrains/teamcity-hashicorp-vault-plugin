@@ -130,7 +130,7 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
     }
 
     private fun getDefaultSettings(auth: Auth, namespace: String = NAMESPACE ) = VaultFeatureSettings(
-        namespace, "url", "vaultNamespace", true, auth
+        namespace, "url", "vaultNamespace", auth
     )
 
     companion object {

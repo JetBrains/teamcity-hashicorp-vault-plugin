@@ -101,7 +101,7 @@ public class VaultConnectorTest {
 
 
     final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(
-      new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond(), false), SSL_TRUST_STORE_PROVIDER);
+      new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond()), SSL_TRUST_STORE_PROVIDER);
 
     then(wrapped.getFirst()).isNotNull();
     then(wrapped.getSecond()).isNotNull();
@@ -112,7 +112,7 @@ public class VaultConnectorTest {
                                                                                  .initialToken(VaultToken.of(wrapped.getFirst()))
                                                                                  .build();
     final RestTemplate simpleTemplate =
-      UtilKt.createRestTemplate(new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, "", "", false), SSL_TRUST_STORE_PROVIDER);
+      UtilKt.createRestTemplate(new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, "", ""), SSL_TRUST_STORE_PROVIDER);
     final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
     final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 
@@ -153,7 +153,7 @@ public class VaultConnectorTest {
 
 
     final Pair<String, String> wrapped =
-      VaultConnector.doRequestWrappedToken(new VaultFeatureSettings("", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond(), true),
+      VaultConnector.doRequestWrappedToken(new VaultFeatureSettings("", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond()),
                                            SSL_TRUST_STORE_PROVIDER);
 
     then(wrapped.getFirst()).isNotNull();
@@ -165,7 +165,7 @@ public class VaultConnectorTest {
                                                                                  .initialToken(VaultToken.of(wrapped.getFirst()))
                                                                                  .build();
     final RestTemplate simpleTemplate =
-      UtilKt.createRestTemplate(new VaultFeatureSettings("", getVault().getUrl(), vaultNamespace, authMountPath, "", "", true), SSL_TRUST_STORE_PROVIDER);
+      UtilKt.createRestTemplate(new VaultFeatureSettings("", getVault().getUrl(), vaultNamespace, authMountPath, "", ""), SSL_TRUST_STORE_PROVIDER);
     final CubbyholeAuthentication authentication = new CubbyholeAuthentication(options, simpleTemplate);
     final TaskScheduler scheduler = new ConcurrentTaskScheduler();
 
@@ -197,7 +197,7 @@ public class VaultConnectorTest {
     Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
 
     VaultFeatureSettings serverSettings =
-      new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond(), false);
+      new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond());
 
     Pair<String, String> pair = VaultConnector.doRequestToken(serverSettings, SSL_TRUST_STORE_PROVIDER);
     VaultConnector.revoke(new LeasedTokenInfo(pair.getFirst(), pair.getSecond(), serverSettings), SSL_TRUST_STORE_PROVIDER);
@@ -245,7 +245,7 @@ public class VaultConnectorTest {
     Pair<String, String> credentials = getAppRoleCredentials(template, "auth/" + authMountPath + "/role/testrole");
 
     VaultFeatureSettings serverSettings =
-      new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond(), false);
+      new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, credentials.getFirst(), credentials.getSecond());
 
     final Pair<String, String> wrapped = VaultConnector.doRequestWrappedToken(serverSettings, SSL_TRUST_STORE_PROVIDER);
 
@@ -255,7 +255,7 @@ public class VaultConnectorTest {
     then(wrappedToken).isNotNull();
     then(accessor).isNotNull();
 
-    final VaultFeatureSettings agentSettings = new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, "", "", false);
+    final VaultFeatureSettings agentSettings = new VaultFeatureSettings("vault", getVault().getUrl(), vaultNamespace, authMountPath, "", "");
 
     final CubbyholeAuthenticationOptions options = CubbyholeAuthenticationOptions.builder()
                                                                                  .wrapped()

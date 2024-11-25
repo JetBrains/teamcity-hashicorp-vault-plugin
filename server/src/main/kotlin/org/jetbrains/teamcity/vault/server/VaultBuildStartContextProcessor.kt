@@ -42,7 +42,7 @@ class VaultBuildStartContextProcessor(
                 LOG.debug("There's no need to fetch HashiCorp Vault$ns parameter for build $build")
                 return@forEach
             }
-            context.addSharedParameter(getVaultParameterName(settings.id, VaultConstants.LEGACY_REFERENCES_USED_SUFFIX), settings.failOnError.toString())
+            context.addSharedParameter(getVaultParameterName(settings.id, VaultConstants.LEGACY_REFERENCES_USED_SUFFIX), "true")
         }
     }
 

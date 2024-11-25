@@ -67,7 +67,7 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
     ): ResolvingResult {
         val replacements = doFetchAndPrepareReplacements(settings, token, parameters)
 
-        if (settings.failOnError && replacements.errors.isNotEmpty()) {
+        if (replacements.errors.isNotEmpty()) {
             val ns = if (isDefault(settings.id)) "" else "('${settings.id}' namespace)"
             replacements.errors.values.forEach {
                 build.buildLogger.warning(it)
