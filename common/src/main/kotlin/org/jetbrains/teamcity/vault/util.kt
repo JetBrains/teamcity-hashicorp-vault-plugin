@@ -3,6 +3,7 @@ package org.jetbrains.teamcity.vault
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jetbrains.buildServer.agent.BuildProgressLogger
+import jetbrains.buildServer.serverSide.TeamCityProperties
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.support.ClientHttpRequestFactoryFactory
@@ -24,6 +25,7 @@ import org.springframework.web.client.HttpStatusCodeException
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.DefaultUriTemplateHandler
 import java.net.URI
+import java.time.Duration
 
 fun isDefault(namespace: String): Boolean {
     return namespace == VaultConstants.FeatureSettings.DEFAULT_ID
@@ -43,7 +45,12 @@ fun isLegacyReferencesUsedParameter(value: String) =
         value.startsWith(VaultConstants.PARAMETER_PREFIX) && value.endsWith(VaultConstants.LEGACY_REFERENCES_USED_SUFFIX)
 
 fun createClientHttpRequestFactory(trustStoreProvider: SSLTrustStoreProvider): ClientHttpRequestFactory {
-    return ClientHttpRequestFactoryFactory.create(ClientOptions(), trustStoreProvider)
+    val connectionTimeout = TeamCityProperties.getLong("${VaultConstants.PARAMETER_PREFIX}${VaultConstants.VAULT_CLIENT_CONNECTION_TIMEOUT_SECONDS}", 5)
+    val readTimeout = TeamCityProperties.getLong("${VaultConstants.PARAMETER_PREFIX}${VaultConstants.VAULT_CLIENT_READ_TIMEOUT_SECONDS}", 15)
+    return ClientHttpRequestFactoryFactory.create(ClientOptions(
+        Duration.ofSeconds(connectionTimeout),
+        Duration.ofSeconds(readTimeout)
+    ), trustStoreProvider)
 }
 
 fun createRestTemplate(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): RestTemplate {

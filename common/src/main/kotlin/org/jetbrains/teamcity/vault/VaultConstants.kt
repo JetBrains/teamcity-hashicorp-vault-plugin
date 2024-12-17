@@ -10,6 +10,8 @@ object VaultConstants {
 
     const val PARAMETER_PREFIX = "teamcity.vault"
     const val TOKEN_REFRESH_TIMEOUT_PROPERTY_SUFFIX = ".token.refresh.timeout"
+    const val VAULT_CLIENT_CONNECTION_TIMEOUT_SECONDS = ".client.connection.timeoutInSeconds"
+    const val VAULT_CLIENT_READ_TIMEOUT_SECONDS = ".client.read.timeoutInSeconds"
     const val LEGACY_REFERENCES_USED_SUFFIX = ".legacy.references.used"
 
     const val PARAMETER_TYPE = "hashicorp-vault"
