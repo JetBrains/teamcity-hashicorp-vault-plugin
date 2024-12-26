@@ -86,13 +86,13 @@ subprojects {
 
 
     repositories {
-        mavenLocal()
         if (localRepo) {
             maven {
                 name = "local-teamcity-artifacts"
                 url "file:///${localRepo}"
             }
         }
+        mavenLocal()
         maven {
             url "https://plugins.gradle.org/m2/"
         }
@@ -120,6 +120,12 @@ subprojects {
     }
 }
 repositories {
+    if (localRepo) {
+        maven {
+            name = "local-teamcity-artifacts"
+            url "file:///${localRepo}"
+        }
+    }
     mavenLocal()
     maven {
         url "https://plugins.gradle.org/m2/"
