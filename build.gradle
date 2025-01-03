@@ -1,8 +1,11 @@
 import java.nio.file.Paths
+import com.github.jk1.license.render.JsonReportRenderer
+import com.github.jk1.license.filter.LicenseBundleNormalizer
 
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.7.0'
     id "io.github.rodm.teamcity-server" version "1.5.2"
+    id "com.github.jk1.dependency-license-report" version "1.17"
 }
 
 initializeWorkspace()
@@ -138,6 +141,12 @@ configurations.testImplementation {
     exclude group: "org.jetbrains.teamcity", module: "server-api"
     exclude group: "org.jetbrains.teamcity", module: "server-web-api"
     exclude group: "org.jetbrains.teamcity.internal", module: "plugins"
+}
+
+licenseReport {
+    renderers = [new JsonReportRenderer('third-party-libraries.json')]
+    excludes = ["org.jetbrains.*", "com.jetbrains.*"]
+    filters = [new LicenseBundleNormalizer(bundlePath: "${project.rootDir}/license-third-party-normalizer.json", createDefaultTransformationRules: false)]
 }
 
 def anyParamPath(String... names) {
