@@ -1,11 +1,8 @@
 package org.jetbrains.teamcity.vault.server
 
-import jetbrains.buildServer.serverSide.InvalidProperty
-import jetbrains.buildServer.serverSide.ProjectManager
-import jetbrains.buildServer.serverSide.PropertiesProcessor
-import jetbrains.buildServer.serverSide.SProject
-import jetbrains.buildServer.serverSide.SProjectFeatureDescriptor
+import jetbrains.buildServer.serverSide.*
 import jetbrains.buildServer.serverSide.connections.ProjectConnectionsManager
+import jetbrains.buildServer.serverSide.identifiers.IdentifiersUtil
 import jetbrains.buildServer.serverSide.oauth.OAuthConnectionDescriptor
 import jetbrains.buildServer.serverSide.oauth.OAuthProvider
 import jetbrains.buildServer.util.StringUtil
@@ -79,6 +76,15 @@ class VaultProjectConnectionProvider(
                         val project = projectManager.findProjectByExternalId(projectExternalId)
                         if (project != null) {
                             verifyCollisions(project, errors, namespace, connectionId)
+                        }
+                    }
+
+                    val id = properties[VaultConstants.FeatureSettings.USER_DEFINED_ID_PARAM]
+                    if (!id.isNullOrBlank()) {
+                        try {
+                            IdentifiersUtil.validateExternalId(id, "Vault ID")
+                        }catch (e: InvalidIdentifierException){
+                            errors.add(InvalidProperty(VaultConstants.FeatureSettings.USER_DEFINED_ID_PARAM, e.localizedMessage))
                         }
                     }
                     // IDs are only there for verification and shouldn't be committed to storage
