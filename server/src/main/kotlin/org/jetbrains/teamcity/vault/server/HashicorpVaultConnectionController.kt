@@ -2,6 +2,7 @@ package org.jetbrains.teamcity.vault.server
 
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.text.StringUtil
+import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.BuildsManager
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.RunningBuildEx
@@ -24,7 +25,7 @@ class HashicorpVaultConnectionController(
     private val buildsManager: BuildsManager,
     private val hashiCorpVaultConnectionResolver: HashiCorpVaultConnectionResolver,
 ) {
-    private val LOG = Logger.getInstance(HashiCorpVaultConnectionResolver::class.java)
+    private val LOG = Logger.getInstance("${Loggers.SERVER_CATEGORY}.${HashicorpVaultConnectionController::class.java.name}")
 
     companion object {
         private const val STORAGE_ID = "hashicorp-vault-token-generation"
