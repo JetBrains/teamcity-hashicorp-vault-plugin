@@ -116,4 +116,11 @@ object VaultConstants {
             FeatureSettings.PATH
         )
     }
+
+    object FeatureFlags {
+        /**
+         * Feature flag that enables/disables write engines support, when only a write operation is possible to retrieve/generate a secret (for example, k8s engine).
+         */
+        const val FEATURE_ENABLE_WRITE_ENGINES: String = "teamcity.internal.vault.write.engines.enabled"
+    }
 }

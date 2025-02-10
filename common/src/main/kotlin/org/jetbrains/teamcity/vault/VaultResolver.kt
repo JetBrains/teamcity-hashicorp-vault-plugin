@@ -2,12 +2,11 @@ package org.jetbrains.teamcity.vault
 
 import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
-import jetbrains.buildServer.serverSide.TeamCityProperties
-import org.jetbrains.teamcity.vault.retrier.VaultRetrier
-import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import org.jetbrains.teamcity.vault.support.VaultTemplate
+import org.springframework.http.HttpEntity
 import org.springframework.vault.authentication.SimpleSessionManager
 import org.springframework.vault.client.VaultEndpoint
 import org.springframework.vault.support.VaultResponse
@@ -45,21 +44,27 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
         private val client: VaultTemplate,
     ) {
         fun doFetchAndPrepareReplacements(parameters: Collection<VaultQuery>): ResolvingResult {
-            val responses = fetch(client, parameters.mapTo(HashSet()) { it.vaultPath })
+            val paramsGroupedByEngineType = parameters.groupBy( {it.isWriteEngine == true}, {it.vaultPath} ).mapValues { it.value.toHashSet() }
+            val responses = paramsGroupedByEngineType.map { (isWriteEngine, vaultPaths) ->  fetch(client, vaultPaths, isWriteEngine)}
+                .flatMap { it.entries }
+                .associateTo(HashMap()) { it.key to it.value }
 
             return getReplacements(parameters, responses)
         }
 
         private class ResolvingError(message: String) : Exception(message)
 
-        private fun fetch(client: VaultTemplate, paths: Collection<String>): HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>> {
+        private fun fetch(client: VaultTemplate, paths: Collection<String>, isWriteEngine: Boolean): HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>> {
             val responses = HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>>(paths.size)
-
             for (path in paths.toSet()) {
                 try {
 
                     val response = retrier.execute(Callable {
-                        client.read(path.removePrefix("/"))
+                        if (isWriteEngine) {
+                            client.write(path.removePrefix("/"), HttpEntity.EMPTY)
+                        } else {
+                            client.read(path.removePrefix("/"))
+                        }
                     })
 
                     if (response == null) {

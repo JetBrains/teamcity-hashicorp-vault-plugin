@@ -5,9 +5,12 @@ package org.jetbrains.teamcity.vault.agent;
 import java.io.IOException;
 import java.net.URI;
 import java.util.*;
+import org.junit.Assert;
+import jetbrains.buildServer.BaseTestCase;
 import jetbrains.buildServer.agent.AgentRunningBuildEx;
 import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.agent.Constants;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.util.CollectionsUtil;
 import jetbrains.buildServer.util.PasswordReplacer;
 import jetbrains.buildServer.util.VersionComparatorUtil;
@@ -15,6 +18,7 @@ import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider;
 import org.jetbrains.teamcity.vault.*;
 import org.jetbrains.teamcity.vault.support.VaultTemplate;
 import org.mockito.Mockito;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.AbstractClientHttpRequestFactoryWrapper;
 import org.springframework.http.client.ClientHttpRequest;
@@ -26,7 +30,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.BDDAssertions.then;
 import static org.jetbrains.teamcity.vault.UtilKt.createClientHttpRequestFactory;
 
-public class VaultParametersResolverTest {
+public class VaultParametersResolverTest extends BaseTestCase {
   public static final VaultDevContainer vault = new VaultDevContainer();
 
   private VaultParametersResolver resolver;
@@ -60,7 +64,7 @@ public class VaultParametersResolverTest {
         return requestFactory.createRequest(uri, httpMethod);
       }
     };
-    template = VaultTestUtil.createNamespaceAndTemplate(vault, factory, vaultNamespace);
+    template = Mockito.spy(VaultTestUtil.createNamespaceAndTemplate(vault, factory, vaultNamespace));
     resolver = new VaultParametersResolver(emptyTrustStoreProvider);
     feature = new VaultFeatureSettings(vault.getUrl(), vaultNamespace);
   }
@@ -117,7 +121,7 @@ public class VaultParametersResolverTest {
     final String path = getKVPath("test");
 
     final Map<String, String> replacements =
-      resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultQuery("/" + path, null)))
+      resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultQuery("/" + path, null, false)))
               .getReplacements();
     then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
   }
@@ -128,7 +132,7 @@ public class VaultParametersResolverTest {
     writeSecret(path, Collections.singletonMap("data", "TestValue"));
 
     final Map<String, String> replacements =
-      resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultQuery("/" + path, null)))
+      resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), Collections.singletonList(new VaultQuery("/" + path, null, false)))
               .getReplacements();
     then(replacements).hasSize(1).contains(entry("/" + path, "TestValue"));
   }
@@ -140,8 +144,8 @@ public class VaultParametersResolverTest {
     then(readSecret(path)).contains(entry("first", "TestValueA"));
 
     final List<VaultQuery> parameters = Arrays.asList(
-      new VaultQuery("/" + path, "first"),
-      new VaultQuery("/" + path, "second")
+      new VaultQuery("/" + path, "first", false),
+      new VaultQuery("/" + path, "second", false)
     );
 
     final Map<String, String> replacements = resolver.doFetchAndPrepareReplacements(feature, vault.getToken(), parameters).getReplacements();
@@ -163,6 +167,47 @@ public class VaultParametersResolverTest {
     then(replacements).hasSize(2).contains(entry("/" + path + "!/first", "TestValueA"), entry("/" + path + "!/second", "TestValueB"));
 
     then(myRequestedURIs).hasSize(1).containsOnlyOnce("/v1/" + path);
+  }
+
+  @Test(dataProvider = "namespaces")
+  public void testDynamicSecretParameterResolvedFromVault(String namespace) {
+    setInternalProperty(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES, "true");
+    testSecretParameterResolvedFromVault(true);
+  }
+
+  @Test(dataProvider = "namespaces")
+  public void testDynamicSecretParameterResolvedFromVaultWhenWriteEngineIsOff(String namespace) {
+    setInternalProperty(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES, "false");
+    testSecretParameterResolvedFromVault(true);
+  }
+
+  @Test(dataProvider = "namespaces")
+  public void testStaticSecretParameterResolvedFromVault(String namespace) {
+    setInternalProperty(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES, "false");
+    testSecretParameterResolvedFromVault(false);
+  }
+
+  @Test(dataProvider = "namespaces")
+  public void testStaticSecretParameterResolvedFromVaultWhenWriteEngineIsOn(String namespace) {
+    setInternalProperty(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES, "true");
+    testSecretParameterResolvedFromVault(false);
+  }
+
+  private void testSecretParameterResolvedFromVault(boolean isDynamicQuery) {
+    String prefix = isDynamicQuery ? VaultQuery.WRITE_PREFIX : "";
+    String path = "some/random/path";
+    String key = "secret";
+    boolean isWriteEngineEnabled = TeamCityProperties.getBoolean(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES);
+    final VaultParameter parameter = new VaultParameter(Constants.ENV_PREFIX +  "param",
+                                                        new VaultParameterSettings(VaultConstants.FeatureSettings.DEFAULT_ID, String.format("%s%s!/%s", prefix, path, key)));
+    final VaultQuery vaultQuery = VaultQuery.extract(parameter.getVaultParameterSettings().getVaultQuery());
+    Assert.assertEquals(isWriteEngineEnabled && isDynamicQuery, vaultQuery.isWriteEngine());
+    resolver.doFetchAndPrepareReplacements(template, Arrays.asList(vaultQuery)).getReplacements();
+    if (isWriteEngineEnabled && isDynamicQuery) {
+      Mockito.verify(template).write(path, HttpEntity.EMPTY);
+    } else {
+      Mockito.verify(template).read(path);
+    }
   }
 
   private boolean isKV2() {
