@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.text.StringUtil
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.BuildsManager
+import jetbrains.buildServer.serverSide.IOGuard
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.RunningBuildEx
 import jetbrains.buildServer.serverSide.SRunningBuild
@@ -65,7 +66,9 @@ class HashicorpVaultConnectionController(
         }
 
         return try {
-            val agentFeatureSettings = hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(feature, namespace)
+            val agentFeatureSettings = IOGuard.allowNetworkCall<VaultFeatureSettings, Exception> {
+                hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(feature, namespace)
+            }
             agentFeatureSettings.toFeatureProperties()
         } catch (e: Throwable) {
             LOG.error("Failed to request token for hashicorp vault namespace ${feature.id} build ${build.buildId} of ${project.projectId}", e)
