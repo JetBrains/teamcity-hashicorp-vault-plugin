@@ -50,6 +50,9 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
 
     protected final RestOperations restOperations;
 
+    protected final String namespace;
+    protected final String locationForMessages;
+
     protected final TaskScheduler taskScheduler;
 
     protected final FixedTimeoutRefreshTrigger refreshTrigger;
@@ -62,6 +65,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
     public LifecycleAwareSessionManager(@NotNull ClientAuthentication clientAuthentication,
                                         @NotNull TaskScheduler taskScheduler,
                                         @NotNull RestOperations restOperations,
+                                        @NotNull String namespace,
                                         @NotNull FixedTimeoutRefreshTrigger refreshTrigger,
                                         @NotNull BuildProgressLogger logger) {
         this.clientAuthentication = clientAuthentication;
@@ -69,6 +73,8 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
         this.taskScheduler = taskScheduler;
         this.refreshTrigger = refreshTrigger;
         this.logger = logger;
+        this.namespace = namespace;
+        this.locationForMessages = "HashiCorp Vault" + ((!namespace.isEmpty()) ? " (namespace '" + this.namespace + "')" : "");
     }
 
     @Override
@@ -104,7 +110,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
                 }
             }
         }
-        String message = "Cannot revoke HashiCorp Vault token: ";
+        String message = "Cannot revoke " + locationForMessages + " token: ";
         if (e instanceof HttpStatusCodeException) {
             message += VaultResponses.getError((HttpStatusCodeException) e);
         } else {
@@ -124,7 +130,7 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
      * token was obtained or refresh failed.
      */
     protected boolean renewToken() {
-        LOG.info("Renewing HashiCorp Vault token");
+        LOG.info("Renewing " + locationForMessages + " token");
 
         VaultToken token = this.token;
         if (token == null) {
@@ -143,23 +149,26 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
             if (renewed.getLeaseDuration().getSeconds() <= validTtlThreshold) {
                 LOG.warn(String.format("Token TTL (%s) exceeded validity TTL threshold (%s). Dropping token.",
                         renewed.getLeaseDuration(), validTtlThreshold));
-                logger.warning("HashiCorp Vault token exceed validity TTL threshold and would be dropped.");
+                logger.warning(locationForMessages + " token exceed validity TTL threshold and would be dropped.");
                 this.token = null;
                 return false;
             }
 
             this.token = renewed;
-            LOG.info("Renewed HashiCorp Vault token successfully");
-            logger.message("Renewed HashiCorp Vault token successfully");
+            final String msg = "Renewed " + locationForMessages + " token successfully";
+            LOG.info(msg);
+            logger.message(msg);
             return true;
         } catch (HttpStatusCodeException e) {
-            logger.warning("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getStatusCode() + " " + VaultResponses.getError(e));
-            LOG.warn("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getStatusCode() + " " + VaultResponses.getError(e), e);
+            final String msg = "Cannot renew " + locationForMessages + " token, resetting token and performing re-login: " + e.getStatusCode() + " " + VaultResponses.getError(e);
+            logger.warning(msg);
+            LOG.warn(msg, e);
             this.token = null;
             return false;
         } catch (RuntimeException e) {
-            logger.warning("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getMessage());
-            LOG.warn("Cannot renew HashiCorp Vault token, resetting token and performing re-login: " + e.getMessage(), e);
+            final String msg = "Cannot renew " + locationForMessages + " token, resetting token and performing re-login: " + e.getMessage();
+            logger.warning(msg);
+            LOG.warn(msg, e);
             this.token = null;
             return false;
         }
@@ -219,13 +228,13 @@ public class LifecycleAwareSessionManager implements SessionManager, DisposableB
                             }
                         }
                     } catch (Exception e) {
-                        logger.error("Cannot renew HashiCorp Vault token: " + e.getMessage());
-                        LOG.error("Cannot renew HashiCorp Vault token", e);
+                        logger.error("Cannot renew " + locationForMessages + " token: " + e.getMessage());
+                        LOG.error("Cannot renew " + locationForMessages + " token", e);
                     }
                 }
             };
             Date startTime = refreshTrigger.nextExecutionTime((LoginToken) token);
-            LOG.info("Scheduling HashiCorp Vault token refresh to " + startTime);
+            LOG.info("Scheduling " + locationForMessages + " token refresh to " + startTime);
             scheduled = taskScheduler.schedule(task, startTime);
         }
     }
