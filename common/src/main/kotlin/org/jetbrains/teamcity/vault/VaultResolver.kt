@@ -44,8 +44,8 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
         private val client: VaultTemplate,
     ) {
         fun doFetchAndPrepareReplacements(parameters: Collection<VaultQuery>): ResolvingResult {
-            val paramsGroupedByEngineType = parameters.groupBy( {it.isWriteEngine == true}, {it.vaultPath} ).mapValues { it.value.toHashSet() }
-            val responses = paramsGroupedByEngineType.map { (isWriteEngine, vaultPaths) ->  fetch(client, vaultPaths, isWriteEngine)}
+            val paramsGroupedByEngineType = parameters.groupBy( {it.isWriteEngine == true}, { it.shorten } ).mapValues { it.value.toHashSet() }
+            val responses = paramsGroupedByEngineType.map { (isWriteEngine, queries) ->  fetch(client, queries, isWriteEngine)}
                 .flatMap { it.entries }
                 .associateTo(HashMap()) { it.key to it.value }
 
@@ -54,29 +54,29 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
 
         private class ResolvingError(message: String) : Exception(message)
 
-        private fun fetch(client: VaultTemplate, paths: Collection<String>, isWriteEngine: Boolean): HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>> {
-            val responses = HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>>(paths.size)
-            for (path in paths.toSet()) {
+        private fun fetch(client: VaultTemplate, queries: Collection<VaultQuery.Shorten>, isWriteEngine: Boolean): HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>> {
+            val responses = HashMap<String, HashiCorpVaultResponse<Exception, VaultResponse>>(queries.size)
+            for (query in queries.toSet()) {
                 try {
 
                     val response = retrier.execute(Callable {
                         if (isWriteEngine) {
-                            client.write(path.removePrefix("/"), HttpEntity.EMPTY)
+                            client.write(query.path.removePrefix("/"), query.extractedParams?.let { HttpEntity(it) } ?: HttpEntity.EMPTY)
                         } else {
-                            client.read(path.removePrefix("/"))
+                            client.read(query.path.removePrefix("/"))
                         }
                     })
 
                     if (response == null) {
-                        val errorMessage = getErrorMessage(path)
+                        val errorMessage = getErrorMessage(query.pathWithParams)
                         LOG.warn(errorMessage)
-                        responses[path] = Error(errorMessage)
+                        responses[query.pathWithParams] = Error(errorMessage)
                     } else {
-                        responses[path] = Response(response)
+                        responses[query.pathWithParams] = Response(response)
                     }
                 } catch (e: Exception) {
-                    LOG.warn(getErrorMessage(path), e)
-                    responses[path] = Error(e)
+                    LOG.warn(getErrorMessage(query.pathWithParams), e)
+                    responses[query.pathWithParams] = Error(e)
                 }
             }
             return responses
@@ -89,7 +89,7 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
             val errors = HashMap<String, String>()
 
             for (parameter in parameters) {
-                val response = responses[parameter.vaultPath]
+                val response = responses[parameter.shorten.pathWithParams]
                 when (response) {
                     is Response -> {
                         try {
