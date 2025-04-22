@@ -50,7 +50,10 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
                 .withTrustStore(sslTrustStoreProvider.trustStore)
 
             if (configuration.serverProxyHost != null) {
-                requestBuilder.withProxyHost(URIBuilder(configuration.serverProxyHost).setPort(configuration.serverProxyPort).build())
+                requestBuilder.withProxyHost(
+                    URIBuilder()
+                        .setHost(configuration.serverProxyHost).setPort(configuration.serverProxyPort).build()
+                )
 
                 val serverProxyCredentials = configuration.serverProxyCredentials
                 if (serverProxyCredentials != null) {
