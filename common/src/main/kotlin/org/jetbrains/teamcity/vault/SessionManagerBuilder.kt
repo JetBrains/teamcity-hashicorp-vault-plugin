@@ -64,13 +64,13 @@ class SessionManagerBuilder(
         return CubbyholeAuthentication(options, restTemplate)
     }
 
-    fun buildWithImprovedLogging(settings: VaultFeatureSettings, logger: BuildProgressLogger): LifecycleAwareSessionManager {
+    fun buildWithImprovedLogging(settings: VaultFeatureSettings, namespace: String, logger: BuildProgressLogger): LifecycleAwareSessionManager {
         val template = buildRestTemplate(settings)
         val authentication = buildClientAuthentication(settings, template)
 
 
         return LifecycleAwareSessionManager(
-            authentication, scheduler, template,
+            authentication, scheduler, template, namespace,
             LifecycleAwareSessionManager.FixedTimeoutRefreshTrigger(getTimeoutSeconds(settings), TimeUnit.SECONDS), logger
         )
     }
