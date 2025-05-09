@@ -15,7 +15,7 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultParametersResolver::class.java.name)
     }
 
-    fun resolveLegacyReferences(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String, namespace: String) {
+    fun resolveLegacyReferences(build: AgentRunningBuild, settings: VaultFeatureSettings, token: String, namespace: String, isWriteEngineEnabled: Boolean) {
         val references = getRelatedParameterReferences(build, namespace)
         if (references.isEmpty()) {
             LOG.info("There's nothing to resolve")
@@ -24,14 +24,14 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         val logger = build.buildLogger
         logger.message("${references.size} ${"reference".pluralize(references)} to resolve: $references")
 
-        val parameters = references.map { VaultQuery.extract(VaultReferencesUtil.getPath(it, namespace)) }
+        val parameters = references.map { VaultQuery.extract(VaultReferencesUtil.getPath(it, namespace), isWriteEngineEnabled) }
 
         val replacements = resolveReplacements(build, settings, parameters, token)
 
         replaceParametersReferences(build, replacements.replacements, references, namespace)
     }
 
-    fun resolveParameters(build: AgentRunningBuild, settings: VaultFeatureSettings, vaultParameters: List<VaultParameter>, token: String) {
+    fun resolveParameters(build: AgentRunningBuild, settings: VaultFeatureSettings, vaultParameters: List<VaultParameter>, token: String, isWriteEngineEnabled: Boolean) {
         if (vaultParameters.isEmpty()) {
             return
         }
@@ -43,7 +43,7 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         logger.message("${humanReadableParamsDesc.size} remote ${"parameter".pluralize(humanReadableParamsDesc)} to resolve: $humanReadableParamsDesc")
 
         val keyToQuery = vaultParameters.associate { parameter ->
-            parameter.parameterKey to VaultQuery.extract(parameter.vaultParameterSettings.vaultQuery)
+            parameter.parameterKey to VaultQuery.extract(parameter.vaultParameterSettings.vaultQuery, isWriteEngineEnabled)
         }
 
         val replacements = resolveReplacements(build, settings, keyToQuery.values, token).replacements

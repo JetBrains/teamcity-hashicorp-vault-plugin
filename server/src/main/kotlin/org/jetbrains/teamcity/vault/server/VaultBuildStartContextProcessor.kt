@@ -44,6 +44,7 @@ class VaultBuildStartContextProcessor(
             }
             context.addSharedParameter(getVaultParameterName(settings.id, VaultConstants.LEGACY_REFERENCES_USED_SUFFIX), "true")
         }
+        setWriteEngineFeatureFlag(context);
     }
 
     private fun isParametersContainLegacyVaultReferences(
@@ -64,6 +65,15 @@ class VaultBuildStartContextProcessor(
         }
 
         return false;
+    }
+
+    private fun setWriteEngineFeatureFlag(context: BuildStartContext) {
+        val propertyValue = TeamCityProperties.getPropertyOrNull(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES) ?: return
+        val buildType = context.build.buildType ?: return
+
+        if (!buildType.configParameters.containsKey(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES)) {
+            context.addSharedParameter(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES, propertyValue)
+        }
     }
 
     override fun getOrderId() = "HashiCorpVaultPluginBuildStartContextProcessor"

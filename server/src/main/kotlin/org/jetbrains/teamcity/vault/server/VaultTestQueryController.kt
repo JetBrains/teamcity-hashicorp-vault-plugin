@@ -94,7 +94,7 @@ class VaultTestQueryController(
                     .serverFeatureSettingsToAgentSettings(serverFeature, parameterSettings.namespace)
                 val token = sessionManagerBuilder
                     .build(agentFeature).sessionToken.token
-                val query = VaultQuery.extract(parameterSettings.vaultQuery)
+                val query = VaultQuery.extract(parameterSettings.vaultQuery, TeamCityProperties.getBoolean(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES))
 
 
                 val result = vaultResolver.doFetchAndPrepareReplacements(agentFeature, token, listOf(query))

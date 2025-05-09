@@ -103,7 +103,7 @@ public class VaultParametersResolverTest extends BaseTestCase {
     Mockito.when(runningBuild.getPasswordReplacer()).thenReturn(passwordReplacer);
     final VaultParameter parameter = new VaultParameter(key, new VaultParameterSettings(VaultConstants.FeatureSettings.DEFAULT_ID, path));
 
-    resolver.resolveParameters(runningBuild, feature, Collections.singletonList(parameter), vault.getToken());
+    resolver.resolveParameters(runningBuild, feature, Collections.singletonList(parameter), vault.getToken(), false);
     Mockito.verify(passwordReplacer).addPassword(EXPECTED_VALUE);
     return runningBuild;
   }
@@ -158,8 +158,8 @@ public class VaultParametersResolverTest extends BaseTestCase {
     writeSecret(path, CollectionsUtil.asMap("first", "TestValueA", "second", "TestValueB"));
 
     final List<VaultQuery> parameters = Arrays.asList(
-      VaultQuery.extract("/" + path + "!/first"),
-      VaultQuery.extract("/" + path + "!/second")
+      VaultQuery.extract("/" + path + "!/first", false),
+      VaultQuery.extract("/" + path + "!/second", false)
     );
 
     myRequestedURIs.clear();
@@ -214,7 +214,7 @@ public class VaultParametersResolverTest extends BaseTestCase {
     boolean isWriteEngineEnabled = TeamCityProperties.getBoolean(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES);
     final VaultParameter parameter = new VaultParameter(Constants.ENV_PREFIX +  "param",
                                                         new VaultParameterSettings(VaultConstants.FeatureSettings.DEFAULT_ID, query));
-    final VaultQuery vaultQuery = VaultQuery.extract(parameter.getVaultParameterSettings().getVaultQuery());
+    final VaultQuery vaultQuery = VaultQuery.extract(parameter.getVaultParameterSettings().getVaultQuery(), isWriteEngineEnabled);
     Assert.assertEquals(isWriteEngineEnabled && isDynamicQuery, vaultQuery.isWriteEngine());
     resolver.doFetchAndPrepareReplacements(template, Arrays.asList(vaultQuery)).getReplacements();
     if (isWriteEngineEnabled && isDynamicQuery) {

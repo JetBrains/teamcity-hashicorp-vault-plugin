@@ -61,16 +61,17 @@ class VaultBuildFeature(
             namespace to VaultFeatureSettingsAndToken(settings, token)
         }
 
+        val isWriteEngineEnabled = allParameters[VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES].toBoolean()
         settingsAndTokens.forEach { (namespace, settingsAndToken) ->
             build.buildLogger.activity("HashiCorp Vault" + if (namespace != "") " (namespace '$namespace')" else "",
                     VaultConstants.FeatureSettings.FEATURE_TYPE) {
                 val parameters = vaultNamespacesAndParameters[namespace]
                 if (!parameters.isNullOrEmpty()) {
-                    myVaultParametersResolver.resolveParameters(build, settingsAndToken.settings, parameters, settingsAndToken.token)
+                    myVaultParametersResolver.resolveParameters(build, settingsAndToken.settings, parameters, settingsAndToken.token, isWriteEngineEnabled)
                 }
 
                 if (vaultLegacyReferencesNamespaces.contains(namespace)) {
-                    myVaultParametersResolver.resolveLegacyReferences(build, settingsAndToken.settings, settingsAndToken.token, namespace)
+                    myVaultParametersResolver.resolveLegacyReferences(build, settingsAndToken.settings, settingsAndToken.token, namespace, isWriteEngineEnabled)
                 }
 
                 build.addSharedConfigParameter(getParametersFetchedForNamespaceParameter(namespace), "true")
