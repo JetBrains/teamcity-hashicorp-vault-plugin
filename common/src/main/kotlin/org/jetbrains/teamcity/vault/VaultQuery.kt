@@ -12,8 +12,8 @@ data class VaultQuery(val vaultPath: String, val jsonPath: String? = null, val i
         const val PARAMS_PREFIX: String = "?";
 
         @JvmStatic
-        fun extract(path: String): VaultQuery {
-            val isWriteEngine = TeamCityProperties.getBoolean(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES) && path.startsWith(WRITE_PREFIX)
+        fun extract(path: String, isWriteEngineEnabled: Boolean? = false): VaultQuery {
+            val isWriteEngine = isWriteEngineEnabled == true && path.startsWith(WRITE_PREFIX)
             val split = path.substringAfter(WRITE_PREFIX).split(SECRET_KEY_PREFIX, PARAMS_PREFIX, limit = 3)
             val secretKey = if (path.contains(SECRET_KEY_PREFIX)) split[1] else null
             val params = if (isWriteEngine && path.contains(PARAMS_PREFIX)) split.last() else null
