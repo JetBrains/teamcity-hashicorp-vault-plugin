@@ -5,6 +5,7 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.log.Loggers
+import jetbrains.buildServer.serverSide.TeamCityProperties
 import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.StringUtil
@@ -61,7 +62,8 @@ class VaultBuildFeature(
             namespace to VaultFeatureSettingsAndToken(settings, token)
         }
 
-        val isWriteEngineEnabled = allParameters[VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES].toBoolean()
+        val isWriteEngineEnabled = TeamCityProperties.getPropertyOrNull(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES)?.toBoolean() ?:
+            allParameters[VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES].toBoolean()
         settingsAndTokens.forEach { (namespace, settingsAndToken) ->
             build.buildLogger.activity("HashiCorp Vault" + if (namespace != "") " (namespace '$namespace')" else "",
                     VaultConstants.FeatureSettings.FEATURE_TYPE) {
