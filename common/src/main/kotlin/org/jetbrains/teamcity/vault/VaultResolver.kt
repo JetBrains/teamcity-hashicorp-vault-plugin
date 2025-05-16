@@ -18,7 +18,7 @@ import java.util.concurrent.Callable
 open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) {
     companion object {
         private val LOG = Logger.getInstance(VaultResolver::class.java)
-        private val retrier = VaultRetrier.getRetrier()
+        private val retrier = VaultRetrier.getRetrier("fetching the data from the vault")
         const val DATA_KEY = "data"
     }
 
