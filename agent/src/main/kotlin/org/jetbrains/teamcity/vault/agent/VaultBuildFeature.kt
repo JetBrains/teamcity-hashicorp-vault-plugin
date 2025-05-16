@@ -32,7 +32,7 @@ class VaultBuildFeature(
     init {
         dispatcher.addListener(this)
         LOG.info("HashiCorp Vault integration enabled")
-        retrier = VaultRetrier.getRetrier()
+        retrier = VaultRetrier.getRetrier("fetching the vault session token")
     }
 
     private val sessions = ConcurrentHashMap<Long, LifecycleAwareSessionManager>()

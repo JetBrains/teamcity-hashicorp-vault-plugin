@@ -22,7 +22,7 @@ import java.util.concurrent.Callable
 
 class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustStoreProvider, private val requestHandler: HTTPRequestBuilder.RequestHandler) {
 
-    private val retrier: Retrier = VaultRetrier.getRetrier()
+    private val retrier: Retrier = VaultRetrier.getRetrier("fetching the vault credentials from TeamCity server")
 
     @Autowired
     constructor(sslTrustStoreProvider: SSLTrustStoreProvider) : this(sslTrustStoreProvider, HTTPRequestBuilder.DelegatingRequestHandler())
@@ -50,7 +50,10 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
                 .withTrustStore(sslTrustStoreProvider.trustStore)
 
             if (configuration.serverProxyHost != null) {
-                requestBuilder.withProxyHost(URIBuilder(configuration.serverProxyHost).setPort(configuration.serverProxyPort).build())
+                requestBuilder.withProxyHost(
+                    URIBuilder()
+                        .setHost(configuration.serverProxyHost).setPort(configuration.serverProxyPort).build()
+                )
 
                 val serverProxyCredentials = configuration.serverProxyCredentials
                 if (serverProxyCredentials != null) {

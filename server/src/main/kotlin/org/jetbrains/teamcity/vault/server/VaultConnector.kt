@@ -30,7 +30,7 @@ class VaultConnector(
 ) {
     companion object {
         val LOG = Logger.getInstance(Loggers.SERVER_CATEGORY + "." + VaultConnector::class.java.name)
-        private val retrier = VaultRetrier.getRetrier()
+        private val retrier = VaultRetrier.getRetrier("logging into the vault")
 
         /**
          * @return true if operation succeed
