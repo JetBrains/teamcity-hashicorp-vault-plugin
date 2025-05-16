@@ -69,9 +69,7 @@ class VaultBuildStartContextProcessor(
 
     private fun setWriteEngineFeatureFlag(context: BuildStartContext) {
         val propertyValue = TeamCityProperties.getPropertyOrNull(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES) ?: return
-        val buildType = context.build.buildType ?: return
-
-        if (!buildType.configParameters.containsKey(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES)) {
+        if (!context.sharedParameters.containsKey(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES)) {
             context.addSharedParameter(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES, propertyValue)
         }
     }
