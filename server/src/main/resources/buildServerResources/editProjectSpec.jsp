@@ -10,7 +10,9 @@
 <jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>
 
 <c:set var="project" value="<%=context.getAdditionalParameter(ParameterContext.PROJECT)%>" />
+<c:set var="buildType" value="<%=context.getAdditionalParameter(ParameterContext.BUILD_TYPE)%>" />
 <c:set var="projectId" value='${project == null ? "" : project.externalId}' />
+<c:set var="buildTypeId" value='${buildType == null ? "" : buildType.externalId}' />
 
 <bs:linkScript>
   /js/bs/testConnection.js
@@ -119,6 +121,7 @@
     </td>
   </tr>
   <props:hiddenProperty name="projectId" value="${projectId}"/>
+  <props:hiddenProperty name="buildTypeId" value="${buildTypeId}"/>
 
   <tr>
     <td style="border-top: 0">

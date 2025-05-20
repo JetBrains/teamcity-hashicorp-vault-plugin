@@ -16,6 +16,7 @@ object VaultConstants {
 
     const val PARAMETER_TYPE = "hashicorp-vault"
     const val PROJECT_ID = "projectId"
+    const val BUILD_TYPE_ID = "buildTypeId"
     const val CONNECTION_ID = "connectionFeatureId"
 
     const val VAULT_PARAMETERS_FETCHED_SUFFIX = "parameters.fetched"
