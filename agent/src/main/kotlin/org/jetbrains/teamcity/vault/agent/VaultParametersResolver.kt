@@ -1,4 +1,3 @@
-
 package org.jetbrains.teamcity.vault.agent
 
 import com.intellij.openapi.diagnostic.Logger
@@ -6,9 +5,14 @@ import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.AgentRunningBuild
 import jetbrains.buildServer.agent.Constants
 import jetbrains.buildServer.log.Loggers
+import jetbrains.buildServer.util.retry.Retrier
+import jetbrains.buildServer.util.retry.RetrierEventListener
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
+import org.jetbrains.teamcity.vault.retrier.VaultRetrier
+import java.lang.Exception
 import java.util.*
+import java.util.concurrent.Callable
 
 class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : VaultResolver(trustStoreProvider) {
     companion object {
@@ -65,7 +69,7 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         parameters: Collection<VaultQuery>,
         token: String
     ): ResolvingResult {
-        val replacements = doFetchAndPrepareReplacements(settings, token, parameters)
+        val replacements = doFetchAndPrepareReplacements(settings, token, parameters, agentRetrier(build))
 
         if (replacements.errors.isNotEmpty()) {
             val ns = if (isDefault(settings.id)) "" else "('${settings.id}' namespace)"
@@ -83,6 +87,19 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
         return replacements
     }
 
+    private fun agentRetrier(build: AgentRunningBuild): Retrier {
+        val agentLoggerListener = object : RetrierEventListener {
+            override fun <T : Any?> onFailure(callable: Callable<T?>, atempt: Int, e: Exception) {
+                build.buildLogger.warning("Hashicorp Vault request atempt $atempt failed: ${e.message}")
+            }
+        }
+
+        return VaultRetrier.getRetrier(
+            "fetching the data from the vault",
+            additionalListeners = listOf(agentLoggerListener),
+            params = build.sharedConfigParameters
+        )
+    }
 
     private fun getRelatedParameterReferences(build: AgentRunningBuild, namespace: String): Collection<String> {
         val references = HashSet<String>()
@@ -100,5 +117,4 @@ class VaultParametersResolver(trustStoreProvider: SSLTrustStoreProvider) : Vault
             }
         }
     }
-
 }

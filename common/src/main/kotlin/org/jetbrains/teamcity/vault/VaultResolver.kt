@@ -2,8 +2,8 @@ package org.jetbrains.teamcity.vault
 
 import com.intellij.openapi.diagnostic.Logger
 import com.jayway.jsonpath.JsonPath
+import jetbrains.buildServer.util.retry.Retrier
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
-import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import org.jetbrains.teamcity.vault.support.VaultTemplate
 import org.springframework.http.HttpEntity
@@ -18,7 +18,7 @@ import java.util.concurrent.Callable
 open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) {
     companion object {
         private val LOG = Logger.getInstance(VaultResolver::class.java)
-        private val retrier = VaultRetrier.getRetrier("fetching the data from the vault")
+        private val defaultRetrier = VaultRetrier.getRetrier("fetching the data from the vault")
         const val DATA_KEY = "data"
     }
 
@@ -27,21 +27,23 @@ open class VaultResolver(private val trustStoreProvider: SSLTrustStoreProvider) 
     fun doFetchAndPrepareReplacements(
         settings: VaultFeatureSettings,
         token: String,
-        parameters: Collection<VaultQuery>
+        parameters: Collection<VaultQuery>,
+        retrier: Retrier
     ): ResolvingResult {
         val endpoint = VaultEndpoint.from(URI.create(settings.url))
         val factory = createClientHttpRequestFactory(trustStoreProvider)
         val client = VaultTemplate(endpoint, settings.vaultNamespace, factory, SimpleSessionManager({ VaultToken.of(token) }))
 
-        return doFetchAndPrepareReplacements(client, parameters)
+        return doFetchAndPrepareReplacements(client, parameters, retrier)
     }
 
-    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: Collection<VaultQuery>): ResolvingResult {
-        return VaultParametersFetcher(client).doFetchAndPrepareReplacements(parameters)
+    fun doFetchAndPrepareReplacements(client: VaultTemplate, parameters: Collection<VaultQuery>, retrier: Retrier = defaultRetrier): ResolvingResult {
+        return VaultParametersFetcher(client, retrier).doFetchAndPrepareReplacements(parameters)
     }
 
     class VaultParametersFetcher(
         private val client: VaultTemplate,
+        private var retrier: Retrier = defaultRetrier
     ) {
         fun doFetchAndPrepareReplacements(parameters: Collection<VaultQuery>): ResolvingResult {
             val paramsGroupedByEngineType = parameters.groupBy( {it.isWriteEngine == true}, { it.shorten } ).mapValues { it.value.toHashSet() }
