@@ -1,7 +1,9 @@
 package org.jetbrains.teamcity.vault.server
 
 import com.intellij.openapi.diagnostic.Logger
+import jetbrains.buildServer.log.LogUtil
 import jetbrains.buildServer.log.Loggers
+import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
 import org.jetbrains.teamcity.vault.Auth
@@ -64,13 +66,16 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
         return effectiveFeatures.map { (_, settings) -> settings }
     }
 
-    fun serverFeatureSettingsToAgentSettings(settings: VaultFeatureSettings, namespace: String): VaultFeatureSettings =
+    fun serverFeatureSettingsToAgentSettings(settings: VaultFeatureSettings, namespace: String, build: SBuild?): VaultFeatureSettings =
         if (settings.auth is Auth.AppRoleAuthServer || settings.auth is Auth.LdapServer) {
             val wrappedToken: String = try {
                 connector.requestWrappedToken(settings)
             } catch (e: Throwable) {
-                val message = "Failed to fetch HashiCorp Vault$namespace wrapped token: ${e.message}"
-                LOG.warn(message, e)
+                var message = "Failed to fetch HashiCorp Vault wrapped token: ${e.message}, namespace: $namespace, project feature id: ${settings.id}"
+                if (build != null) {
+                    message += ", build: ${LogUtil.describe(build)}"
+                }
+                LOG.warnAndDebugDetails(message, e)
                 throw RuntimeException(message, e)
             }
             val featureSettingsMap = settings.toFeatureProperties().toMutableMap()

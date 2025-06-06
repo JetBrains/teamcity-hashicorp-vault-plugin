@@ -94,7 +94,7 @@ class VaultTestQueryController(
 
             IOGuard.allowNetworkCall<Exception> {
                 val agentFeature = hashiCorpVaultConnectionResolver
-                    .serverFeatureSettingsToAgentSettings(serverFeature, parameterSettings.namespace)
+                    .serverFeatureSettingsToAgentSettings(serverFeature, parameterSettings.namespace, build = null)
                 val token = sessionManagerBuilder
                     .build(agentFeature).sessionToken.token
                 val query = VaultQuery.extract(parameterSettings.vaultQuery, isWriteEngineEnabled)

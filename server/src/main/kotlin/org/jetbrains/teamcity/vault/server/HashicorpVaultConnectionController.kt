@@ -4,6 +4,8 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.text.StringUtil
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.BuildsManager
+import jetbrains.buildServer.serverSide.CustomDataConflictException
+import jetbrains.buildServer.serverSide.CustomDataStorage
 import jetbrains.buildServer.serverSide.IOGuard
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.RunningBuildEx
@@ -67,7 +69,7 @@ class HashicorpVaultConnectionController(
 
         return try {
             val agentFeatureSettings = IOGuard.allowNetworkCall<VaultFeatureSettings, Exception> {
-                hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(feature, namespace)
+                hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(feature, namespace, build)
             }
             agentFeatureSettings.toFeatureProperties()
         } catch (e: Throwable) {
@@ -77,16 +79,23 @@ class HashicorpVaultConnectionController(
     }
 
     private fun hasTokenBeenGenerated(build: SRunningBuild, feature: VaultFeatureSettings): Boolean {
-        val customStorage = (build as RunningBuildEx).temporaryCustomDataStorage
-        val tokenGenerationId = getTokenGenerationId(feature)
-        customStorage.refresh()
-        val value = customStorage.getValue(tokenGenerationId)
-        if (!StringUtil.isEmpty(value)) {
-            return true
-        }
+        (1..3).forEach { attempt ->
+            val customStorage = (build as RunningBuildEx).temporaryCustomDataStorage
+            val tokenGenerationId = getTokenGenerationId(feature)
+            customStorage.refresh()
+            val value = customStorage.getValue(tokenGenerationId)
+            if (!StringUtil.isEmpty(value)) {
+                return true
+            }
 
-        customStorage.putValue(tokenGenerationId, IS_GENERATED)
-        customStorage.flush()
+            customStorage.putValue(tokenGenerationId, IS_GENERATED)
+            try {
+                customStorage.flush(CustomDataStorage.ConflictResolution.FAIL)
+            } catch (e: CustomDataConflictException) {
+                // build storage has been changed by some other node, we need to run refresh again
+            }
+            return false
+        }
 
         return false
     }

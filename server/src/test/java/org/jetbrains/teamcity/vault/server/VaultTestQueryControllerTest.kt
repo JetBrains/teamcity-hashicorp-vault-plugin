@@ -48,7 +48,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
 
         val agentSettings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE, null))
             .thenReturn(agentSettings)
         Mockito.`when`(sessionManagerBuilder.build(agentSettings).sessionToken.token)
             .thenReturn(TOKEN)
@@ -81,7 +81,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
 
         Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, namespace))
             .thenReturn(settings)
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(settings, namespace))
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(settings, namespace, null))
             .thenReturn(settings)
         Mockito.`when`(sessionManagerBuilder.build(settings).sessionToken.token)
             .thenReturn(TOKEN)
@@ -211,7 +211,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenReturn(serverSettings)
 
         val error = "Mock error"
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE, null))
             .thenThrow(VaultException(error))
 
         doPost(
@@ -235,7 +235,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenReturn(serverSettings)
         val agentSettings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE, null))
             .thenReturn(agentSettings)
         val error = "Mock error"
         Mockito.`when`(sessionManagerBuilder.build(agentSettings).sessionToken.token)
@@ -262,7 +262,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenReturn(serverSettings)
         val agentSettings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE, null))
             .thenReturn(agentSettings)
         Mockito.`when`(sessionManagerBuilder.build(agentSettings).sessionToken.token)
             .thenReturn(TOKEN)
@@ -299,7 +299,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
             .thenReturn(serverSettings)
         val agentSettings = getDefaultSettings(Auth.getAgentAuthFromProperties(emptyMap()))
 
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE))
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE, null))
             .thenReturn(agentSettings)
         Mockito.`when`(sessionManagerBuilder.build(agentSettings).sessionToken.token)
             .thenReturn(TOKEN)

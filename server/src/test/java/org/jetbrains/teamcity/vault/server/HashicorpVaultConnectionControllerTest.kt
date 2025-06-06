@@ -42,7 +42,7 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
                 emptyMap()
             )
         )
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE)).thenReturn(agentSettings)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE, build)).thenReturn(agentSettings)
 
         val settingsMap = controller.getToken(NAMESPACE, request)
         Assert.assertEquals(settingsMap, agentSettings.toFeatureProperties())
@@ -62,7 +62,7 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
                 emptyMap()
             )
         )
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE)).thenReturn(agentSettings)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE, build)).thenReturn(agentSettings)
 
         val settingsMap = controller.getToken(NAMESPACE, request)
         Assert.assertEquals(settingsMap, agentSettings.toFeatureProperties())
@@ -86,7 +86,7 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
                 emptyMap()
             )
         )
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings1, NAMESPACE)).thenReturn(agentSettings1)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings1, NAMESPACE, build)).thenReturn(agentSettings1)
 
         val agentSettings2 = getDefaultSettings(
             Auth.getAgentAuthFromProperties(
@@ -94,7 +94,7 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
             ),
             namespace2
         )
-        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings2, namespace2)).thenReturn(agentSettings2)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings2, namespace2, build)).thenReturn(agentSettings2)
 
         val settingsMap1 = controller.getToken(NAMESPACE, request)
         Assert.assertEquals(settingsMap1, agentSettings1.toFeatureProperties())
