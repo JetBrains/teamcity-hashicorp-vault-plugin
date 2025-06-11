@@ -50,8 +50,8 @@ class VaultTestQueryController(
 
         val projectId = properties[VaultConstants.PROJECT_ID] ?: return writeError(response, HttpStatus.BAD_REQUEST, "Failed to find projectId parameter")
         val project = projectManager.findProjectByExternalId(projectId) ?: return writeError(response, HttpStatus.NOT_FOUND, "Project $projectId not found")
-        val buildTypeId = properties[VaultConstants.BUILD_TYPE_ID] ?: return writeError(response, HttpStatus.BAD_REQUEST, "Failed to find buildTypeId parameter")
-        val buildType = projectManager.findBuildTypeByExternalId(buildTypeId) ?: return writeError(response, HttpStatus.NOT_FOUND, "BuildType $buildTypeId not found")
+        val buildTypeId = properties[VaultConstants.BUILD_TYPE_ID]
+        val buildType = buildTypeId?.let { projectManager.findBuildTypeByExternalId(it) ?: return writeError(response, HttpStatus.NOT_FOUND, "BuildType $it not found") }
         doTestQuery(project, buildType, properties, xmlResponse)
     }
 
@@ -66,7 +66,7 @@ class VaultTestQueryController(
         writer.flush()
     }
 
-    private fun doTestQuery(project: SProject, buildType: SBuildType, properties: Map<String, String>, xmlResponse: Element) {
+    private fun doTestQuery(project: SProject, buildType: SBuildType?, properties: Map<String, String>, xmlResponse: Element) {
         val errors = ActionErrors()
 
         val invalids = VaultParameterSettings.getInvalidProperties(properties)
@@ -90,7 +90,11 @@ class VaultTestQueryController(
                 return
             }
 
-            val isWriteEngineEnabled = buildType is InternalParameters && buildType.getBooleanInternalParameter(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES)
+            val isWriteEngineEnabled =  if (buildType is InternalParameters) {
+                buildType.getBooleanInternalParameter(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES)
+            } else {
+                project.getParameterValue(VaultConstants.FeatureFlags.FEATURE_ENABLE_WRITE_ENGINES)?.toBoolean() ?: false
+            }
 
             IOGuard.allowNetworkCall<Exception> {
                 val agentFeature = hashiCorpVaultConnectionResolver
