@@ -215,7 +215,7 @@ public class VaultConnectorTest {
 
   @Test
   public void testRetrierIsCalledFor500Error() throws JsonProcessingException {
-    TeamCityProperties.getModel().storeDefaultValue(VaultRetrier.RETRY_DELAY, "0");
+    TeamCityProperties.getModel().storeDefaultValue(VaultRetrier.RETRY_DELAY_PARAM, "0");
     final RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
     final String path = "/path";
     final Map<String, String> body = Collections.emptyMap();
