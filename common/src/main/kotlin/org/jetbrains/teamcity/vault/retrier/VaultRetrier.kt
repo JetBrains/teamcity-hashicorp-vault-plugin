@@ -6,6 +6,7 @@ import jetbrains.buildServer.util.retry.Retrier
 import jetbrains.buildServer.util.retry.RetrierEventListener
 import org.apache.http.conn.ConnectTimeoutException
 import java.lang.Exception
+import java.net.SocketTimeoutException
 import java.util.concurrent.Callable
 
 object VaultRetrier {
@@ -25,10 +26,14 @@ object VaultRetrier {
         val maxAttempts = getIntParameter(MAX_ATTEMPTS_PARAM, 5, params)
         val retryDelayMillis = getIntParameter(RETRY_DELAY_PARAM, 200, params)
 
-         val timeoutExceptionListener =
+         val connectTimeoutExceptionListener =
             object : ClientExceptionListener<ConnectTimeoutException>(ConnectTimeoutException::class) {
                 override fun isNonRecoverableKubernetesException(exception: ConnectTimeoutException): Boolean = false
             }
+         val socketTimeoutExceptionListener =
+             object : ClientExceptionListener<SocketTimeoutException>(SocketTimeoutException::class) {
+                 override fun isNonRecoverableKubernetesException(exception: SocketTimeoutException): Boolean = false
+             }
 
         val loggerRetrierListener = object : RetrierEventListener {
             override fun <T : Any?> onFailure(callable: Callable<T?>, attempt: Int, e: Exception) {
@@ -40,7 +45,8 @@ object VaultRetrier {
             Retrier.DelayStrategy.exponentialBackoff(retryDelayMillis),
         )
         retrier.registerListener(SpringHttpErrorCodeListener())
-        retrier.registerListener(timeoutExceptionListener)
+        retrier.registerListener(connectTimeoutExceptionListener)
+        retrier.registerListener(socketTimeoutExceptionListener)
         retrier.registerListener(loggerRetrierListener)
 
         for (listener in additionalListeners) {
