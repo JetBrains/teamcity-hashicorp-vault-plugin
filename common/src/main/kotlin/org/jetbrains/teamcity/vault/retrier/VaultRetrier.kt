@@ -18,22 +18,22 @@ object VaultRetrier {
         return params?.get(paramName)?.toIntOrNull() ?: TeamCityProperties.getInteger(paramName, defaultValue)
     }
 
-     fun getRetrier(
-         retrierPurpose: String,
-         additionalListeners: List<RetrierEventListener> = emptyList(),
-         params: Map<String, String>? = null
+    fun getRetrier(
+        retrierPurpose: String,
+        additionalListeners: List<RetrierEventListener> = emptyList(),
+        params: Map<String, String>? = null
     ): Retrier {
         val maxAttempts = getIntParameter(MAX_ATTEMPTS_PARAM, 5, params)
         val retryDelayMillis = getIntParameter(RETRY_DELAY_PARAM, 200, params)
 
-         val connectTimeoutExceptionListener =
+        val connectTimeoutExceptionListener =
             object : ClientExceptionListener<ConnectTimeoutException>(ConnectTimeoutException::class) {
                 override fun isNonRecoverableKubernetesException(exception: ConnectTimeoutException): Boolean = false
             }
-         val socketTimeoutExceptionListener =
-             object : ClientExceptionListener<SocketTimeoutException>(SocketTimeoutException::class) {
-                 override fun isNonRecoverableKubernetesException(exception: SocketTimeoutException): Boolean = false
-             }
+        val socketTimeoutExceptionListener =
+            object : ClientExceptionListener<SocketTimeoutException>(SocketTimeoutException::class) {
+                override fun isNonRecoverableKubernetesException(exception: SocketTimeoutException): Boolean = false
+            }
 
         val loggerRetrierListener = object : RetrierEventListener {
             override fun <T : Any?> onFailure(callable: Callable<T?>, attempt: Int, e: Exception) {

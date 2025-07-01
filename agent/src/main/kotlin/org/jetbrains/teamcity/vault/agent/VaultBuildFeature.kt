@@ -5,8 +5,6 @@ import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.BuildProblemData
 import jetbrains.buildServer.agent.*
 import jetbrains.buildServer.log.Loggers
-import jetbrains.buildServer.serverSide.TeamCityProperties
-import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import jetbrains.buildServer.util.EventDispatcher
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.positioning.PositionAware
@@ -27,12 +25,9 @@ class VaultBuildFeature(
         val LOG = Logger.getInstance(Loggers.AGENT_CATEGORY + "." + VaultBuildFeature::class.java.name)
     }
 
-    private val retrier: Retrier
-
     init {
         dispatcher.addListener(this)
         LOG.info("HashiCorp Vault integration enabled")
-        retrier = VaultRetrier.getRetrier("fetching the vault session token")
     }
 
     private val sessions = ConcurrentHashMap<Long, LifecycleAwareSessionManager>()
@@ -56,9 +51,10 @@ class VaultBuildFeature(
             allParameters[getParametersFetchedForNamespaceParameter(it)] != "true"
         }
 
+        val retrier = VaultAgentRetrier.getAgentRetrier(build, "fetching the vault session token")
         val settingsAndTokens = nonFetchedNamespaces.mapNotNull { namespace ->
             val settings = vaultFeatureSettingsFetcher.getVaultFeatureSettings(namespace, build) ?: return@mapNotNull null
-            val token = resolveToken(allParameters, settings, build, namespace) ?: return@mapNotNull null
+            val token = resolveToken(allParameters, settings, build, namespace, retrier) ?: return@mapNotNull null
             namespace to VaultFeatureSettingsAndToken(settings, token)
         }
 
@@ -138,7 +134,8 @@ class VaultBuildFeature(
         parameters: Map<String, String>,
         settings: VaultFeatureSettings,
         runningBuild: AgentRunningBuild,
-        namespace: String
+        namespace: String,
+        retrier: Retrier
     ): String? {
         if (settings.url.isBlank()) {
             return null
