@@ -42,6 +42,7 @@ class VaultFeatureSettingsFetcher(private val sslTrustStoreProvider: SSLTrustSto
                 .withCredentials(SimpleCredentials(build.accessUser, build.accessCode))
                 .withTimeout(configuration.serverConnectionTimeout * 1000)
                 .allowNonSecureConnection(true)
+                .withPreemptiveAuthentication(true)
                 .withTrustStore(sslTrustStoreProvider.trustStore)
 
             if (configuration.serverProxyHost != null) {
