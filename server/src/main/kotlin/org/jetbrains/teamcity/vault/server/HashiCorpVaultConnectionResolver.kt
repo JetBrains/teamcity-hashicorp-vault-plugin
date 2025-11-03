@@ -75,7 +75,6 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
                 if (build != null) {
                     message += ", build: ${LogUtil.describe(build)}"
                 }
-                LOG.warnAndDebugDetails(message, e)
                 throw RuntimeException(message, e)
             }
             val featureSettingsMap = settings.toFeatureProperties().toMutableMap()
