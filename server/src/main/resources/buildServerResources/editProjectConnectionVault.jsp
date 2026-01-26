@@ -6,7 +6,7 @@
 <jsp:useBean id="project" type="jetbrains.buildServer.serverSide.SProject" scope="request" />
 <jsp:useBean id="oauthConnectionBean" type="jetbrains.buildServer.serverSide.oauth.OAuthConnectionBean" scope="request" />
 <jsp:useBean id="propertiesBean" type="jetbrains.buildServer.serverSide.oauth.OAuthConnectionBean" scope="request" />
-<c:set var="gcpIamAuthEnabled" value="${intprop:getBoolean('teamcity.internal.vault.gcp.iam.enabled')}"/>
+<c:set var="gcpIamAuthEnabled" value="${intprop:getBooleanOrTrue('teamcity.internal.vault.gcp.iam.enabled')}"/>
 <bs:linkScript>
     /js/bs/testConnection.js
 </bs:linkScript>
@@ -215,7 +215,7 @@
 </tr>
 
 <tr class="auth-container auth-gcp-iam">
-    <td><label for="${keys.GCP_ROLE}">GCP Role</label></td>
+    <td><label for="${keys.GCP_ROLE}">Vault GCP Role:</label></td>
     <td>
         <props:textProperty name="${keys.GCP_ROLE}" className="longField textProperty_max-width js_max-width" />
         <span class="error" id="error_${keys.GCP_ROLE}" />
@@ -223,7 +223,7 @@
 </tr>
 
 <tr class="noBorder auth-container auth-gcp-iam">
-    <td><label for="${keys.GCP_SERVICE_ACCOUNT}">GCP Service Account ID</label></td>
+    <td><label for="${keys.GCP_SERVICE_ACCOUNT}">GCP Service Account ID:</label></td>
     <td>
         <props:textProperty name="${keys.GCP_SERVICE_ACCOUNT}" className="longField textProperty_max-width js_max-width" />
         <span class="error" id="error_${keys.GCP_SERVICE_ACCOUNT}" />
@@ -237,7 +237,7 @@
 </tr>
 
 <tr class="noBorder auth-container auth-gcp-iam">
-    <td><label for="${keys.GCP_ENDPOINT_PATH}">GCP Endpoint Path</label></td>
+    <td><label for="${keys.GCP_ENDPOINT_PATH}">GCP Endpoint Path:</label></td>
     <td>
         <props:textProperty name="${keys.GCP_ENDPOINT_PATH}" className="longField textProperty_max-width js_max-width" />
         <span class="error" id="error_${keys.GCP_ENDPOINT_PATH}" />
