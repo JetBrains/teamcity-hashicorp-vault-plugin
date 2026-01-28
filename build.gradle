@@ -3,15 +3,15 @@ import com.github.jk1.license.render.JsonReportRenderer
 import com.github.jk1.license.filter.LicenseBundleNormalizer
 
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.9.0'
-    id "io.github.rodm.teamcity-server" version "1.5.2"
-    id "com.github.jk1.dependency-license-report" version "1.17"
+    id 'org.jetbrains.kotlin.jvm' version '2.0.21'
+    id "io.github.rodm.teamcity-server" version "1.5.6"
+    id "com.github.jk1.dependency-license-report" version "2.9"
 }
 
 initializeWorkspace()
 
 ext {
-    ext.kotlin_version = '1.7.0'
+    ext.kotlin_version = '2.0.21'
     version_prefix = '0.1'
     teamcity_version = anyParam('teamcityVersion') ?: '2024.07-SNAPSHOT'
     // compile

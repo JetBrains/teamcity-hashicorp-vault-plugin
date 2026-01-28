@@ -81,4 +81,4 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
 
 
 // Do not include version into plugin archive name
-project.tasks.getByName('serverPlugin').version = ''
+project.tasks.getByName('serverPlugin').archiveFileName = 'hashicorp-vault-plugin.zip'

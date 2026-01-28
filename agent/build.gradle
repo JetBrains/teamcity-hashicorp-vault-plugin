@@ -43,4 +43,4 @@ teamcity {
 }
 
 // Do not include version into plugin archive name
-project.tasks.getByName('agentPlugin').version = ''
+project.tasks.getByName('agentPlugin').archiveFileName = 'hashicorp-vault-plugin.zip'
