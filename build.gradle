@@ -34,11 +34,6 @@ group = 'org.jetbrains.teamcity.vault'
 version = anyParam('PluginVersion') ?: "SNAPSHOT"
 def localRepo = anyParamPath('TC_LOCAL_REPO')
 
-if (System.getenv('BUILD_NUMBER') != null) {
-    version = "${System.env.BUILD_NUMBER}"
-}
-
-
 subprojects {
     group = rootProject.group
     version = rootProject.version
