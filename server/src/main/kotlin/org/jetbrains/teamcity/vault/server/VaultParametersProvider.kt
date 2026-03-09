@@ -50,8 +50,4 @@ class VaultParametersProvider : AbstractBuildParametersProvider() {
         VaultReferencesUtil.collect(parameters, exposed, vaultFeatures.map { feature -> feature.id })
         return exposed
     }
-
-    override fun getPrefix(): String {
-        return VaultConstants.VAULT_PARAMETER_PREFIX
-    }
 }
