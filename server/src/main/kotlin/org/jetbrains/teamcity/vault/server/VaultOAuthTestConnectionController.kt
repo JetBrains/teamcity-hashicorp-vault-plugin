@@ -1,4 +1,3 @@
-
 package org.jetbrains.teamcity.vault.server
 
 import jetbrains.buildServer.controllers.*
@@ -7,9 +6,11 @@ import jetbrains.buildServer.controllers.admin.projects.PluginPropertiesUtil
 import jetbrains.buildServer.serverSide.IOGuard
 import jetbrains.buildServer.serverSide.ProjectManager
 import jetbrains.buildServer.serverSide.SBuildServer
+import jetbrains.buildServer.serverSide.auth.Permission
 import jetbrains.buildServer.serverSide.connections.ProjectConnectionsManager
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import jetbrains.buildServer.web.openapi.WebControllerManager
+import jetbrains.buildServer.web.util.SessionUser
 import org.jdom.Element
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import javax.servlet.http.HttpServletRequest
@@ -38,6 +39,29 @@ class VaultOAuthTestConnectionController(
         val properties = propertiesBean.properties.toMutableMap()
 
         doTestConnection(properties, xmlResponse)
+    }
+
+    private fun checkUserPermissions(
+        request: HttpServletRequest,
+        xmlResponse: Element
+    ) {
+        val errors = ActionErrors()
+        val project = projectManager.findProjectByExternalId(request.getParameter("projectId"))
+        if (project == null) {
+            errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Project not found")
+            errors.serialize(xmlResponse)
+            return
+        }
+
+        val user = SessionUser.getUser(request)
+
+        val hasAccess = user.isPermissionGrantedForProject(project.getProjectId(), Permission.EDIT_PROJECT)
+
+        if (!hasAccess) {
+            errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Authorised user lacks permissions for the project: " + project.getExternalId())
+            errors.serialize(xmlResponse)
+            return
+        }
     }
 
     private fun doTestConnection(properties: Map<String, String>, xmlResponse: Element) {
