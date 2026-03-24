@@ -1,5 +1,6 @@
 package org.jetbrains.teamcity.vault.server
 
+import jetbrains.buildServer.serverSide.asserts.ServerAsserts.then
 import jetbrains.buildServer.serverSide.impl.BaseServerTestCase
 import jetbrains.buildServer.web.util.WebAuthUtil
 import org.jetbrains.teamcity.vault.Auth
@@ -46,6 +47,25 @@ class HashicorpVaultConnectionControllerTest : BaseServerTestCase() {
 
         val settingsMap = controller.getToken(NAMESPACE, request)
         Assert.assertEquals(settingsMap, agentSettings.toFeatureProperties())
+    }
+
+    @Test
+    fun testGetToken_Exception() {
+        val build = createRunningBuild(myBuildType, emptyArray(), emptyArray())
+        val serverSettings = getDefaultSettings(Auth.getServerAuthFromProperties(emptyMap()))
+        Mockito.`when`(request.getAttribute(WebAuthUtil.TEAM_CITY_AUTHENTICATED_BUILD)).thenReturn(build.buildId)
+        Mockito.`when`(hashiCorpVaultConnectionResolver.getVaultConnection(myProject, NAMESPACE))
+                .thenReturn(serverSettings)
+
+        Mockito.`when`(hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(serverSettings, NAMESPACE, build))
+            .thenThrow(RuntimeException("Mock error"))
+
+        try {
+            controller.getToken(NAMESPACE, request)
+        }
+        catch (e: ResponseStatusException) {
+            then(e.reason).contains("Mock error")
+        }
     }
 
     @Test(expectedExceptions = [ResponseStatusException::class])
