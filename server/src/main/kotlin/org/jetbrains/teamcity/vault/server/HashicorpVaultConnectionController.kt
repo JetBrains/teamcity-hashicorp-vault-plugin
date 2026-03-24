@@ -74,7 +74,7 @@ class HashicorpVaultConnectionController(
             agentFeatureSettings.toFeatureProperties()
         } catch (e: Throwable) {
             LOG.warnAndDebugDetails("Failed to request token for hashicorp vault namespace ${feature.id} build ${build.buildId} of ${project.projectId}", e)
-            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to request token", e)
+            throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to request token: " + e.message, e)
         }
     }
 
