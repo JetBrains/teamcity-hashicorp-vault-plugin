@@ -6,6 +6,7 @@ import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.*
 import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
+import jetbrains.buildServer.util.SecretValueMasker
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.support.VaultResponses
@@ -23,6 +24,21 @@ import org.springframework.web.client.RestTemplate
 import java.net.URI
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
+
+/**
+ * Diagnostic context propagated into Vault login flow purely for logging
+ * (build id and project id of the resolved feature). The connection namespace
+ * is taken from [VaultFeatureSettings.id] and does not need to be duplicated here.
+ */
+data class VaultLoginContext(
+    val buildId: Long? = null,
+    val projectId: String? = null
+) {
+    companion object {
+        @JvmField
+        val EMPTY = VaultLoginContext()
+    }
+}
 
 class VaultConnector(
     private val trustStoreProvider: SSLTrustStoreProvider,
@@ -44,7 +60,7 @@ class VaultConnector(
                     try {
                         val template = createRestTemplate(settings, trustStoreProvider)
                         // Login and retrieve server token
-                        val (token, _) = performLogin(template, settings, extractTokenAndAccessor)
+                        val (token, _) = performLogin(template, settings, VaultLoginContext.EMPTY, extractTokenAndAccessor)
 
                         template.withVaultToken(token)
                         try {
@@ -176,27 +192,42 @@ class VaultConnector(
         }
 
         @JvmStatic
-        fun doRequestWrappedToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
+        @JvmOverloads
+        fun doRequestWrappedToken(
+            settings: VaultFeatureSettings,
+            trustStoreProvider: SSLTrustStoreProvider,
+            ctx: VaultLoginContext = VaultLoginContext.EMPTY
+        ): Pair<String, String> {
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
             val factory = createClientHttpRequestFactory(trustStoreProvider)
 
             val template = VaultTemplate(endpoint, settings.vaultNamespace, factory, null)
             template.wrapResponses(TeamCityProperties.getProperty("teamcity.vault.xVaultWrapTTL", "10m"))
 
-            return performLogin(template.defaultTemplate, settings, extractWrappedTokenAndAccessor)
+            return performLogin(template.defaultTemplate, settings, ctx, extractWrappedTokenAndAccessor)
         }
 
         @JvmStatic
-        fun doRequestToken(settings: VaultFeatureSettings, trustStoreProvider: SSLTrustStoreProvider): Pair<String, String> {
+        @JvmOverloads
+        fun doRequestToken(
+            settings: VaultFeatureSettings,
+            trustStoreProvider: SSLTrustStoreProvider,
+            ctx: VaultLoginContext = VaultLoginContext.EMPTY
+        ): Pair<String, String> {
             val endpoint = VaultEndpoint.from(URI.create(settings.url))!!
             val factory = createClientHttpRequestFactory(trustStoreProvider)
 
             val template = VaultTemplate(endpoint, settings.vaultNamespace, factory, null)
 
-            return performLogin(template.defaultTemplate, settings, extractTokenAndAccessor)
+            return performLogin(template.defaultTemplate, settings, ctx, extractTokenAndAccessor)
         }
 
-        private fun performLogin(template: RestTemplate, settings: VaultFeatureSettings, extractor: (VaultResponse) -> Pair<String, String>): Pair<String, String> {
+        private fun performLogin(
+            template: RestTemplate,
+            settings: VaultFeatureSettings,
+            ctx: VaultLoginContext,
+            extractor: (VaultResponse) -> Pair<String, String>
+        ): Pair<String, String> {
             when (val auth = settings.auth) {
                 is Auth.AppRoleAuthServer -> {
                     val options = AppRoleAuthenticationOptions.builder()
@@ -208,7 +239,7 @@ class VaultConnector(
                     val body = getAppRoleLogin(auth)
                     val path = "auth/${options.path}/login"
 
-                    return performLoginRequest(template, auth.method, path, body, auth.secretId, extractor)
+                    return performLoginRequest(template, auth.method, path, body, auth.secretId, extractor, settings, ctx, auth.roleId)
                 }
 
                 is Auth.LdapServer -> {
@@ -221,7 +252,7 @@ class VaultConnector(
                     val path = "auth/${options.path}/login/${options.username}"
                     val body = mapOf("password" to auth.password)
 
-                    return performLoginRequest(template, auth.method, path, body, auth.password, extractor)
+                    return performLoginRequest(template, auth.method, path, body, auth.password, extractor, settings, ctx, auth.username)
                 }
 
                 else -> error("Unsupported auth method: ${settings.auth.method}, class: ${settings.auth::class.qualifiedName}")
@@ -250,46 +281,118 @@ class VaultConnector(
             token to accessor
         }
 
+        @JvmStatic
+        @JvmOverloads
         fun performLoginRequest(
             template: RestTemplate,
             method: AuthMethod,
             path: String,
             body: Map<String, String>,
             maskingValue: String,
-            extractor: (VaultResponse) -> Pair<String, String>
-        ): Pair<String, String> =
-            try {
+            extractor: (VaultResponse) -> Pair<String, String>,
+            settings: VaultFeatureSettings? = null,
+            ctx: VaultLoginContext = VaultLoginContext.EMPTY,
+            roleIdentifier: String = ""
+        ): Pair<String, String> {
+            logLoginAttempt(method, path, settings, ctx, roleIdentifier, maskingValue)
+            return try {
                 val errorMessage = "HashiCorp Vault hasn't returned anything from POST to '$path'"
                 val vaultResponse = retrier.execute(Callable {
                     template.write(path, body)
                         ?: throw VaultException(errorMessage)
                 }) ?: throw VaultException(errorMessage)
-                extractor(vaultResponse)
+                val result = extractor(vaultResponse)
+                logLoginSuccess(method, settings, ctx, result.second)
+                result
             } catch (e: VaultException) {
                 val cause = e.cause
                 if (cause is HttpStatusCodeException) {
+                    logLoginFailure(method, settings, ctx, roleIdentifier, maskingValue, cause)
                     throw getReadableException(cause, method) { it.replace(maskingValue, "*******") }
                 }
+                logLoginFailure(method, settings, ctx, roleIdentifier, maskingValue, e)
                 throw e
             }
+        }
+
+        private fun logLoginAttempt(
+            method: AuthMethod,
+            path: String,
+            settings: VaultFeatureSettings?,
+            ctx: VaultLoginContext,
+            roleIdentifier: String,
+            secretValue: String
+        ) {
+            LOG.info(
+                "Vault login attempt: build_id=${ctx.buildId}, project_id='${ctx.projectId}', " +
+                "namespace='${settings?.id ?: ""}', vault_url='${settings?.url ?: ""}', " +
+                "vault_namespace='${settings?.vaultNamespace ?: ""}', auth_method=${method.name}, " +
+                "auth_path='$path', role_id='$roleIdentifier', " +
+                "secret_id='${SecretValueMasker.mask(secretValue)}'"
+            )
+        }
+
+        private fun logLoginSuccess(
+            method: AuthMethod,
+            settings: VaultFeatureSettings?,
+            ctx: VaultLoginContext,
+            accessor: String
+        ) {
+            LOG.info(
+                "Vault login OK: build_id=${ctx.buildId}, project_id='${ctx.projectId}', " +
+                "namespace='${settings?.id ?: ""}', auth_method=${method.name}, accessor='$accessor'"
+            )
+        }
+
+        private fun logLoginFailure(
+            method: AuthMethod,
+            settings: VaultFeatureSettings?,
+            ctx: VaultLoginContext,
+            roleIdentifier: String,
+            secretValue: String,
+            failure: Throwable
+        ) {
+            val statusCode = (failure as? HttpStatusCodeException)?.rawStatusCode
+                ?: (failure.cause as? HttpStatusCodeException)?.rawStatusCode
+                ?: -1
+            val vaultError = (failure as? HttpStatusCodeException)?.let { VaultResponses.getError(it) }
+                ?: (failure.cause as? HttpStatusCodeException)?.let { VaultResponses.getError(it) }
+                ?: failure.message.orEmpty()
+            LOG.warn(
+                "Vault login FAILED: build_id=${ctx.buildId}, project_id='${ctx.projectId}', " +
+                "namespace='${settings?.id ?: ""}', vault_url='${settings?.url ?: ""}', " +
+                "auth_method=${method.name}, http_status=${statusCode}, " +
+                "role_id='$roleIdentifier', " +
+                "secret_id='${SecretValueMasker.mask(secretValue)}', " +
+                "vault_error='${vaultError.take(200).replace('\n', ' ')}'"
+            )
+        }
     }
 
 
     @Suppress("UnstableApiUsage")
-    fun requestWrappedToken(settings: VaultFeatureSettings): String {
+    @JvmOverloads
+    fun requestWrappedToken(
+        settings: VaultFeatureSettings,
+        ctx: VaultLoginContext = VaultLoginContext.EMPTY
+    ): String {
         try {
-            val (token, _) = doRequestWrappedToken(settings, trustStoreProvider)
+            val (token, _) = doRequestWrappedToken(settings, trustStoreProvider, ctx)
             return token
         } catch (e: Exception) {
             throw e
         }
     }
 
-    fun tryRequestToken(settings: VaultFeatureSettings): LeasedTokenInfo {
+    @JvmOverloads
+    fun tryRequestToken(
+        settings: VaultFeatureSettings,
+        ctx: VaultLoginContext = VaultLoginContext.EMPTY
+    ): LeasedTokenInfo {
         return when (settings.auth.method) {
             AuthMethod.APPROLE,
             AuthMethod.LDAP -> {
-                val (token, accessor) = doRequestToken(settings, trustStoreProvider)
+                val (token, accessor) = doRequestToken(settings, trustStoreProvider, ctx)
                 LeasedTokenInfo(token, accessor, settings)
             }
 

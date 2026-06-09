@@ -6,6 +6,7 @@ import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.SBuild
 import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.serverSide.oauth.OAuthConstants
+import jetbrains.buildServer.util.SecretValueMasker
 import org.jetbrains.teamcity.vault.Auth
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultFeatureSettings
@@ -68,8 +69,12 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
 
     fun serverFeatureSettingsToAgentSettings(settings: VaultFeatureSettings, namespace: String, build: SBuild?): VaultFeatureSettings =
         if (settings.auth is Auth.AppRoleAuthServer || settings.auth is Auth.LdapServer) {
+            val ctx = VaultLoginContext(
+                buildId = build?.buildId,
+                projectId = build?.projectId
+            )
             val wrappedToken: String = try {
-                connector.requestWrappedToken(settings)
+                connector.requestWrappedToken(settings, ctx)
             } catch (e: Throwable) {
                 var message = "Failed to fetch HashiCorp Vault wrapped token: ${e.message}, namespace: $namespace, project feature id: ${settings.id}"
                 if (build != null) {
@@ -77,6 +82,7 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
                 }
                 throw RuntimeException(message, e)
             }
+            logIssuedToken(settings, namespace, build, wrappedToken)
             val featureSettingsMap = settings.toFeatureProperties().toMutableMap()
             val agentAuth = when (settings.auth) {
                 is Auth.AppRoleAuthServer -> Auth.AppRoleAuthAgent(wrappedToken)
@@ -89,6 +95,25 @@ class HashiCorpVaultConnectionResolver(private val connector: VaultConnector) {
         } else {
             settings
         }
+
+    /**
+     * Logs which project requested a Vault wrapped token, which connection/credentials were used to
+     * obtain it, and the resulting token. Helps diagnose the sporadic "permission denied" failures
+     * (TW-93821): if a same-namespace connection from a different project is picked up, the role id /
+     * secret logged here will differ. The secret and the wrapped token are masked via [SecretValueMasker].
+     */
+    private fun logIssuedToken(settings: VaultFeatureSettings, namespace: String, build: SBuild?, wrappedToken: String) {
+        val (credentialId, secretMasked) = when (val auth = settings.auth) {
+            is Auth.AppRoleAuthServer -> auth.roleId to SecretValueMasker.mask(auth.secretId)
+            is Auth.LdapServer -> auth.username to SecretValueMasker.mask(auth.password)
+            else -> "" to ""
+        }
+        LOG.info(
+            "Vault wrapped token issued: build_id=${build?.buildId}, project_id='${build?.projectId}', " +
+            "namespace='$namespace', connection_id='${settings.id}', auth_method=${settings.auth.method.name}, " +
+            "role_id='$credentialId', secret_id='$secretMasked', wrapped_token='${SecretValueMasker.mask(wrappedToken)}'"
+        )
+    }
 
     private data class ConnectionDescriptor(val projectId: String, val parameterNamespace: String)
 }

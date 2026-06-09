@@ -67,6 +67,12 @@ class HashicorpVaultConnectionController(
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "A token has already been generated for this build")
         }
 
+        LOG.info(
+            "Resolving Vault wrapped token: build_id=${build.buildId}, " +
+            "project_id='${project.projectId}', namespace='$namespace', " +
+            "vault_url='${feature.url}', vault_namespace='${feature.vaultNamespace}'"
+        )
+
         return try {
             val agentFeatureSettings = IOGuard.allowNetworkCall<VaultFeatureSettings, Exception> {
                 hashiCorpVaultConnectionResolver.serverFeatureSettingsToAgentSettings(feature, namespace, build)

@@ -13,7 +13,7 @@ initializeWorkspace()
 ext {
     ext.kotlin_version = '2.0.21'
     version_prefix = '0.1'
-    teamcity_version = anyParam('teamcityVersion') ?: '2024.07-SNAPSHOT'
+    teamcity_version = anyParam('teamcityVersion') ?: '2026.2-SNAPSHOT'
     // compile
     spring_version = '5.3.34'
     sprint_vault_version = '2.3.3'
