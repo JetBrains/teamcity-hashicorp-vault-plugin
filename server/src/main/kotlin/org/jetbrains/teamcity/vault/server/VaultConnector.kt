@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.diagnostic.Logger
 import jetbrains.buildServer.log.Loggers
 import jetbrains.buildServer.serverSide.*
+import jetbrains.buildServer.serverSide.impl.projects.ProjectCredentialsStorage
 import org.jetbrains.teamcity.vault.retrier.VaultRetrier
 import org.jetbrains.teamcity.vault.retrier.SpringHttpErrorCodeListener
 import jetbrains.buildServer.util.SecretValueMasker
@@ -174,6 +175,24 @@ class VaultConnector(
             return login
         }
 
+        /**
+         * Fails fast when the credential is a `credentialsJSON:` secure value token which TeamCity could not
+         * resolve (e.g. the project was copied without its secure values). Such a login is guaranteed to be
+         * rejected by Vault and, repeated a few times, triggers Vault's user lockout for the whole role,
+         * breaking every project sharing the role_id (TW-93821).
+         */
+        private fun failOnUnresolvedSecureValue(value: String, parameterName: String, settings: VaultFeatureSettings, ctx: VaultLoginContext) {
+            if (ProjectCredentialsStorage.isSecureValueToken(value)) {
+                val project = ctx.projectId?.let { " of project '$it'" } ?: ""
+                throw IllegalStateException(
+                    "Cannot log in to HashiCorp Vault using ${settings.auth.method.name} method: " +
+                    "the $parameterName of the connection '${settings.id}'$project is an unresolved TeamCity secure value token, " +
+                    "the secure value it references is missing in the project (e.g. the project was copied or imported without its secure values). " +
+                    "Re-enter the $parameterName in the connection settings. Vault login was not attempted to prevent a user lockout."
+                )
+            }
+        }
+
         private fun getReadableException(cause: HttpStatusCodeException, method: AuthMethod, replacer: ((String) -> String)? = null): ConnectionException {
             val err = VaultResponses.getError(cause)
             val prefix = "Cannot log in to HashiCorp Vault using ${method.name} method"
@@ -230,6 +249,7 @@ class VaultConnector(
         ): Pair<String, String> {
             when (val auth = settings.auth) {
                 is Auth.AppRoleAuthServer -> {
+                    failOnUnresolvedSecureValue(auth.secretId, "Secret ID", settings, ctx)
                     val options = AppRoleAuthenticationOptions.builder()
                         .path(auth.getNormalizedEndpoint())
                         .roleId(auth.roleId)
@@ -243,6 +263,7 @@ class VaultConnector(
                 }
 
                 is Auth.LdapServer -> {
+                    failOnUnresolvedSecureValue(auth.password, "Password", settings, ctx)
                     val options = LdapAuthenticationOptions.builder()
                         .username(auth.username)
                         .password(auth.password)
