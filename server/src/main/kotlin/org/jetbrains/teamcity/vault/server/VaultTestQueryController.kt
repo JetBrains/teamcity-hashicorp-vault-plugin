@@ -5,11 +5,11 @@ import jetbrains.buildServer.controllers.*
 import jetbrains.buildServer.controllers.admin.projects.EditVcsRootsController
 import jetbrains.buildServer.controllers.admin.projects.PluginPropertiesUtil
 import jetbrains.buildServer.serverSide.*
-import jetbrains.buildServer.serverSide.auth.AccessDeniedException
 import jetbrains.buildServer.serverSide.auth.Permission
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.util.ssl.SSLTrustStoreProvider
 import jetbrains.buildServer.web.openapi.WebControllerManager
+import jetbrains.buildServer.web.util.SessionUser
 import org.jdom.Element
 import org.jetbrains.teamcity.vault.*
 import org.jetbrains.teamcity.vault.server.HashiCorpVaultConnectionResolver.ParameterNamespaceCollisionException
@@ -30,7 +30,7 @@ class VaultTestQueryController(
     private val hashiCorpVaultConnectionResolver: HashiCorpVaultConnectionResolver,
     private val sessionManagerBuilder: SessionManagerBuilder,
     private val connector: VaultConnector,
-) : BaseFormXmlController(server), RequestPermissionsCheckerEx {
+) : BaseFormXmlController(server) {
 
     private val scheduler: TaskScheduler = ConcurrentTaskScheduler()
 
@@ -40,16 +40,39 @@ class VaultTestQueryController(
 
     init {
         wcm.registerController(PATH, this)
-        authInterceptor.addPathBasedPermissionsChecker(PATH, this)
     }
 
     override fun doGet(request: HttpServletRequest, response: HttpServletResponse) = null
+
+    private fun checkHasAccess(
+        request: HttpServletRequest,
+        properties: MutableMap<String, String>,
+        xmlResponse: Element,
+        project: SProject
+    ): Boolean {
+        val errors = ActionErrors()
+        val user = SessionUser.getUser(request)
+
+        val hasAccess = user.isPermissionGrantedForProject(project.getProjectId(), Permission.EDIT_PROJECT)
+
+        if (!hasAccess) {
+            errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Authorised user lacks permissions for the project: " + project.getExternalId())
+            errors.serialize(xmlResponse)
+            return false
+        }
+
+        return true
+    }
 
     override fun doPost(request: HttpServletRequest, response: HttpServletResponse, xmlResponse: Element) {
         val properties = getRequestProperties(request)
 
         val projectId = properties[VaultConstants.PROJECT_ID] ?: return writeError(response, HttpStatus.BAD_REQUEST, "Failed to find projectId parameter")
         val project = projectManager.findProjectByExternalId(projectId) ?: return writeError(response, HttpStatus.NOT_FOUND, "Project $projectId not found")
+        if (!checkHasAccess(request, properties, xmlResponse, project)) {
+            return
+        }
+
         val buildTypeId = properties[VaultConstants.BUILD_TYPE_ID]
         val buildType = buildTypeId?.let { projectManager.findBuildTypeByExternalId(it) ?: return writeError(response, HttpStatus.NOT_FOUND, "BuildType $it not found") }
         doTestQuery(project, buildType, properties, xmlResponse)
@@ -122,16 +145,6 @@ class VaultTestQueryController(
         }
     }
 
-    override fun checkPermissions(securityContext: SecurityContextEx, request: HttpServletRequest) {
-        val projectProperties = getRequestProperties(request)
-        val projectId = projectProperties[VaultConstants.PROJECT_ID]
-        val project = projectManager.findProjectByExternalId(projectId)
-        if (project == null) {
-            throw AccessDeniedException(securityContext.authorityHolder, "No project $projectId")
-        } else {
-            securityContext.authorityHolder.isPermissionGrantedForProject(project.projectId, Permission.EDIT_PROJECT)
-        }
-    }
 
     private fun failTestConnection(
         errors: ActionErrors,
