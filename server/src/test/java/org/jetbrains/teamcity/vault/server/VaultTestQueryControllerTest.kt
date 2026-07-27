@@ -7,7 +7,7 @@ import jetbrains.buildServer.serverSide.InternalParameters
 import jetbrains.buildServer.serverSide.SBuildType
 import jetbrains.buildServer.serverSide.SProject
 import jetbrains.buildServer.serverSide.SimpleParameter
-import jetbrains.buildServer.serverSide.impl.ProjectEx
+import jetbrains.buildServer.web.util.SessionUser
 import org.jetbrains.teamcity.vault.*
 import org.mockito.Answers
 import org.mockito.Mock
@@ -20,7 +20,7 @@ import org.testng.annotations.AfterMethod
 import org.testng.annotations.BeforeMethod
 import org.testng.annotations.Listeners
 import org.testng.annotations.Test
-import java.util.UUID
+import java.util.*
 
 @Listeners(MockitoTestNGListener::class)
 class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryController>() {
@@ -46,6 +46,7 @@ class VaultTestQueryControllerTest : BaseControllerTestCase<VaultTestQueryContro
         projectWriteEngine = createProject(projectId)
         val buildTypeId = UUID.randomUUID().toString()
         buildTypeWriteEngine = registerBuildType(buildTypeId, projectId)
+        SessionUser.setUser(myRequest, createAdmin("testUser"))
     }
 
     @AfterMethod
