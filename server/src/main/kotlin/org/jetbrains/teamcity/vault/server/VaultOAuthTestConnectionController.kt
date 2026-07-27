@@ -30,6 +30,11 @@ class VaultOAuthTestConnectionController(
     override fun doGet(request: HttpServletRequest, response: HttpServletResponse) = null
 
     override fun doPost(request: HttpServletRequest, response: HttpServletResponse, xmlResponse: Element) {
+
+        if (!checkHasAccess(request, xmlResponse)) {
+            return
+        }
+
         if (PublicKeyUtil.isPublicKeyExpired(request)) {
             PublicKeyUtil.writePublicKeyExpiredError(xmlResponse)
             return
@@ -41,16 +46,16 @@ class VaultOAuthTestConnectionController(
         doTestConnection(properties, xmlResponse)
     }
 
-    private fun checkUserPermissions(
+    private fun checkHasAccess(
         request: HttpServletRequest,
         xmlResponse: Element
-    ) {
+    ): Boolean {
         val errors = ActionErrors()
         val project = projectManager.findProjectByExternalId(request.getParameter("projectId"))
         if (project == null) {
             errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Project not found")
             errors.serialize(xmlResponse)
-            return
+            return false
         }
 
         val user = SessionUser.getUser(request)
@@ -60,8 +65,10 @@ class VaultOAuthTestConnectionController(
         if (!hasAccess) {
             errors.addError(EditVcsRootsController.FAILED_TEST_CONNECTION_ERR, "Authorised user lacks permissions for the project: " + project.getExternalId())
             errors.serialize(xmlResponse)
-            return
+            return false
         }
+
+        return true
     }
 
     private fun doTestConnection(properties: Map<String, String>, xmlResponse: Element) {
