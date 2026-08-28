@@ -143,7 +143,7 @@ class VaultBuildFeature(
         val logger = runningBuild.buildLogger
         val token: String
         try {
-            val sessionManager = sessionManagerBuilder.buildWithImprovedLogging(settings, logger)
+            val sessionManager = sessionManagerBuilder.buildWithImprovedLogging(settings, namespace, logger)
             sessions[runningBuild.buildId] = sessionManager
             val sessionToken = retrier.execute(
                 Callable {
