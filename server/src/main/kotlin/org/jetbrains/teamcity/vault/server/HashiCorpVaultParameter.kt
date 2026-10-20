@@ -2,24 +2,29 @@
 package org.jetbrains.teamcity.vault.server
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import jetbrains.buildServer.controllers.ActionErrors
 import jetbrains.buildServer.controllers.BasePropertiesBean
 import jetbrains.buildServer.controllers.SimpleView
+import jetbrains.buildServer.controllers.admin.projects.EditVcsRootsController
 import jetbrains.buildServer.controllers.parameters.InvalidParametersException
 import jetbrains.buildServer.controllers.parameters.ParameterContext
 import jetbrains.buildServer.controllers.parameters.ParameterEditContext
 import jetbrains.buildServer.controllers.parameters.ParameterRenderContext
 import jetbrains.buildServer.controllers.parameters.remote.RemoteParameterControlProvider
-import jetbrains.buildServer.messages.serviceMessages.MessageWithAttributes
 import jetbrains.buildServer.serverSide.InvalidProperty
 import jetbrains.buildServer.serverSide.Parameter
 import jetbrains.buildServer.serverSide.SBuild
+import jetbrains.buildServer.serverSide.SProject
+import jetbrains.buildServer.serverSide.auth.Permission
 import jetbrains.buildServer.serverSide.parameters.remote.RemoteParameter
 import jetbrains.buildServer.serverSide.parameters.remote.RemoteParameterProvider
+import jetbrains.buildServer.users.SUser
 import jetbrains.buildServer.util.StringUtil
 import jetbrains.buildServer.web.openapi.PluginDescriptor
+import jetbrains.buildServer.web.util.SessionUser
+import org.jdom.Element
 import org.jetbrains.teamcity.vault.VaultConstants
 import org.jetbrains.teamcity.vault.VaultConstants.PARAMETER_TYPE
-import org.jetbrains.teamcity.vault.VaultFeatureSettings
 import org.jetbrains.teamcity.vault.VaultParameterSettings
 import org.springframework.web.servlet.ModelAndView
 import javax.servlet.http.HttpServletRequest
@@ -29,9 +34,8 @@ class HashiCorpVaultParameter(private val descriptor: PluginDescriptor) : Remote
 
     private val objectMapper = jacksonObjectMapper()
 
-    //TODO: TW-79366
     override fun renderControl(request: HttpServletRequest, context: ParameterRenderContext): ModelAndView {
-        val modelAndView = fillModelWithVault(context) ?: return getErrorModel()
+        val modelAndView = fillModelWithVault(request, context) ?: return getErrorModel()
         modelAndView.viewName = descriptor.getPluginResourcesPath("editCustomParameter.jsp")
         modelAndView.model["propertiesBean"] = BasePropertiesBean(context.description.parameterTypeArguments)
 
@@ -53,18 +57,28 @@ class HashiCorpVaultParameter(private val descriptor: PluginDescriptor) : Remote
 
     override fun getRemoteParameterDescription(): String = "HashiCorp Vault Parameter"
 
-    private fun fillModelWithVault(context: ParameterContext): ModelAndView? {
+    private fun fillModelWithVault(request: HttpServletRequest, context: ParameterContext): ModelAndView? {
         val project = context.getAdditionalParameter(ParameterContext.PROJECT) ?: return null
         val modelAndView = ModelAndView()
 
         val vaultFeatureSettings = VaultConnectionUtils.getFeatures(project)
         modelAndView.model[VAULT_FEATURE_SETTINGS] = vaultFeatureSettings
-
+        modelAndView.model[HAS_EDIT_PERMISSION] = checkHasAccess(request, project)
+        
         return modelAndView
     }
 
+    private fun checkHasAccess(
+        request: HttpServletRequest,
+        project: SProject
+    ): Boolean {
+        val user: SUser? = SessionUser.getUser(request)
+        return user?.isPermissionGrantedForProject(project.getProjectId(), Permission.EDIT_PROJECT) ?: false
+    }
+
+
     override fun renderSpecEditor(request: HttpServletRequest, context: ParameterEditContext): ModelAndView {
-        val modelAndView = fillModelWithVault(context) ?: return getErrorModel()
+        val modelAndView = fillModelWithVault(request, context) ?: return getErrorModel()
         modelAndView.viewName = descriptor.getPluginResourcesPath("editProjectSpec.jsp")
         return modelAndView
     }
@@ -94,5 +108,6 @@ class HashiCorpVaultParameter(private val descriptor: PluginDescriptor) : Remote
 
     companion object {
         const val VAULT_FEATURE_SETTINGS = "vaultFeatureSettings"
+        const val HAS_EDIT_PERMISSION = "hasEditPermission"
     }
 }
