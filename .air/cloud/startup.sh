@@ -10,22 +10,24 @@ set -euo pipefail
 # make sure the toolchain is present and return promptly.
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-JDK_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-# Released TeamCity version whose artifacts are public on
-# download.jetbrains.com; used when no packages.jetbrains.team credentials are
-# available (the default teamcityVersion is a SNAPSHOT that only resolves from
-# the authenticated internal repository).
-FALLBACK_TEAMCITY_VERSION=2025.11
+JDK_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+# Released TeamCity version whose artifacts (including the internal test
+# dependencies) are public on download.jetbrains.com; used when no
+# packages.jetbrains.team credentials are available (the default
+# teamcityVersion is a SNAPSHOT that only resolves from the authenticated
+# internal repository).
+FALLBACK_TEAMCITY_VERSION=2026.2
 
 if [ "${AIR_STARTUP_MODE:-}" = "warmup" ]; then WARMUP=1; else WARMUP=; fi
 
 log() { echo "[startup] $*"; }
 
-# --- JDK 17 (Gradle 8.14 cannot run on the preinstalled Java 25) -------------
+# --- JDK 21 (Gradle 8.14 cannot run on the preinstalled Java 25; the
+# TeamCity 2026.x jars need a compiler that reads Java 21 class files) --------
 if [ ! -x "$JDK_HOME/bin/java" ]; then
-  log "Installing OpenJDK 17..."
+  log "Installing OpenJDK 21..."
   sudo apt-get update -qq
-  sudo apt-get install -y -qq openjdk-17-jdk-headless
+  sudo apt-get install -y -qq openjdk-21-jdk-headless
 fi
 log "JDK: $("$JDK_HOME/bin/java" -version 2>&1 | head -1)"
 
@@ -118,16 +120,20 @@ if [ -n "$WARMUP" ]; then
 
   if [ -n "$HAVE_SPACE_CREDS" ]; then
     log "Warmup: building plugin and test classes with default teamcityVersion..."
-    ./gradlew assemble testClasses
+    if ! ./gradlew assemble testClasses; then
+      log "WARNING: build with default (SNAPSHOT) teamcityVersion failed;"
+      log "retrying with the released version $FALLBACK_TEAMCITY_VERSION"
+      ./gradlew assemble testClasses -PteamcityVersion="$FALLBACK_TEAMCITY_VERSION"
+    fi
   else
     log "Warmup: building plugin with -PteamcityVersion=$FALLBACK_TEAMCITY_VERSION (no internal repo credentials)..."
-    ./gradlew assemble -PteamcityVersion="$FALLBACK_TEAMCITY_VERSION"
+    ./gradlew assemble testClasses -PteamcityVersion="$FALLBACK_TEAMCITY_VERSION"
   fi
   log "Warmup build finished"
 fi
 
 # --- Healthcheck ---------------------------------------------------------------
-# Asserts the environment works the way a real task needs it to: JDK 17 runs,
+# Asserts the environment works the way a real task needs it to: JDK 21 runs,
 # the Docker daemon (required by testcontainers-based tests) is up, and the
 # Gradle build actually produced the server and agent plugin archives.
 healthcheck() {
