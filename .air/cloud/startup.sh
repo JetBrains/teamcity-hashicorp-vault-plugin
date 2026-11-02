@@ -84,7 +84,11 @@ ENV_FILE="$HOME/.air-repo-env.sh"
   printf 'export JAVA_HOME=%q\n' "$JDK_HOME"
   printf 'export PATH="$JAVA_HOME/bin:$PATH"\n'
   if [ -n "$GRADLE_PROXY_OPTS" ]; then
-    printf 'export GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }%s"\n' "$GRADLE_PROXY_OPTS"
+    # Guarded append: the file may be sourced several times per shell.
+    printf 'case " ${GRADLE_OPTS:-} " in\n'
+    printf '  *" %s "*) ;;\n' "$GRADLE_PROXY_OPTS"
+    printf '  *) export GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }%s" ;;\n' "$GRADLE_PROXY_OPTS"
+    printf 'esac\n'
   fi
 } > "$ENV_FILE"
 
